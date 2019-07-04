@@ -16,14 +16,15 @@
 #'   mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and \eqn{\alpha_{m}} is the
 #'   mixing weight parameter.
 #'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks colums
+#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 #'   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 #'   The notations are in line with the cited article by KMS (2016).
 #' @param all_boldA 3D array containing the \eqn{((dp)x(dp))} "bold A" matrices related to each mixture component VAR-process,
-#'   obtained from \code{form_boldA()}. Will be computed if not given.
-#' @return Returns \code{TRUE} if the model is stationary and \code{FALSE} if not. In order to obtain numerical stability
-#'   \code{is_stationary()} may return \code{FALSE} when the parameter vector is in the stationarity region, but
-#'   very close to the boundary.
+#'   obtained from \code{form_boldA}. Will be computed if not given.
+#' @param tolerance Returns false if modulus of any eigenvalue is larger or equal to \code{1-tolerance}.
+#' @return Returns \code{TRUE} if the model is stationary and \code{FALSE} if not. Based on the argument \code{tolerance},
+#'   \code{is_stationary} may return \code{FALSE} when the parameter vector is in the stationarity region, but
+#'   very close to the boundary (this is used to ensure numerical stability in estimation of the model parameters).
 #' @section Warning:
 #'  No argument checks!
 #' @references
@@ -34,17 +35,17 @@
 #'            \emph{Springer}.
 #'  }
 
-is_stationary <- function(p, M, d, params, all_boldA=NULL) {
+is_stationary <- function(p, M, d, params, all_boldA=NULL, tolerance=1e-3) {
   if(is.null(all_boldA)) {
     all_A <- pick_allA(p=p, M=M, d=d, params=params)
     all_boldA <- form_boldA(p=p, M=M, d=d, all_A=all_A)
   }
   for(m in 1:M) {
-    if(any(abs(eigen(all_boldA[, , m], symmetric=FALSE, only.values=TRUE)$'values') >= 1-1e-8)) {
+    if(any(abs(eigen(all_boldA[, , m], symmetric=FALSE, only.values=TRUE)$'values') >= 1 - tolerance)) {
       return(FALSE)
     }
   }
-  return(TRUE)
+  TRUE
 }
 
 
@@ -55,8 +56,8 @@ is_stationary <- function(p, M, d, params, all_boldA=NULL) {
 #'   space or not.
 #'
 #' @inheritParams is_stationary
-#' @param alphas (Mx1) vector containing all mixing weight parameters, obtained from \code{pick_alphas()}.
-#' @param all_Omega 3D array containing all covariance matrices \eqn{\Omega_{m}}, obtained from \code{pick_Omegas()}.
+#' @param alphas (Mx1) vector containing all mixing weight parameters, obtained from \code{pick_alphas}.
+#' @param all_Omega 3D array containing all covariance matrices \eqn{\Omega_{m}}, obtained from \code{pick_Omegas}.
 #' @return Returns \code{TRUE} if the given parameter values are in the parameter space and \code{FALSE} otherwise.
 #'   Does NOT consider the identifiability condition!
 #' @references
@@ -66,9 +67,9 @@ is_stationary <- function(p, M, d, params, all_boldA=NULL) {
 #'  }
 
 in_paramspace_int <- function(p, M, d, all_boldA, alphas, all_Omega) {
-  if(M>=2 & sum(alphas[-M])>=1) {
+  if(M >= 2 & sum(alphas[-M]) >= 1) {
     return(FALSE)
-  } else if(any(alphas<=0)) {
+  } else if(any(alphas <= 0)) {
     return(FALSE)
   } else if(!is_stationary(p=p, M=M, d=d, all_boldA=all_boldA)) {
     return(FALSE)
@@ -78,7 +79,7 @@ in_paramspace_int <- function(p, M, d, all_boldA, alphas, all_Omega) {
       return(FALSE)
     }
   }
-  return(TRUE)
+  TRUE
 }
 
 
@@ -168,12 +169,12 @@ check_parameters <- function(p, M, d, params, constraints=NULL) {
   params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints)
   alphas <- pick_alphas(p=p, M=M, d=d, params=params)
 
-  if(M>=2 & sum(alphas[-M])>=1) {
+  if(M >= 2 & sum(alphas[-M]) >= 1) {
     stop("The mixing weight parameters don't sum to one")
-  } else if(any(alphas<=0)) {
+  } else if(any(alphas <= 0)) {
     stop("The mixing weight parameters must be strictly positive")
   } else if(!is_stationary(p=p, M=M, d=d, params=params)) {
-    stop("The stationarity condition is not satisfied")
+    stop("The stationarity condition is not satisfied (with large enough numerical tolerance)")
   }
   all_Omega <- pick_Omegas(p=p, M=M, d=d, params=params)
   for(m in 1:M) {
@@ -244,7 +245,7 @@ check_data <- function(data, p) {
     if(ncol(data) < 2) stop("The data matrix must contain at least two columns! For univariate analysis use the package 'uGMAR'.")
     if(nrow(data) < p+1) stop("The data must contain at least p+1 observations!")
   }
-  return(data)
+  data
 }
 
 
@@ -263,7 +264,7 @@ all_pos_ints <- function(x) {
 
 #' @title Check that p, M and d are correctly set
 #'
-#' @description \code{check_pMd} checks the argumens p, M and d.
+#' @description \code{check_pMd} checks the arguments p, M and d.
 #'
 #' @inheritParams is_stationary
 #' @return Throws an error if something is wrong.

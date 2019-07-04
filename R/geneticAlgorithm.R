@@ -41,12 +41,12 @@
 #'   mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
 #'   \eqn{\alpha_{m}} is the mixing weight parameter.
 #'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks colums
+#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 #'   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 #'   The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.
 #' @param mu_scale a size \eqn{(dx1)} vector defining \strong{means} of the normal distributions from which each
 #'   mean parameter \eqn{\mu_{m}} is drawn from in random mutations. Default is \code{colMeans(data)}. Note that
-#'   mean-parametrization is always used for optimization in \code{GAfit()} - even when \code{parametrization=="intercept"}, but
+#'   mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}, but
 #'   input (in \code{initpop}) and output (return value) parameter vectors may be intercept-parametrized.
 #' @param mu_scale2 a size \eqn{(dx1)} strictly positive vector defining \strong{standard deviations} of the normal
 #'   distributions from which each mean parameter \eqn{\mu_{m}} is drawn from in random mutations.
@@ -56,10 +56,10 @@
 #'   Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard deviations
 #'   of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
 #'   and for non-diagonal elements they are \code{sqrt(1/d*omega_scale[i]*omega_scale[j])}.
-#'   Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit()} is
+#'   Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit} is
 #'   \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}.
-#' @param ar_scale a positive real number adjusting how large AR-paramater values are typically generated in some random
-#'   mutations. See function \code{random_coefmats2()} for details. This is ignored when estimating constrained models.
+#' @param ar_scale a positive real number adjusting how large AR parameter values are typically generated in some random
+#'   mutations. See function \code{random_coefmats2} for details. This is ignored when estimating constrained models.
 #' @param regime_force_scale a non-negative real number specifying how much should natural selection favour individuals
 #'   with less regimes that have almost all mixing weights (practically) at zero. Set to zero for no favouring or large number
 #'   for heavy favouring. Without any favouring the genetic algorithm gets more often stuck in an area of the parameter space where some
@@ -79,6 +79,10 @@
 #'    The genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)}.
 #'    It uses (slightly modified) individually adaptive crossover and mutation rates described by \emph{Patnaik and Srinivas (1994)}
 #'    and employs (50\%) fitness inheritance discussed by \emph{Smith, Dike and Stegmann (1995)}.
+#'
+#'    By "redundant" or "unidentified" regimes we mean regimes that have the time varying mixing weights basically at zero for all t.
+#'    The model would have the same log-likelihood value without redundant regimes and there is no purpose to have redundant regime in
+#'    the model.
 #' @return Returns estimated parameter vector which has the form described in \code{initpop}.
 #' @references
 #'  \itemize{
@@ -95,6 +99,7 @@
 #'    \item Smith R.E., Dike B.A., Stegmann S.A. 1995. Fitness inheritance in genetic algorithms.
 #'          \emph{Proceedings of the 1995 ACM Symposium on Applied Computing}, 345-350.
 #'  }
+#'  @export
 
 
 GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL, ngen=200, popsize,

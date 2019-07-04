@@ -120,3 +120,15 @@ test_that("user loglikelihood works correctly", {
   expect_equal(loglikelihood(data=data, p=2, M=2, params=theta_222c, conditional=FALSE, parametrization="intercept", constraints=C_222), -1095.952, tolerance=1e-3)
   expect_equal(loglikelihood_int(data=data, p=2, M=2, params=theta_222_c2, conditional=TRUE, parametrization="intercept", constraints=C_222_2), -1096.98, tolerance=1e-2)
 })
+
+
+test_that("cond_moments works correctly", {
+  expect_equal(cond_moments(data=data, p=1, M=1, params=theta_112, parametrization="intercept", to_return="total_ccovs")[, 2, 20], c(-0.15, 5.20), tolerance=1e-2)
+  expect_equal(cond_moments(data=data, p=1, M=1, params=theta_112, parametrization="intercept", to_return="regime_cmeans")[1, , 1], c(6.172968, 105.106160), tolerance=1e-5)
+  expect_equal(cond_moments(data=data, p=1, M=1, params=theta_112, parametrization="intercept", to_return="total_cmeans")[100, ], c(1.611256, 105.138260), tolerance=1e-5)
+  expect_equal(cond_moments(data, p=2, M=2, params=theta_222, parametrization="intercept", to_return="total_ccovs")[1, , 200],c(1.2645665, 0.1038158), tolerance=1e-5)
+  expect_equal(cond_moments(data, p=2, M=2, params=theta_222, parametrization="intercept", to_return="total_cmeans")[1, ],c(2.752923, 112.571724), tolerance=1e-5)
+  expect_equal(cond_moments(data=data, p=1, M=2, params=theta_122_mu, parametrization="mean", to_return="total_ccovs")[, 2, 100], c(3.56, 9.80), tolerance=1e-2)
+  expect_equal(cond_moments(data=data, p=2, M=2, params=theta_222c, parametrization="intercept", constraints=C_222, to_return="total_cmeans")[13, ], c(24.78782, 122.40034), tolerance=1e-5)
+  expect_equal(cond_moments(data=data, p=2, M=2, params=theta_222_c2, parametrization="intercept", constraints=C_222_2, to_return="total_ccovs")[ , 2, 13], c(3.459987, 9.619985), tolerance=1e-5)
+})

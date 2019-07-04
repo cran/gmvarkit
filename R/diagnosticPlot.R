@@ -2,7 +2,7 @@
 #'
 #' @title Quantile residual diagnostic plot for GMVAR model
 #'
-#' @description \code{diagnostic_plot()} plots a multivariate quantile residual diagnostic plot
+#' @description \code{diagnostic_plot} plots a multivariate quantile residual diagnostic plot
 #'   for either autocorrelation, conditional heteroskedasticity, normality or simply draws the
 #'   quantile residual time series.
 #'
@@ -12,14 +12,12 @@
 #'     \item{\code{"series"} the quantile residual time series.}
 #'     \item{\code{"ac"} the quantile residual autocorrelation and cross-correlation functions.}
 #'     \item{\code{"ch"} the squared quantile residual autocorrelation and cross-correlation functions.}
-#'     \item{\code{"norm"} the quantile residual kernel density estimates with theoretical standard normal
+#'     \item{\code{"norm"} the quantile residual histogram with theoretical standard normal
 #'       density (dashed line) and standard normal QQ-plots.}
 #'   }
 #' @param maxlag the maximum lag considered in types \code{"ac"} and \code{"ch"}.
 #' @details Auto- and cross-correlations (types \code{"ac"} and \code{"ch"}) are calculated with the function
-#'  \code{acf()} from the package \code{stats} and the plot method for class \code{'acf'} objects is used. In
-#'  the normality plot the kernel density estimates are calculated with function \code{density()} from the
-#'  package \code{stats} with bandwith argument \code{"SJ"} and Gaussian kernel.
+#'  \code{acf} from the package \code{stats} and the plot method for class \code{'acf'} objects is used.
 #' @inherit quantile_residual_tests references
 #' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
 #'  \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
@@ -61,7 +59,6 @@ diagnostic_plot <- function(gmvar, type=c("series", "ac", "ch", "norm"), maxlag=
   check_gmvar(gmvar)
   check_null_data(gmvar)
   type <- match.arg(type)
-  stopifnot(type %in% c("series", "ac", "ch", "norm"))
   qres <- gmvar$quantile_residuals
   colnames(qres) <- colnames(as.ts(gmvar$data))
   if(type == "series") {
@@ -76,8 +73,9 @@ diagnostic_plot <- function(gmvar, type=c("series", "ac", "ch", "norm"), maxlag=
     d <- gmvar$model$d
     par(mfrow=c(2, d), mar=c(2.5, 2.5, 2.1, 1.1))
     for(i1 in 1:d) {
-      plot(density(qres[,i1], bw="SJ", kernel="gaussian"),  main=colnames(qres)[i1], ylim=c(0, 0.5))
-      x <- seq(from=min(qres[,i1]), to=max(max(qres[,i1])), length.out=1000)
+      hs <- hist(qres[,i1], breaks="Scott", probability=TRUE, col="skyblue", plot=TRUE,
+                 main=colnames(qres)[i1], ylim=c(0, 0.5))
+      x <- seq(from=min(hs$breaks), to=max(hs$breaks), length.out=1000)
       lines(x=x, y=dnorm(x), lty=2, col="darkred")
     }
     for(i1 in 1:d) {

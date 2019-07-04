@@ -39,7 +39,7 @@ unvec <- function(d, a) {
 #' @description \code{vech} stacks colums of the given matrix from
 #'   the principal diagonal downwards (including elements on the diagonal) to form a vector.
 #'
-#' @param A a size \eqn{(dxd)} symmmetric matrix to be vectorized parsimoniously.
+#' @param A a size \eqn{(dxd)} symmetric matrix to be vectorized parsimoniously.
 #' @return a vector of size \eqn{(d(d+1)/2x1)}.
 #' @section Warning:
 #'  No argument checks!
@@ -51,10 +51,10 @@ vech <- function(A) {
 
 #' @title Reverse operator of the parsimonious vectorization operator \code{vech()}.
 #'
-#' @description \code{unvech} creates a symmetrix matrix from the given vector by
+#' @description \code{unvech} creates a symmetric matrix from the given vector by
 #'   copying the lower triangular part to be the upper triangular part as well.
 #'
-#' @param a a size \eqn{(d(d+1)/2x1)} vector to be unvectorized into a symmmetric \eqn{(dxd)} matrix.
+#' @param a a size \eqn{(d(d+1)/2x1)} vector to be unvectorized into a symmetric \eqn{(dxd)} matrix.
 #' @param d number of rows the square matrix to be formed.
 #' @return a symmetric matrix of size \eqn{(dxd)}.
 #' @section Warning:

@@ -3,17 +3,18 @@
 #' @description \code{calc_gradient} or \code{calc_hessian} calculates the gradient or Hessian matrix
 #'   of the given function at the given point using central difference numerical approximation.
 #'   \code{get_gradient} or \code{get_hessian} calculates the gradient or Hessian matrix of the
-#'   log-likelihood function at the parameter estimates of class \code{'gmvar'} object.
+#'   log-likelihood function at the parameter estimates of class \code{'gmvar'} object. \code{get_soc}
+#'   returns eigenvalues of the Hessian matrix.
 #'
 #' @inheritParams quantile_residuals
 #' @param x a numeric vector specifying the point where the gradient or Hessian should be calculated.
 #' @param fn a function that takes in argument \code{x} as the \strong{first} argument.
-#' @param h difference used to approximate the derivates.
+#' @param h difference used to approximate the derivatives.
 #' @param ... other arguments passed to \code{fn}
-#' @details Especially the functions \code{get_gradient()} or \code{get_hessian()} can be used to check whether
+#' @details Especially the functions \code{get_gradient} or \code{get_hessian} can be used to check whether
 #'   the found estimates denote a (local) maximum point, a saddle point or something else.
 #' @return Gradient functions return numerical approximation of the gradient, and Hessian functions return
-#'   numerical approximation of the Hessian.
+#'   numerical approximation of the Hessian. \code{get_soc} returns eigenvalues of the Hessian matrix.
 #' @section Warning:
 #'   No argument checks!
 #' @examples
@@ -31,6 +32,7 @@
 #'   data <- cbind(10*eurusd[,1], 100*eurusd[,2])
 #'   colnames(data) <- colnames(eurusd)
 #'
+#'   \donttest{
 #'   # GMVAR(1,2), d=2 model:
 #'   params122 <- c(0.623, -0.129, 0.959, 0.089, -0.006, 1.006, 1.746,
 #'     0.804, 5.804, 3.245, 7.913, 0.952, -0.037, -0.019, 0.943, 6.926,
@@ -38,6 +40,8 @@
 #'   mod122 <- GMVAR(data, p=1, M=2, params=params122)
 #'   get_gradient(mod122)
 #'   get_hessian(mod122)
+#'   get_soc(mod122)
+#'   }
 #' @export
 
 calc_gradient <- function(x, fn, h=6e-06, ...) {
@@ -91,3 +95,9 @@ get_hessian <- function(gmvar, h=6e-06) {
   calc_hessian(x=gmvar$params, fn=foo, h=h)
 }
 
+
+#' @rdname calc_gradient
+#' @export
+get_soc <- function(gmvar, h=6e-6) {
+  eigen(get_hessian(gmvar, h))$value
+}

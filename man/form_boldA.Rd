@@ -13,7 +13,7 @@ form_boldA(p, M, d, all_A)
 
 \item{d}{number of time series in the system.}
 
-\item{all_A}{4D array containing all coefficient matrices \eqn{A_{m,i}}, obtained from \code{pick_allA()}.}
+\item{all_A}{4D array containing all coefficient matrices \eqn{A_{m,i}}, obtained from \code{pick_allA}.}
 }
 \value{
 Returns 3D array containing the \eqn{((dp)x(dp))} "bold A" matrices related to each component VAR-process.
@@ -21,7 +21,7 @@ Returns 3D array containing the \eqn{((dp)x(dp))} "bold A" matrices related to e
 }
 \description{
 \code{form_boldA} creates the "bold A" coefficient matrices related to
-  VAR processess.
+  VAR processes.
 }
 \section{Warning}{
 

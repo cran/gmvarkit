@@ -46,7 +46,7 @@ pick_Am <- function(p, M, d, params, m) {
 
 #' @title Pick coefficient all matrices
 #'
-#' @description \code{pick_allA()} picks all coefficient matrices \eqn{A_{m,i} (i=1,..,p, m=1,..,M)}
+#' @description \code{pick_allA} picks all coefficient matrices \eqn{A_{m,i} (i=1,..,p, m=1,..,M)}
 #'   from the given parameter vector so that they are arranged in a 4D array with the fourth dimension
 #'   indicating each component and third dimension indicating each lag.
 #'
@@ -105,7 +105,7 @@ pick_all_phi0_A <- function(p, M, d, params) {
 
 #' @title Pick covariance matrices
 #'
-#' @description \code{pick_Omegas()} picks the covariance matrices \eqn{\Omega_{m} (m=1,..,M)}
+#' @description \code{pick_Omegas} picks the covariance matrices \eqn{\Omega_{m} (m=1,..,M)}
 #'  from the given parameter vector so that they are arranged in a 3D array with the third
 #'  dimension indicating each component.
 #'
@@ -166,70 +166,6 @@ pick_regime <- function(p, M, d, params, m) {
 }
 
 
-#' @title Calculate and return regime means \eqn{\mu_{m}}
-#'
-#' @description \code{get_regime_means} calculates regime means \eqn{\mu_{m} = (I - \sum A)^(-1))}
-#'   from the given parameter vector.
-#'
-#' @inheritParams loglikelihood_int
-#' @inheritParams is_stationary
-#' @return Returns a \eqn{(dxM)} matrix containing regime mean \eqn{\mu_{m}} in the m:th column, \eqn{m=1,..,M}.
-#' @section Warning:
-#'  No argument checks!
-#' @inherit is_stationary references
-
-get_regime_means_int <- function(p, M, d, params, parametrization=c("intercept", "mean"), constraints=NULL) {
-  parametrization <- match.arg(parametrization)
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints)
-  if(parametrization=="mean") {
-    return(pick_phi0(p=p, M=M, d=d, params=params))
-  } else {
-    params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=NULL, change_to="mean")
-    return(pick_phi0(p=p, M=M, d=d, params=params))
-  }
-}
-
-
-#' @title Calculate and return regime means \eqn{\mu_{m}}
-#'
-#' @description \code{get_regime_means} calculates regime means \eqn{\mu_{m} = (I - \sum A_{m,i})^(-1))}
-#'   for the given GMVAR model
-#'
-#' @inheritParams simulateGMVAR
-#' @return Returns a \eqn{(dxM)} matrix containing regime mean \eqn{\mu_{m}} in the m:th column, \eqn{m=1,..,M}.
-#' @inherit is_stationary references
-#' @examples
-#' # These examples use the data 'eurusd' which comes with the
-#' # package, but in a scaled form.
-#' data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-#' colnames(data) <- colnames(eurusd)
-#'
-#' # GMVAR(1,2), d=2 model:
-#' params122 <- c(0.623, -0.129, 0.959, 0.089, -0.006, 1.006, 1.746,
-#'  0.804, 5.804, 3.245, 7.913, 0.952, -0.037, -0.019, 0.943, 6.926,
-#'  3.982, 12.135, 0.789)
-#' mod122 <- GMVAR(data, p=1, M=2, params=params122)
-#' mod122
-#' get_regime_means(mod122)
-#'
-#'
-#' # GMVAR(2,2), d=2 model with mean-parametrization:
-#' params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
-#'  -0.070, -0.109, -0.281, 0.920, -0.025, 4.839, 11.633, 124.983, 1.248,
-#'   0.077, -0.040, 1.266, -0.272, -0.074, 0.034, -0.313, 5.855, 3.570,
-#'   9.838, 0.740)
-#' mod222 <- GMVAR(data, p=2, M=2, params=params222, parametrization="mean")
-#' mod222
-#' get_regime_means(mod222)
-#' @export
-
-get_regime_means <- function(gmvar) {
-  check_gmvar(gmvar)
-  get_regime_means_int(p=gmvar$model$p, M=gmvar$model$M, d=gmvar$model$d, params=gmvar$params,
-                       parametrization=gmvar$model$parametrization, constraints=gmvar$model$constraints)
-}
-
-
 #' @title Calculate absolute values of the eigenvalues of the "bold A" matrices containing the AR coefficients
 #'
 #' @description \code{get_boldA_eigens} calculates absolute values of the eigenvalues of
@@ -260,4 +196,32 @@ get_boldA_eigens <- function(gmvar) {
   lapply(1:M, function(m) abs(eigen(all_boldA[, , m], symmetric=FALSE, only.values=TRUE)$'values'))
 }
 
+
+#' @title Calculate the eigenvalues of the "Omega" error term covariance matrices
+#'
+#' @description \code{get_omega_eigens} the eigenvalues of the "Omega" error term covariance matrices
+#'   for each mixture component
+#'
+#' @inheritParams simulateGMVAR
+#' @return Returns a list with \eqn{M} elements - one for each regime. Each element contains
+#'  the eigenvalues of the "Omega" error term covariance matrix.
+#' @inherit is_stationary references
+#' @examples
+#' params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
+#'  -0.070, -0.109, -0.281, 0.920, -0.025, 4.839, 11.633, 124.983, 1.248,
+#'   0.077, -0.040, 1.266, -0.272, -0.074, 0.034, -0.313, 5.855, 3.570,
+#'   9.838, 0.740)
+#' mod222 <- GMVAR(d=2, p=2, M=2, params=params222, parametrization="mean")
+#' get_omega_eigens(mod222)
+#' @export
+
+get_omega_eigens <- function(gmvar) {
+  check_gmvar(gmvar)
+  p <- gmvar$model$p
+  M <- gmvar$model$M
+  d <- gmvar$model$d
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$params, constraints=gmvar$model$constraints)
+  all_Omega <- pick_Omegas(p=p, M=M, d=d, params=params)
+  lapply(1:M, function(m) eigen(all_Omega[, , m], symmetric=TRUE, only.values=TRUE)$'values')
+}
 

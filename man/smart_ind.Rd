@@ -6,7 +6,8 @@
   parameter vector}
 \usage{
 smart_ind(p, M, d, params, constraints = NULL, accuracy = 1,
-  which_random = numeric(0), mu_scale, mu_scale2, omega_scale, ar_scale = 1)
+  which_random = numeric(0), mu_scale, mu_scale2, omega_scale,
+  ar_scale = 1)
 }
 \arguments{
 \item{p}{a positive integer specifying the autoregressive degree of the model.}
@@ -27,7 +28,7 @@ Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eq
 mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and \eqn{\alpha_{m}} is the
 mixing weight parameter.
 If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-\eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks colums
+\eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 The notations are in line with the cited article by KMS (2016).}
 
@@ -48,7 +49,7 @@ close to the given parameter vector. If constraints are employed, then this does
 
 \item{mu_scale}{a size \eqn{(dx1)} vector defining \strong{means} of the normal distributions from which each
 mean parameter \eqn{\mu_{m}} is drawn from in random mutations. Default is \code{colMeans(data)}. Note that
-mean-parametrization is always used for optimization in \code{GAfit()} - even when \code{parametrization=="intercept"}, but
+mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}, but
 input (in \code{initpop}) and output (return value) parameter vectors may be intercept-parametrized.}
 
 \item{mu_scale2}{a size \eqn{(dx1)} strictly positive vector defining \strong{standard deviations} of the normal
@@ -60,11 +61,11 @@ random covariance matrices in random mutations. The covariance matrices are draw
 Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard deviations
 of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
 and for non-diagonal elements they are \code{sqrt(1/d*omega_scale[i]*omega_scale[j])}.
-Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit()} is
+Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit} is
 \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}.}
 
-\item{ar_scale}{a positive real number adjusting how large AR-paramater values are typically generated in some random
-mutations. See function \code{random_coefmats2()} for details. This is ignored when estimating constrained models.}
+\item{ar_scale}{a positive real number adjusting how large AR parameter values are typically generated in some random
+mutations. See function \code{random_coefmats2} for details. This is ignored when estimating constrained models.}
 }
 \value{
 Returns somewhat random mean-parametrized parameter vector that has form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},

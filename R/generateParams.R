@@ -150,7 +150,7 @@ random_ind2 <- function(p, M, d, mu_scale, mu_scale2, omega_scale, ar_scale=1) {
 #' @title Create somewhat random stationary VAR model \eqn{(dxd)}
 #'  coefficient matrices \eqn{A}.
 #'
-#' @description \code{random_coefmats2} generates random VAR model coefficientmatrices
+#' @description \code{random_coefmats2} generates random VAR model coefficient matrices
 #'
 #' @inheritParams is_stationary
 #' @param ar_scale a positive real number. Larger values will likely result larger AR-coefficients.
@@ -214,7 +214,7 @@ random_coefmats2 <- function(p, d, ar_scale=1) {
 
 #' @title Create random VAR-model \eqn{(dxd)} coefficient matrices \eqn{A}.
 #'
-#' @description \code{random_coefmats} generates random VAR model coefficientmatrices
+#' @description \code{random_coefmats} generates random VAR model coefficient matrices
 #'
 #' @inheritParams is_stationary
 #' @param how_many how many \eqn{(dxd)} coefficient matrices \eqn{A} should be drawn?

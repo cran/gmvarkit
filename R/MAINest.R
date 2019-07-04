@@ -9,7 +9,7 @@
 #' @param ncores number cores to be used in parallel computing.
 #' @param maxit maximum number of iterations in the variable metric algorithm.
 #' @param print_res should summaries of estimation results be printed?
-#' @param ... additional settings passed to the function \code{GAfit()} employing the genetic algorithm.
+#' @param ... additional settings passed to the function \code{GAfit} employing the genetic algorithm.
 #' @details
 #'    Because of complexity and multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
 #'    algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in some local maximum
@@ -18,14 +18,14 @@
 #'
 #'    Overall the estimation process is computationally heavy and it might take considerably long time for large models with
 #'    large number of observations. If the iteration limit \code{maxit} in the variable metric algorithm is reached, one can continue
-#'    the estimation by iterating more with the function \code{iterate_more()}.
+#'    the estimation by iterating more with the function \code{iterate_more}.
 #'
 #'    The genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)}, but it includes some extra
 #'    functionality designed for this particular estimation problem. The genetic algorithm uses (slightly modified) individually
 #'    adaptive crossover and mutation rates described by \emph{Patnaik and Srinivas (1994)} and employs (50\%) fitness
 #'    inheritance discussed by \emph{Smith, Dike and Stegmann (1995)}.
 #'
-#'    The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim()}
+#'    The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim}
 #'    from the package \code{stats}.
 #' @return Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Multivariate quantile residuals
 #'   (Kalliovirta and Saikkonen 2010) are also computed and included in the returned object. In addition, the returned
@@ -58,9 +58,12 @@
 #'   mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
 #'   \eqn{\alpha_{m}} is the mixing weight parameter.
 #'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks colums
+#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 #'   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 #'   The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.
+#'
+#'   Remark that the first autocovariance/correlation matrix in \code{$uncond_moments} is for the lag zero,
+#'   the second one for the lag one, etc.
 #' @section S3 methods:
 #'   The following S3 methods are supported for class \code{'gmvar'}: \code{logLik}, \code{residuals}, \code{print}, \code{summary},
 #'    \code{predict} and \code{plot}.
@@ -86,26 +89,29 @@
 #' ## These are long running examples that use parallel computing!
 #'
 #' # These examples use the data 'eurusd' which comes with the
-#' # package, but in a scaled form.
+#' # package, but in a scaled form (similar to Kalliovirta et al. 2016).
+#' data(eurusd, package="gmvarkit")
 #' data <- cbind(10*eurusd[,1], 100*eurusd[,2])
 #' colnames(data) <- colnames(eurusd)
 #'
 #' # GMVAR(1,2) model with default settings
-#' fit12 <- fitGMVAR(data, p=1, M=2, ncores=2, ncalls=4)
+#' fit12 <- fitGMVAR(data, p=1, M=2)
 #' fit12
+#' plot(fit12)
+#' summary(fit12)
 #'
 #' # GMVAR(2,2) model with mean parametrization
 #' fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean")
 #' fit22
 #'
 #' # GMVAR(2,2) model with autoregressive parameters restricted
-#' # to be the same for all regimes
+#' # to be the same for both regimes
 #' C_mat <- rbind(diag(2*2^2), diag(2*2^2))
 #' fit22c <- fitGMVAR(data, p=2, M=2, constraints=C_mat)
 #' fit22c
 #'
 #' # GMVAR(2,2) model with autoregressive parameters restricted
-#' # to be the same for all regimes and non-diagonl elements
+#' # to be the same for both regimes and non-diagonl elements
 #' # the coefficient matrices constrained to zero. Estimation
 #' # with only 10 estimation rounds.
 #' tmp <- matrix(c(1, rep(0, 10), 1, rep(0, 8), 1, rep(0, 10), 1),
@@ -123,7 +129,6 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
   on.exit(closeAllConnections())
   parametrization <- match.arg(parametrization)
   if(!all_pos_ints(c(p, M, ncalls, ncores, maxit))) stop("Arguments p, M, ncalls, ncores and maxit must be positive integers")
-  if(!parametrization %in% c("intercept", "mean")) stop("Argument parametrization has to be 'intercept' or 'mean'")
   data <- check_data(data=data, p=p)
   d <- ncol(data)
   n_obs <- nrow(data)
@@ -177,7 +182,6 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
     vapply(1:npars, function(i1) (loglik_fn(params + I[i1,]*h) - loglik_fn(params - I[i1,]*h))/(2*h), numeric(1))
   }
 
-
   cl <- parallel::makeCluster(ncores)
   parallel::clusterExport(cl, ls(environment(fitGMVAR)), envir = environment(fitGMVAR)) # assign all variables from package:gmvarkit
   parallel::clusterEvalQ(cl, c(library(Brobdingnag), library(mvnfast), library(pbapply)))
@@ -219,39 +223,14 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
   }
 
 
-  loglik <- best_fit$value
-  T_obs <- n_obs - p
-  obs <- ifelse(conditional, T_obs, n_obs)
-  IC <- get_IC(loglik=loglik, npars=npars, obs=obs)
-
-  cat("Calculating approximate standard errors...\n")
-  std_errors <- standard_errors(data=data, p=p, M=M, params=params, conditional=conditional, parametrization=parametrization,
-                                constraints=constraints, minval=minval)
-  if(all(is.na(std_errors))) message("Unable to calculate approximate standard errors!")
-
   ### Wrap up ###
-  qresiduals <- quantile_residuals_int(data=data, p=p, M=M, params=params, conditional=conditional,
-                                      parametrization=parametrization, constraints=constraints)
+  cat("Calculating approximate standard errors...\n")
+  ret <- GMVAR(data=data, p=p, M=M, d=d, params=params, conditional=conditional, parametrization=parametrization,
+               constraints=constraints, calc_std_errors=TRUE)
+  ret$all_estimates <- all_estimates
+  ret$all_logliks <- loks
+  ret$which_converger <- converged
 
-  ret <- structure(list(data=data,
-                        model=list(p=p,
-                                   M=M,
-                                   d=d,
-                                   conditional=conditional,
-                                   parametrization=parametrization,
-                                   constraints=constraints),
-                        params=params,
-                        std_errors=std_errors,
-                        mixing_weights=mixing_weights,
-                        quantile_residuals=qresiduals,
-                        loglik=structure(loglik,
-                                         class="logLik",
-                                         df=npars),
-                        IC=IC,
-                        all_estimates=all_estimates,
-                        all_logliks=loks,
-                        which_converged=converged),
-                   class="gmvar")
   cat("Finished!\n")
   ret
 }
@@ -264,13 +243,14 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
 #'
 #' @inheritParams simulateGMVAR
 #' @inheritParams fitGMVAR
-#' @details The main purpose of \code{iterate_more()} is to provide a simple and convenient tool to finalize
+#' @inheritParams GMVAR
+#' @details The main purpose of \code{iterate_more} is to provide a simple and convenient tool to finalize
 #'   the estimation when the maximum number of iterations is reached when estimating a GMVAR model with the
-#'   main estimation function \code{fitGMVAR()}. It's just a simple wrapper around function \code{optim()}
-#'   from the package \code{stats} and \code{GMVAR()} from the package \code{gmvarkit}.
+#'   main estimation function \code{fitGMVAR}. It's just a simple wrapper around function \code{optim}
+#'   from the package \code{stats} and \code{GMVAR} from the package \code{gmvarkit}.
 #' @return Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Can be used
 #'   to work with other functions provided in \code{gmvarkit}.
-#' @seealso \code{fitGMVAR()}, \code{GMVAR()}, \code{optim()}
+#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link[stats]{optim}}
 #' @inherit GMVAR references
 #' @examples
 #' \donttest{
@@ -313,7 +293,7 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
 #' }
 #' @export
 
-iterate_more <- function(gmvar, maxit=100) {
+iterate_more <- function(gmvar, maxit=100, calc_std_errors=TRUE) {
   check_gmvar(gmvar)
   stopifnot(maxit %% 1 == 0 & maxit >= 1)
   minval <- -(10^(ceiling(log10(nrow(gmvar$data))) + ncol(gmvar$data) + 1) - 1)
@@ -333,5 +313,5 @@ iterate_more <- function(gmvar, maxit=100) {
 
   GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, params=res$par,
         conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
-        constraints=gmvar$model$constraints, calc_std_errors=TRUE)
+        constraints=gmvar$model$constraints, calc_std_errors=calc_std_errors)
 }
