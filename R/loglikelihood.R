@@ -6,7 +6,7 @@
 #'
 #' @param data a matrix or class \code{'ts'} object with \code{d>1} columns. Each column is taken to represent
 #'  a single time series. \code{NA} values are not supported.
-#' @param p a positive integer specifying the autoregressive degree of the model.
+#' @param p a positive integer specifying the autoregressive order of the model.
 #' @param M a positive integer specifying the number of mixture components.
 #' @param params a real valued vector specifying the parameter values.
 #'   \describe{
@@ -35,7 +35,7 @@
 #'   mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
 #'   \eqn{\alpha_{m}} is the mixing weight parameter.
 #'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks colums
+#'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 #'   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 #'   The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.
 #' @param conditional a logical argument specifying whether the conditional or exact log-likelihood function
@@ -110,7 +110,7 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
   alphas <- pick_alphas(p=p, M=M, d=d, params=params)
 
   # Check that the parameter vector lies in the parameter space (excluding indentifiability)
-  if(check_params == TRUE) {
+  if(check_params) {
     if(!in_paramspace_int(p=p, M=M, d=d, all_boldA=all_boldA, alphas=alphas, all_Omega=all_Omega)) {
       return(minval)
     }

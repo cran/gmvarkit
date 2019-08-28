@@ -110,7 +110,7 @@ GMVAR <- function(data, p, M, d, params, conditional=TRUE, parametrization=c("in
     obs <- ifelse(conditional, nrow(data) - p, nrow(data))
     IC <- get_IC(loglik=lok_and_mw$loglik, npars=npars, obs=obs)
   }
-  if(calc_std_errors == TRUE) {
+  if(calc_std_errors) {
     if(is.null(data)) {
       warning("Approximate standard errors can't be calculated")
       std_errors <- rep(NA, npars)
@@ -126,7 +126,7 @@ GMVAR <- function(data, p, M, d, params, conditional=TRUE, parametrization=c("in
     std_errors <- rep(NA, npars)
   }
   if(calc_cond_moments == FALSE || is.null(data)) {
-    if(calc_cond_moments == TRUE) warning("Conditional moments can't be calculated without data")
+    if(calc_cond_moments) warning("Conditional moments can't be calculated without data")
     regime_cmeans <- NA
     total_cmeans <- NA
     total_ccovs <- NA
@@ -270,4 +270,39 @@ swap_parametrization <- function(gmvar) {
   GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, params=new_params, conditional=gmvar$model$conditional,
         parametrization=change_to, constraints=gmvar$model$constraints,
         calc_std_errors=ifelse(is.null(gmvar$data), FALSE, TRUE))
+}
+
+
+#' @title Construct a GMVAR model based on results from an arbitrary estimation round of \code{fitGMVAR}
+#'
+#' @description \code{alt_gmvar} constructs a GMVAR model based on results from an arbitrary estimation round of \code{fitGMVAR}.
+#'
+#' @inheritParams simulateGMVAR
+#' @inheritParams GMVAR
+#' @param which_round based on which estimation round should the model be constructed? An integer value in 1,...,\code{ncalls}.
+#' @details It's sometimes useful to examine other estimates than the one with the highest log-likelihood value. This function
+#'   is just a simple wrapper to \code{GMVAR} that picks the correct estimates from an returned by \code{fitGMVAR}.
+#' @inherit GMVAR references return
+#' @inherit add_data seealso
+#' @examples
+#' \donttest{
+#'  # These are long running examples and use parallel computing
+#'  data(eurusd, package="gmvarkit")
+#'  data <- cbind(10*eurusd[,1], 100*eurusd[,2])
+#'  colnames(data) <- colnames(eurusd)
+#'
+#'  fit12 <- fitGMVAR(data, 1, 2, ncalls=2, seeds=5:6)
+#'  fit12
+#'  fit12_2 <- alt_gmvar(fit12, which_round=1)
+#'  fit12_2
+#' }
+#' @export
+
+alt_gmvar <- function(gmvar, which_round=1, calc_cond_moments=TRUE, calc_std_errors=TRUE) {
+  stopifnot(!is.null(gmvar$all_estimates))
+  stopifnot(which_round >= 1 || which_round <= length(gmvar$all_estimates))
+  GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, d=gmvar$model$d, params=gmvar$all_estimates[[which_round]],
+        conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
+        constraints=gmvar$model$constraints, calc_cond_moments=calc_cond_moments,
+        calc_std_errors=calc_std_errors)
 }
