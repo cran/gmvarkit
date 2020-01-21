@@ -2,7 +2,7 @@
 % Please edit documentation in R/generateParams.R
 \name{random_ind}
 \alias{random_ind}
-\title{Create somewhat random mean-parametrized parameter vector of GMVAR model, that may not be stationary!}
+\title{Create random mean-parametrized parameter vector of a GMVAR model that may not be stationary}
 \usage{
 random_ind(p, M, d, constraints = NULL, mu_scale, mu_scale2, omega_scale)
 }
@@ -11,7 +11,7 @@ random_ind(p, M, d, constraints = NULL, mu_scale, mu_scale2, omega_scale)
 
 \item{M}{a positive integer specifying the number of mixture components.}
 
-\item{d}{number of time series in the system.}
+\item{d}{the number of time series in the system.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -24,23 +24,23 @@ Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be empl
 
 \item{mu_scale}{a size \eqn{(dx1)} vector defining \strong{means} of the normal distributions from which each
 mean parameter \eqn{\mu_{m}} is drawn from in random mutations. Default is \code{colMeans(data)}. Note that
-mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}, but
-input (in \code{initpop}) and output (return value) parameter vectors may be intercept-parametrized.}
+mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}.
+However, input (in \code{initpop}) and output (return value) parameter vectors can be intercept-parametrized.}
 
 \item{mu_scale2}{a size \eqn{(dx1)} strictly positive vector defining \strong{standard deviations} of the normal
 distributions from which each mean parameter \eqn{\mu_{m}} is drawn from in random mutations.
 Default is \code{2*sd(data[,i]), i=1,..,d}.}
 
 \item{omega_scale}{a size \eqn{(dx1)} strictly positive vector specifying the scale and variability of the
-random covariance matrices in random mutations. The covariance matrices are drawn from (scaled) Wishart distribution.
-Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard deviations
-of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
+random covariance matrices in random mutations. The covariance matrices are drawn from (scaled) Wishart
+distribution. Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard
+deviations of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
 and for non-diagonal elements they are \code{sqrt(1/d*omega_scale[i]*omega_scale[j])}.
 Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit} is
 \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}.}
 }
 \value{
-Returns somewhat random mean-parametrized parameter vector that has form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},
+Returns random mean-parametrized parameter vector that has form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},
  ...,\strong{\eqn{\upsilon_{M}}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
  \itemize{
    \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\mu_{m},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
@@ -49,7 +49,7 @@ Returns somewhat random mean-parametrized parameter vector that has form \strong
  }
 }
 \description{
-\code{random_ind} generates random mean-parametrized parameter vector that may not be stationary
+\code{random_ind} generates random mean-parametrized parameter vector that may not be stationary.
 }
 \references{
 \itemize{

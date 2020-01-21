@@ -6,6 +6,7 @@
 \alias{get_gradient}
 \alias{get_hessian}
 \alias{get_soc}
+\alias{get_foc}
 \title{Calculate gradient or Hessian matrix}
 \usage{
 calc_gradient(x, fn, h = 6e-06, ...)
@@ -17,6 +18,8 @@ get_gradient(gmvar, h = 6e-06)
 get_hessian(gmvar, h = 6e-06)
 
 get_soc(gmvar, h = 6e-06)
+
+get_foc(gmvar, h = 6e-06)
 }
 \arguments{
 \item{x}{a numeric vector specifying the point where the gradient or Hessian should be calculated.}
@@ -27,22 +30,24 @@ get_soc(gmvar, h = 6e-06)
 
 \item{...}{other arguments passed to \code{fn}}
 
-\item{gmvar}{object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
 }
 \value{
-Gradient functions return numerical approximation of the gradient, and Hessian functions return
+Gradient functions return numerical approximation of the gradient and Hessian functions return
   numerical approximation of the Hessian. \code{get_soc} returns eigenvalues of the Hessian matrix.
 }
 \description{
 \code{calc_gradient} or \code{calc_hessian} calculates the gradient or Hessian matrix
   of the given function at the given point using central difference numerical approximation.
   \code{get_gradient} or \code{get_hessian} calculates the gradient or Hessian matrix of the
-  log-likelihood function at the parameter estimates of class \code{'gmvar'} object. \code{get_soc}
-  returns eigenvalues of the Hessian matrix.
+  log-likelihood function at the parameter estimates of a class \code{'gmvar'} object. \code{get_soc}
+  returns eigenvalues of the Hessian matrix, and \code{get_foc} is the same as \code{get_gradient}
+  but named conveniently.
 }
 \details{
-Especially the functions \code{get_gradient} or \code{get_hessian} can be used to check whether
-  the found estimates denote a (local) maximum point, a saddle point or something else.
+In particular, the functions \code{get_foc} and \code{get_soc} can be used to check whether
+  the found estimates denote a (local) maximum point, a saddle point, or something else. Note that
+  profile log-likelihood functions can be conveniently plotted with the function \code{profile_logliks}.
 }
 \section{Warning}{
 
@@ -74,4 +79,7 @@ Especially the functions \code{get_gradient} or \code{get_hessian} can be used t
   get_hessian(mod122)
   get_soc(mod122)
   }
+}
+\seealso{
+\code{\link{profile_logliks}}
 }

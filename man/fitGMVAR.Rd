@@ -2,7 +2,7 @@
 % Please edit documentation in R/MAINest.R
 \name{fitGMVAR}
 \alias{fitGMVAR}
-\title{Two-phase maximum likelihood estimation of GMVAR model}
+\title{Two-phase maximum likelihood estimation of a GMVAR model}
 \usage{
 fitGMVAR(data, p, M, conditional = TRUE,
   parametrization = c("intercept", "mean"), constraints = NULL,
@@ -19,10 +19,10 @@ a single time series. \code{NA} values are not supported.}
 \item{M}{a positive integer specifying the number of mixture components.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
-should be used. Default is \code{TRUE}.}
+should be used.}
 
 \item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M. Default is \code{"intercept"}.}
+intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -35,7 +35,7 @@ Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be empl
 
 \item{ncalls}{the number of estimation rounds that should be performed.}
 
-\item{ncores}{the number cores to be used in parallel computing.}
+\item{ncores}{the number CPU cores to be used in parallel computing.}
 
 \item{maxit}{the maximum number of iterations in the variable metric algorithm.}
 
@@ -53,7 +53,7 @@ Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Mu
   The estimated parameter vector can be obtained at \code{gmvar$params} (and corresponding approximate standard errors
   at \code{gmvar$std_errors}) and it is...
   \describe{
-    \item{\strong{Regular models:}}{
+    \item{\strong{Unconstrained models:}}{
       a size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} vector that has form
       \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
       ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
@@ -74,39 +74,43 @@ Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Mu
       }
     }
   }
-  Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-  mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
-  \eqn{\alpha_{m}} is the mixing weight parameter.
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
+  the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
+  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
-  of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-  The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.
+  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks
+  columns of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
+  The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} which introduces
+  the GMVAR model.
 
   Remark that the first autocovariance/correlation matrix in \code{$uncond_moments} is for the lag zero,
   the second one for the lag one, etc.
 }
 \description{
-\code{fitGMVAR} estimates GMVAR model in two phases: in the first phase it uses genetic algorithm
-  to find starting values for gradient based variable metric algorithm, which it then uses to finalize the estimation in the second
-  phase. Parallel computing is used to perform multiple rounds of estimations in parallel.
+\code{fitGMVAR} estimates a GMVAR model in two phases: in the first phase it uses a genetic algorithm
+  to find starting values for a gradient based variable metric algorithm, which it then uses to finalize the
+  estimation in the second phase. Parallel computing is utilized to perform multiple rounds of estimations in parallel.
 }
 \details{
 Because of complexity and multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
-   algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in some local maximum
-   point instead. Therefore a number of estimation rounds is required for reliable results. Because of the nature of the model,
-   the estimation may fail especially in the cases where the number of mixture components is chosen too large.
+ algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in
+ some local maximum point instead. Therefore a number of estimation rounds is required for reliable results. Because
+ of the nature of the model, the estimation may fail especially in the cases where the number of mixture components
+ is chosen too large.
 
-   Overall the estimation process is computationally heavy and it might take considerably long time for large models with
-   large number of observations. If the iteration limit \code{maxit} in the variable metric algorithm is reached, one can continue
-   the estimation by iterating more with the function \code{iterate_more}.
+ The estimation process is computationally heavy and it might take considerably long time for large models with
+ large number of observations. If the iteration limit \code{maxit} in the variable metric algorithm is reached,
+ one can continue the estimation by iterating more with the function \code{iterate_more}. Alternatively, one may
+ use the found estimates as starting values for the genetic algorithm and and employ another round of estimation.
 
-   The genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)}, but it includes some extra
-   functionality designed for this particular estimation problem. The genetic algorithm uses (slightly modified) individually
-   adaptive crossover and mutation rates described by \emph{Patnaik and Srinivas (1994)} and employs (50\%) fitness
-   inheritance discussed by \emph{Smith, Dike and Stegmann (1995)}.
+ The code of the genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)} but it
+ includes some extra features that were found useful for this particular estimation problem. For instance,
+ the genetic algorithm uses a slightly modified version of the individually adaptive crossover and mutation
+ rates descriped by \emph{Patnaik and Srinivas (1994)} and employs (50\%) fitness inheritance discussed
+ by \emph{Smith, Dike and Stegmann (1995)}.
 
-   The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim}
-   from the package \code{stats}.
+ The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim}
+ from the package \code{stats}.
 }
 \section{S3 methods}{
 
@@ -132,7 +136,8 @@ plot(fit12)
 summary(fit12)
 
 # GMVAR(2,2) model with mean parametrization
-fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean")
+fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
+                  ncalls=16, seeds=11:26)
 fit22
 
 # GMVAR(2,2) model with autoregressive parameters restricted
@@ -148,7 +153,7 @@ fit22c
 tmp <- matrix(c(1, rep(0, 10), 1, rep(0, 8), 1, rep(0, 10), 1),
  nrow=2*2^2, byrow=FALSE)
 C_mat2 <- rbind(tmp, tmp)
-fit22c2 <- fitGMVAR(data, p=2, M=2, constraints=C_mat2, ncalls=10)
+fit22c2 <- fitGMVAR(data, p=2, M=2, constraints=C_mat2)
 fit22c2
 }
 }
@@ -168,7 +173,7 @@ fit22c2
  }
 }
 \seealso{
-\code{\link{GMVAR}}, \code{\link{iterate_more}}, \code{\link{predict.gmvar}},
+\code{\link{GMVAR}}, \code{\link{iterate_more}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
   \code{\link{simulateGMVAR}}, \code{\link{quantile_residual_tests}}, \code{\link{print_std_errors}},
   \code{\link{swap_parametrization}}, \code{\link{get_gradient}}
 }

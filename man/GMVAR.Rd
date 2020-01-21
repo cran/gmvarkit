@@ -8,7 +8,7 @@
 \alias{summary.gmvar}
 \alias{plot.gmvar}
 \alias{print.gmvar}
-\title{Create object of class 'gmvar' defining a GMVAR model}
+\title{Create a class 'gmvar' object defining a GMVAR model}
 \usage{
 GMVAR(data, p, M, d, params, conditional = TRUE,
   parametrization = c("intercept", "mean"), constraints = NULL,
@@ -37,7 +37,7 @@ used to define GMVAR models without data and can be ignored if \code{data} is pr
 
 \item{params}{a real valued vector specifying the parameter values.
 \describe{
-  \item{\strong{For regular models:}}{
+  \item{\strong{For unconstrained models:}}{
     Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
     \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
     ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
@@ -58,19 +58,19 @@ used to define GMVAR models without data and can be ignored if \code{data} is pr
     }
   }
 }
-Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
+Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
 \eqn{\alpha_{m}} is the mixing weight parameter.
 If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
 \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.}
+The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
-should be used. Default is \code{TRUE}.}
+should be used.}
 
 \item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M. Default is \code{"intercept"}.}
+intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -105,7 +105,7 @@ Returns an object of class \code{'gmvar'} defining the specified GMVAR model. Ca
   the second one for the lag one, etc.
 }
 \description{
-\code{GMVAR} creates an S3 object of class \code{'gmvar'} that defines a GMVAR model
+\code{GMVAR} creates a class \code{'gmvar'} object that defines a GMVAR model
 }
 \details{
 If data is provided, then also multivariate quantile residuals (\emph{Kalliovirta and Saikkonen 2010})
@@ -126,8 +126,8 @@ If data is provided, then also multivariate quantile residuals (\emph{Kalliovirt
 
 \section{S3 methods}{
 
-  Only the print method is available if data is not provided.
-  If data is provided, then the \code{predict} method is also available.
+  Only the \code{print} method is available if data is not provided.
+  If data is provided, then \code{summary}, \code{predict}, and \code{plot} methods are also available.
 }
 
 \examples{

@@ -2,13 +2,13 @@
 % Please edit documentation in R/diagnosticPlot.R
 \name{diagnostic_plot}
 \alias{diagnostic_plot}
-\title{Quantile residual diagnostic plot for GMVAR model}
+\title{Quantile residual diagnostic plot for a GMVAR model}
 \usage{
 diagnostic_plot(gmvar, type = c("series", "ac", "ch", "norm"),
   maxlag = 10)
 }
 \arguments{
-\item{gmvar}{object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
 
 \item{type}{which type of diagnostic plot should be plotted?
 \itemize{
@@ -23,12 +23,12 @@ diagnostic_plot(gmvar, type = c("series", "ac", "ch", "norm"),
 }
 \description{
 \code{diagnostic_plot} plots a multivariate quantile residual diagnostic plot
-  for either autocorrelation, conditional heteroskedasticity, normality or simply draws the
-  quantile residual time series.
+  for either autocorrelation, conditional heteroskedasticity, or normality, or simply draws
+  the quantile residual time series.
 }
 \details{
 Auto- and cross-correlations (types \code{"ac"} and \code{"ch"}) are calculated with the function
- \code{acf} from the package \code{stats} and the plot method for class \code{'acf'} objects is used.
+ \code{acf} from the package \code{stats} and the plot method for class \code{'acf'} objects is employed.
 }
 \examples{
 # These examples use the data 'eurusd' which comes with the
@@ -72,6 +72,6 @@ diagnostic_plot(mod222c, type="ac", maxlag=12)
  }
 }
 \seealso{
-\code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
+\code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
  \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
 }

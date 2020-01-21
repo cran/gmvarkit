@@ -2,16 +2,16 @@
 % Please edit documentation in R/argumentChecks.R
 \name{check_null_data}
 \alias{check_null_data}
-\title{Checks whether the given object contains data or not}
+\title{Checks whether the given object contains data}
 \usage{
 check_null_data(gmvar)
 }
 \arguments{
-\item{gmvar}{object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
 }
 \value{
-Throws an error if is.null(gmvar$data)
+Throws an error if is.null(gmvar$data).
 }
 \description{
-\code{check_null_data} checks that the gmvar-object has data
+\code{check_null_data} checks that the gmvar object has data.
 }

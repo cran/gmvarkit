@@ -15,3 +15,11 @@
 * Added argument "seeds" to fitGMVAR allowing one to set the random number generator seed for each call to the genetic algorithm.
 * New exported function: alt_gmvar
 * Updated the vignette to include the definition of the GMVAR model
+
+# gmvarkit 1.1.2
+
+* New functions: 'profile_logliks' (plot profile log-likelihood functions), 'get_foc' (gradient at the estimates, remember also 'get_soc')
+* Now standard errors are printed correctly for models imposing all kinds of constraints (in earlier versions standard errors for such constrained AR parameters that involved sums or multiplication were incorrect).
+* Minor update on the genetic algorithm.
+* Minor update on the print and summary-print methods. 
+* Improvements on the comments and documentation.

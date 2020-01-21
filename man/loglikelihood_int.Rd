@@ -2,7 +2,7 @@
 % Please edit documentation in R/loglikelihood.R
 \name{loglikelihood_int}
 \alias{loglikelihood_int}
-\title{Compute the log-likelihood of Gaussian Mixture Vector Autoregressive model}
+\title{Compute log-likelihood of a Gaussian Mixture Vector Autoregressive model}
 \usage{
 loglikelihood_int(data, p, M, params, conditional = TRUE,
   parametrization = c("intercept", "mean"), constraints = NULL,
@@ -20,7 +20,7 @@ a single time series. \code{NA} values are not supported.}
 
 \item{params}{a real valued vector specifying the parameter values.
 \describe{
-  \item{\strong{For regular models:}}{
+  \item{\strong{For unconstrained models:}}{
     Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
     \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
     ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
@@ -41,19 +41,19 @@ a single time series. \code{NA} values are not supported.}
     }
   }
 }
-Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
+Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
 \eqn{\alpha_{m}} is the mixing weight parameter.
 If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
 \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.}
+The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
-should be used. Default is \code{TRUE}.}
+should be used.}
 
 \item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M. Default is \code{"intercept"}.}
+intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -64,16 +64,16 @@ For example, to restrict the AR-parameters to be the same for all regimes, set \
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
 
-\item{to_return}{should the returned object be log-likelihood value, mixing weights, mixing weights including
-value for \eqn{alpha_{m,T+1}}, a list containing log-likelihood value and mixing weights or
+\item{to_return}{should the returned object be the log-likelihood value, mixing weights, mixing weights including
+value for \eqn{alpha_{m,T+1}}, a list containing log-likelihood value and mixing weights, or
 the terms \eqn{l_{t}: t=1,..,T} in the log-likelihood function (see \emph{KMS 2016, eq.(9)})? Or should
 the regimewise conditional means, total conditional means, or total conditional covariance matrices
 be returned? Default is the log-likelihood value (\code{"loglik"}).}
 
 \item{check_params}{should it be checked that the parameter vector satisfies the model assumptions? Can be skipped to save
-computation time if it does for sure. Default \code{TRUE}.}
+computation time if it does for sure.}
 
-\item{minval}{value that will be returned if the parameter vector does not lie in the parameter space
+\item{minval}{the value that will be returned if the parameter vector does not lie in the parameter space
 (excluding the identification condition).}
 }
 \value{
@@ -94,11 +94,11 @@ computation time if it does for sure. Default \code{TRUE}.}
  }
 }
 \description{
-\code{loglikelihood_int} computes the log-likelihood of GMVAR model.
+\code{loglikelihood_int} computes log-likelihood of a GMVAR model.
 }
 \details{
-Takes use of the function \code{dmvn} from the package \code{mvnfast} to cut down computation time.
-  Values extremely close to zero are handled with the package \code{Brobdingnag}.
+\code{loglikelihood_int} takes use of the function \code{dmvn} from the package \code{mvnfast}
+  to cut down computation time. Values extremely close to zero are handled with the package \code{Brobdingnag}.
 }
 \references{
 \itemize{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/parameterReforms.R
 \name{sort_components}
 \alias{sort_components}
-\title{Sort components in parameter vector by mixing weights into a decreasing order}
+\title{Sort components in parameter vector according to mixing weights into a decreasing order}
 \usage{
 sort_components(p, M, d, params)
 }
@@ -11,23 +11,24 @@ sort_components(p, M, d, params)
 
 \item{M}{a positive integer specifying the number of mixture components.}
 
-\item{d}{number of time series in the system.}
+\item{d}{the number of time series in the system.}
 
 \item{params}{a real valued vector specifying the parameter values. Should be size
-\eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
-    ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
-    \itemize{
-      \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
-      \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
-      \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
-    }
-Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and \eqn{\alpha_{m}} is the
-mixing weight parameter.
-If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-\eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
-of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notations are in line with the cited article by KMS (2016).}
+  \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
+      ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+      \itemize{
+        \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
+        \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
+        \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
+      }
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
+  the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
+  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
+
+  If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
+  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
+  of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
+  The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.}
 }
 \value{
 Returns sorted parameter vector with \eqn{\alpha_{1}>...>\alpha_{m}}, that has form
@@ -38,16 +39,16 @@ Returns sorted parameter vector with \eqn{\alpha_{1}>...>\alpha_{m}}, that has f
    \item \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})}
    \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
  }
- Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
- component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component and \eqn{\alpha_{m}} is the
+ Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+ component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component, and \eqn{\alpha_{m}} is the
  mixing weight parameter.
  \eqn{vec()} is vectorization operator that stack columns of the given matrix into a vector. \eqn{vech()} stacks columns
  of the given matrix from the principal diagonal downwards (including elements on the diagonal) to form a vector.
- The notations are in line with the cited article by KMS (2016)
+ The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.
 }
 \description{
-\code{sort_components} sorts mixture components in the parameter vector by
-  by mixing weights into a decreasing order.
+\code{sort_components} sorts mixture components in the parameter vector according
+  to mixing weights into a decreasing order.
 }
 \details{
 Constrained parameter vectors are not supported!

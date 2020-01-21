@@ -2,7 +2,7 @@
 % Please edit documentation in R/generateParams.R
 \name{smart_ind}
 \alias{smart_ind}
-\title{Create somewhat random parameter vector of GMVAR model fairly close to a given
+\title{Create random parameter vector of a GMVAR model fairly close to a given
   parameter vector}
 \usage{
 smart_ind(p, M, d, params, constraints = NULL, accuracy = 1,
@@ -14,23 +14,24 @@ smart_ind(p, M, d, params, constraints = NULL, accuracy = 1,
 
 \item{M}{a positive integer specifying the number of mixture components.}
 
-\item{d}{number of time series in the system.}
+\item{d}{the number of time series in the system.}
 
 \item{params}{a real valued vector specifying the parameter values. Should be size
-\eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
-    ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
-    \itemize{
-      \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
-      \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
-      \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
-    }
-Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and \eqn{\alpha_{m}} is the
-mixing weight parameter.
-If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-\eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
-of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notations are in line with the cited article by KMS (2016).}
+  \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
+      ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+      \itemize{
+        \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
+        \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
+        \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
+      }
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
+  the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
+  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
+
+  If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
+  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
+  of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
+  The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -45,30 +46,31 @@ Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be empl
 Larger number means larger accuracy. Read the source code for details.}
 
 \item{which_random}{a vector with length between 1 and M specifying the mixture components that should be random instead of
-close to the given parameter vector. If constraints are employed, then this does not consider AR-coefficients. Default is \code{NULL}.}
+close to the given parameter vector. If constraints are employed, then this does not consider AR coefficients. Default is \code{NULL}.}
 
 \item{mu_scale}{a size \eqn{(dx1)} vector defining \strong{means} of the normal distributions from which each
 mean parameter \eqn{\mu_{m}} is drawn from in random mutations. Default is \code{colMeans(data)}. Note that
-mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}, but
-input (in \code{initpop}) and output (return value) parameter vectors may be intercept-parametrized.}
+mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}.
+However, input (in \code{initpop}) and output (return value) parameter vectors can be intercept-parametrized.}
 
 \item{mu_scale2}{a size \eqn{(dx1)} strictly positive vector defining \strong{standard deviations} of the normal
 distributions from which each mean parameter \eqn{\mu_{m}} is drawn from in random mutations.
 Default is \code{2*sd(data[,i]), i=1,..,d}.}
 
 \item{omega_scale}{a size \eqn{(dx1)} strictly positive vector specifying the scale and variability of the
-random covariance matrices in random mutations. The covariance matrices are drawn from (scaled) Wishart distribution.
-Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard deviations
-of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
+random covariance matrices in random mutations. The covariance matrices are drawn from (scaled) Wishart
+distribution. Expected values of the random covariance matrices are \code{diag(omega_scale)}. Standard
+deviations of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
 and for non-diagonal elements they are \code{sqrt(1/d*omega_scale[i]*omega_scale[j])}.
 Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit} is
 \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}.}
 
-\item{ar_scale}{a positive real number adjusting how large AR parameter values are typically generated in some random
-mutations. See function \code{random_coefmats2} for details. This is ignored when estimating constrained models.}
+\item{ar_scale}{a positive real number adjusting how large AR parameter values are typically generated in
+some random mutations. See the function \code{random_coefmats2} for details. This is ignored when estimating
+constrained models.}
 }
 \value{
-Returns somewhat random mean-parametrized parameter vector that has form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},
+Returns random mean-parametrized parameter vector that has form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},
  ...,\strong{\eqn{\upsilon_{M}}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
  \itemize{
    \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\mu_{m},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
@@ -77,8 +79,8 @@ Returns somewhat random mean-parametrized parameter vector that has form \strong
  }
 }
 \description{
-\code{smart_ind} creates a somewhat random mean-parametrized parameter vector of GMVAR model fairly close to a given
-  parameter vector. The result may not be stationary.
+\code{smart_ind} creates random mean-parametrized parameter vector of a GMVAR model fairly
+ close to a given parameter vector. The result may not be stationary.
 }
 \section{Warning}{
 

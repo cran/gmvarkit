@@ -2,8 +2,7 @@
 % Please edit documentation in R/pickParams.R
 \name{pick_regime}
 \alias{pick_regime}
-\title{Pick regime parameters \strong{\eqn{\upsilon_{m}}}\eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
-  from the given parameter vector.}
+\title{Pick regime parameters \strong{\eqn{\upsilon_{m}}}\eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}}
 \usage{
 pick_regime(p, M, d, params, m)
 }
@@ -16,7 +15,7 @@ pick_regime(p, M, d, params, m)
 
 \item{params}{a real valued vector specifying the parameter values.
 \describe{
-  \item{\strong{For regular models:}}{
+  \item{\strong{For unconstrained models:}}{
     Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
     \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
     ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
@@ -37,13 +36,13 @@ pick_regime(p, M, d, params, m)
     }
   }
 }
-Above \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component and
+Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
 \eqn{\alpha_{m}} is the mixing weight parameter.
 If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
 \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notations are in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)}.}
+The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.}
 
 \item{m}{which component?}
 }

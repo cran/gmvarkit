@@ -1,8 +1,7 @@
 
-
 #' @title Calculate standard errors for estimates of GMVAR model
 #'
-#' @description \code{standard_errors} numerically approximates standard errors for the given estimates of GMVAR model using square
+#' @description \code{standard_errors} numerically calculates approximate standard errors for the GMVAR model using square
 #'   roots of the diagonal of inverse of observed information matrix.
 #'
 #' @inheritParams loglikelihood_int
@@ -43,7 +42,12 @@ standard_errors <- function(data, p, M, params, conditional=TRUE, parametrizatio
 #' @param digits how many digits should be printed?
 #' @details The main purpose of \code{print_std_errors} is to provide a convenient tool to match the standard
 #'   errors to certain parameter estimates.
-#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{print.gmvar}}, \code{\link{swap_parametrization}}
+#'
+#'   Note that if linear constraints are imposed and they involve summations or multiplications, then the AR
+#'   parameter standard errors are printed separately as they don't correspond one-to-one to the model parameter
+#'   standard errors.
+#' @seealso \code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{print.gmvar}},
+#'  \code{\link{swap_parametrization}}
 #' @inherit GMVAR references
 #' @examples
 #' \donttest{
@@ -103,12 +107,26 @@ print_std_errors <- function(gmvar, digits=3) {
     all_mu <- matrix(NA, nrow=d, ncol=M)
     all_phi0 <- all_phi0_or_mu
   }
+  if(!is.null(constraints)) {
+    # The constrained AR parameter standard errors multiplied open in 'pars' are valid only
+    # iff the constraint matrix contains zeros and ones only, and there is at most one one
+    # in each row (no multiplications or summations).
+    if(any(constraints != 1 & constraints != 0) | any(rowSums(constraints) > 1)) {
+      sep_AR <- TRUE # The AR parameter std errors must be printed separately
+      all_A <- array(NA, dim=c(d, d, p, M))
+      AR_stds <- gmvar$std_errors[(M*d + 1):(M*d + ncol(constraints))] # Constrained AR param std errors
+    } else {
+      sep_AR <- FALSE
+    }
+  } else {
+    sep_AR <- FALSE # No constraints imposed
+  }
 
   cat("Model:\n")
   cat(paste0("p = ", p, ", M = ", M, ","),
       ifelse(gmvar$model$conditional, "conditional,", "exact,"),
       ifelse(gmvar$model$parametrization=="mean", "mean parametrization,", "intercept parametrization,"),
-      ifelse(is.null(constraints), "no constraints", "linear constraints employed"), "\n")
+      ifelse(is.null(constraints), "no constraints", "linear constraints imposed"), "\n")
   cat("\n")
   cat("APPROXIMATE STANDARD ERRORS\n\n")
 
@@ -132,7 +150,7 @@ print_std_errors <- function(gmvar, digits=3) {
       df[, tmp_names[count]] <- rep("[", d); count <- count + 1
       df[, Amp_colnames] <- format_value(all_A[, ,i1 , m])
       df[, tmp_names[count]] <- rep("]", d); count <- count + 1
-      df[, tmp_names[count]] <- paste0(Y, ".l", i1); count <- count + 1
+      df[, tmp_names[count]] <- paste0(Y, ".", i1); count <- count + 1
       df <- cbind(df, plus)
     }
     df[, tmp_names[p*(d + 2) + 1]] <- rep("[", d)
@@ -145,6 +163,7 @@ print_std_errors <- function(gmvar, digits=3) {
     print(df)
     cat("\n")
   }
+  if(sep_AR) cat(paste0("AR parameters: ", paste0(format_value(AR_stds), collapse=", ")), "\n\n")
   invisible(gmvar)
 }
 
