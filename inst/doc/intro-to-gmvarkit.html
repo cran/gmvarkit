@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <meta name="author" content="Savi Virolainen" />
 
-<meta name="date" content="2020-01-21" />
+<meta name="date" content="2020-03-12" />
 
 <title>Introduction to gmvarkit</title>
 
@@ -31,9 +31,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -202,7 +199,8 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
 
 
@@ -217,37 +215,41 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <h1 class="title toc-ignore">Introduction to gmvarkit</h1>
 <h4 class="author">Savi Virolainen</h4>
-<h4 class="date">2020-01-21</h4>
+<h4 class="date">2020-03-12</h4>
 
 
 
-<p>The package <code>gmvarkit</code> contains tools to estimate and analyze Gaussian Mixture Vector Autoregressive (GMVAR) model (see Kalliovirta et. al. 2016). We briefly give the definition of the GMVAR model in this vignette, but we do not cover its (very attractive) theoretical and practical properties. The reader is hence adviced to familiarize oneself with the cited article(s).</p>
-<p>The GMVAR models in <code>gmvarkit</code> are defined as class <code>gmvar</code> S3 objects whose can be created with the estimation function <code>fitGMVAR</code> or with the constructor function <code>GMVAR</code>. The created <code>gmvar</code> objects are then be conveniently used as main arguments in many other functions that allow, for example, model diagnostics, simulations and forecasting. Therefore, after estimating a GMVAR model it’s easy to use the other functions for further analyses. However some tasks, such as applying general linear constraints, creating GMVAR models without estimation or setting up initial population for the genetic algorithm employed by the estimation function, require accurate understanding on how the parameter vectors are constructed in this package.</p>
-<p>The notations for (unconstrained) parameter vector are in line with the cited article by Kalliovirta et. al. (2016), but for clarity we repeat these notations in the second section of this vignette. In the third section we show how to apply general linear constraints to the autoregressive parameters of a GMVAR model. Two examples are given to demonstrate how to use the general formula. In the fourth section we have listed some useful functions and methods found in <code>gmvarkit</code> and briefly explain how they work and how to use them.</p>
+<p>The package <code>gmvarkit</code> contains tools to estimate and analyze Gaussian Mixture Vector Autoregressive (GMVAR) model (see Kalliovirta et. al. 2016). We briefly give the definition of the GMVAR model in this vignette, and also very briefly cover some its attractive theoretical and practical properties. For more comprehensive discussion, we refer to the cited article by Kalliovirta, Meitz, and Saikkonen (2016).</p>
+<p>See the readme file for a short introduction on how to use <code>gmvarkit</code>.</p>
+<p>The GMVAR models in <code>gmvarkit</code> are defined as class <code>gmvar</code> S3 objects which can be created with the estimation function <code>fitGMVAR</code> or with the constructor function <code>GMVAR</code>. The created <code>gmvar</code> objects are then be conveniently used as main arguments in many other functions that allow, for example, model diagnostics, simulations, and forecasting. Therefore, after estimating a GMVAR model it’s easy to use the other functions for further analysis. However, some tasks such as imposing linear constraints, creating GMVAR models without estimation, or setting up initial population for the genetic algorithm employed by the estimation function, require accurate understanding on how the parameter vectors are constructed in this package.</p>
+<p>The notations for (unconstrained) parameter vector are in line with the cited article by Kalliovirta et. al. (2016), but for clarity we repeat these notations in the second section of this vignette. In the third section, we show how to apply general linear constraints to the autoregressive parameters of a GMVAR model. Two examples are given to demonstrate how to use the general formula. In the fourth section we have listed some useful functions and methods found in <code>gmvarkit</code> and briefly explain how they work and how to use them.</p>
 <div id="definition-of-the-gmvar-model" class="section level2">
 <h2>Definition of the GMVAR model</h2>
-<p>The Gaussian mixture vector autoregressive (GMVAR) model with <span class="math inline">\(M\)</span> mixture components and autoregressive order <span class="math inline">\(p\)</span>, which we refer to as the GMVAR(<span class="math inline">\(p,M\)</span>) model, is a mixture of <span class="math inline">\(M\)</span> stationary Gaussian VAR(<span class="math inline">\(p\)</span>) models with time varying mixing weights. At each point of time <span class="math inline">\(t\)</span>, a GMVAR process generates an observation from one of its mixture components (which are linear VAR models) according to probabilities pointed by the mixing weights.</p>
+<p>The Gaussian mixture vector autoregressive (GMVAR) model with <span class="math inline">\(M\)</span> mixture components and autoregressive order <span class="math inline">\(p\)</span>, which we refer to as the GMVAR(<span class="math inline">\(p,M\)</span>) model, is a mixture of <span class="math inline">\(M\)</span> stationary Gaussian VAR(<span class="math inline">\(p\)</span>) models with time varying mixing weights. At each point of time <span class="math inline">\(t\)</span>, a GMVAR process generates an observation from one of its mixture components (also called regimes) according to the probabilities pointed by the mixing weights.</p>
 <p>Let <span class="math inline">\(y_t=(y_{1t},...,y_{dt})\)</span>, <span class="math inline">\(t=1,2,...\)</span> be the <span class="math inline">\(d\)</span>-dimensional vector valued time series of interest, and let <span class="math inline">\(\mathcal{F}_{t-1}\)</span> be the <span class="math inline">\(\sigma\)</span>-algebra generated by the random variables <span class="math inline">\(\lbrace y_{t-j},j&gt;0 \rbrace\)</span> (containing the information on the past of <span class="math inline">\(y_t\)</span>). Let <span class="math inline">\(M\)</span> be the number of mixture components, and <span class="math inline">\(\boldsymbol{s}_t=(s_{t,1},...,s_{t,M})\)</span> a sequence of (non-observable) random vectors such that at each <span class="math inline">\(t\)</span> exactly one of its components takes the value one and others take the value zero. The component that takes the value one is selected according to the probabilities <span class="math inline">\(Pr(s_{t,m}=1|\mathcal{F}_{t-1})\equiv\alpha_{m,t}\)</span>, <span class="math inline">\(m=1,...,M\)</span> with <span class="math inline">\(\sum_{m=1}^M\alpha_{m,t}=1\)</span> for all <span class="math inline">\(t\)</span>. Then, for a GMVAR(<span class="math inline">\(p,M\)</span>) model, we have <span class="math display">\[
 y_t = \sum_{m=1}^M s_{t,m}(\mu_{m,t}+\Omega_{m}^{1/2}\varepsilon_t), \quad \varepsilon_t\sim\text{NID}(0,I_d),
 \]</span> where <span class="math inline">\(\Omega_{m}\)</span> is a conditional positive definite covariance matrix, NID stands for “normally and independently distributed”, and <span class="math display">\[
 \mu_{m,t} = \varphi_{m,0} + \sum_{i=1}^p A_{m,i}y_{t-i}
-\]</span> is interpreted as the conditional mean of the <span class="math inline">\(m\)</span>th mixture components. The terms <span class="math inline">\(\varphi_{m,0}\)</span> <span class="math inline">\((d\times 1)\)</span> are intercept parameters and <span class="math inline">\(A_{m,i}\)</span> <span class="math inline">\((d\times d)\)</span> are the autoregressive (AR) matrices. The random vectors <span class="math inline">\(\varepsilon_t\)</span> are assumed to be independent from <span class="math inline">\(\mathcal{F}_{t-1}\)</span> and conditionally indepedent from <span class="math inline">\(\boldsymbol{s}_{t}\)</span> given <span class="math inline">\(\mathcal{F}_{t-1}\)</span>.</p>
+\]</span> is interpreted as the conditional mean of the <span class="math inline">\(m\)</span>th mixture components. The terms <span class="math inline">\(\varphi_{m,0}\)</span> <span class="math inline">\((d\times 1)\)</span> are intercept parameters and <span class="math inline">\(A_{m,i}\)</span> <span class="math inline">\((d\times d)\)</span> are the autoregressive (AR) matrices. The random vectors <span class="math inline">\(\varepsilon_t\)</span> are assumed to be independent from <span class="math inline">\(\mathcal{F}_{t-1}\)</span> and conditionally indepedent from <span class="math inline">\(\boldsymbol{s}_{t}\)</span> given <span class="math inline">\(\mathcal{F}_{t-1}\)</span>. The probabilities <span class="math inline">\(\alpha_{m,t}\)</span> are referred to as the mixing weights.</p>
 <p>For each <span class="math inline">\(m=1,...,M\)</span>, the AR matrices <span class="math inline">\(A_{m,i}\)</span>, <span class="math inline">\(i=1,...,p\)</span> are assumed to satisfy the usual stability condition of VAR models. Namely, denoting <span class="math display">\[
 \boldsymbol{A}_m=
 \begin{bmatrix}
-A_1 &amp; A_2 &amp; \cdots &amp; A_{p-1} &amp; A_p \\
+A_{m,1} &amp; A_{m,2} &amp; \cdots &amp; A_{m,p-1} &amp; A_{m,p} \\
 I_d &amp; 0   &amp; \cdots &amp; 0       &amp; 0   \\
 0   &amp; I_d &amp; \cdots &amp; 0       &amp; 0   \\
 \vdots &amp;  &amp; \ddots &amp; 0       &amp; 0   \\
 0   &amp; 0   &amp; \cdots &amp; I_d     &amp; 0 
 \end{bmatrix}
 \enspace (dp\times dp)
-\]</span> we assume that all the modulus of the eigenvalues of the matrix <span class="math inline">\(\boldsymbol{A}_m\)</span> are smaller than one, for each <span class="math inline">\(m=1,...,M\)</span>.</p>
-<p>Based on the above definition, the conditional density function of <span class="math inline">\(y_t\)</span> given <span class="math inline">\(\mathcal{F}_{t-1}\)</span>, <span class="math inline">\(f(y_t|\mathcal{F}_{t-1})\)</span>, is given as <span class="math display">\[
+\]</span> we assume that modulus of all eigenvalues of the matrix <span class="math inline">\(\boldsymbol{A}_m\)</span> are smaller than one, for each <span class="math inline">\(m=1,...,M\)</span>.</p>
+<p>Based on the above definition, the conditional density function of <span class="math inline">\(y_t\)</span> given <span class="math inline">\(\mathcal{F}_{t-1}\)</span>, <span class="math inline">\(f(\cdot|\mathcal{F}_{t-1})\)</span>, is given as <span class="math display">\[
 f(y_t|\mathcal{F}_{t-1}) = \sum_{m=1}^M\alpha_{m,t}(2\pi)^{-d/2}\det(\Omega_m)^{-1/2}\exp\left\lbrace -\frac{1}{2}(y_t-\mu_{m,t})´\Omega_m^{-1}(y_t-\mu_{m,t}) \right\rbrace .
-\]</span> In order to define the mixing weights <span class="math inline">\(\alpha_{m,t}\)</span>, consider first auxiliary stationary Gaussian VAR-processes <span class="math inline">\(z_{m,t}\)</span>, and the related <span class="math inline">\(dp\)</span>-dimensional random vectors <span class="math inline">\(\boldsymbol{z}_{t,m}=(z_{t,m},...,z_{m,t-p+1})\)</span>. The density of <span class="math inline">\(\boldsymbol{z}_{t,m}\)</span> is <span class="math display">\[
+\]</span> The distribution of <span class="math inline">\(y_t\)</span> given its past is thus a mixture of multivariate normal distributions with time varying mixing weights <span class="math inline">\(\alpha_{m,t}\)</span>. The conditional mean and covariance matrix of <span class="math inline">\(y_t\)</span> given <span class="math inline">\(\mathcal{F}_{t-1}\)</span> are obtained as <span class="math display">\[
+\text{E}[y_t|\mathcal{F}_{t-1}]=\sum_{m=1}^M\alpha_{m,t}\mu_{m,t}, \quad \text{Cov}[y_t|\mathcal{F}_{t-1}]=\sum_{m=1}^M\alpha_{m,t}\Omega_m + \sum_{m=1}^M\alpha_{m,t}\left(\mu_{m,t} - \sum_{n=1}^M\alpha_{n,t}\mu_{n,t} \right)\left(\mu_{m,t} - \sum_{n=1}^M\alpha_{n,t}\mu_{n,t} \right)'.
+\]</span></p>
+<p>In order to define the mixing weights <span class="math inline">\(\alpha_{m,t}\)</span>, consider first auxiliary stationary Gaussian VAR-processes <span class="math inline">\(z_{m,t}\)</span>, and the related <span class="math inline">\(dp\)</span>-dimensional random vectors <span class="math inline">\(\boldsymbol{z}_{t,m}=(z_{t,m},...,z_{m,t-p+1})\)</span>. The density of <span class="math inline">\(\boldsymbol{z}_{t,m}\)</span> is <span class="math display">\[\begin{equation}\label{dpdensities}
 n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(\boldsymbol{\Sigma}_{m,p})^{-1/2}\exp\left\lbrace -\frac{1}{2}(\boldsymbol{z}_{t,m} - \boldsymbol{1}_p\otimes\mu_m)´\boldsymbol{\Sigma}_{m,p}^{-1}(\boldsymbol{z}_{t,m} - \boldsymbol{1}_p\otimes\mu_m)\right\rbrace ,
-\]</span> where <span class="math inline">\(\boldsymbol{1}_p = (1,...,1)\)</span> <span class="math inline">\((p\times 1)\)</span>, <span class="math inline">\(\mu_m=(I_d - \sum_{i=1}^pA_{m,i})^{-1}\varphi_{m,0}\)</span>, and <span class="math inline">\(\boldsymbol{\Sigma}_{m,p}\)</span> is obtained from <span class="math inline">\(vec(\boldsymbol{\Sigma}_{m,p})=(I_{dp^2} - \boldsymbol{A}_m\otimes\boldsymbol{A}_m)^{-1}vec(\Sigma_{m,\varepsilon})\)</span> where <span class="math display">\[
+\end{equation}\]</span> where <span class="math inline">\(\boldsymbol{1}_p = (1,...,1)\)</span> <span class="math inline">\((p\times 1)\)</span>, <span class="math inline">\(\mu_m=(I_d - \sum_{i=1}^pA_{m,i})^{-1}\varphi_{m,0}\)</span>, and <span class="math inline">\(\boldsymbol{\Sigma}_{m,p}\)</span> is obtained from <span class="math inline">\(vec(\boldsymbol{\Sigma}_{m,p})=(I_{dp^2} - \boldsymbol{A}_m\otimes\boldsymbol{A}_m)^{-1}vec(\Sigma_{m,\varepsilon})\)</span> where <span class="math display">\[
 \Sigma_{m,\varepsilon} =
 \begin{bmatrix}
 \Omega_m &amp; 0 &amp; \cdots &amp; 0 \\
@@ -259,13 +261,34 @@ n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(
 \]</span></p>
 <p>Denoting <span class="math inline">\(\boldsymbol{y}_{t-1}=(y_{t-1},...,y_{t-p})\)</span> <span class="math inline">\((dp\times 1)\)</span>, the mixing weights of the GMVAR model are defined as <span class="math display">\[
 \alpha_{m,t} = \frac{\alpha_mn_{dp}(\boldsymbol{y}_{t-1};\mu_m,\boldsymbol{\Sigma}_{m,p})}{\sum_{n=1}^M\alpha_nn_{dp}(\boldsymbol{y}_{t-1};\mu_n,\boldsymbol{\Sigma}_{n,p})},
-\]</span> where the mixing weights parameters <span class="math inline">\(\alpha_m\)</span> are assumed to satisfy <span class="math inline">\(\sum_{m=1}^M\alpha_{m}=1\)</span>. The probabilities for each regime occuring therefore depend on the level, variability, and temporal depedence of the past <span class="math inline">\(p\)</span> observations.</p>
+\]</span> where the mixing weights parameters <span class="math inline">\(\alpha_m\)</span> are assumed to satisfy <span class="math inline">\(\sum_{m=1}^M\alpha_{m}=1\)</span> and the <span class="math inline">\(dp\)</span>-dimensional normal densities are as in (). The probabilities for each regime occuring therefore depend on the level, variability, and temporal depedence of the past <span class="math inline">\(p\)</span> observations. This is a convenient feature for forecasting but it also enables the researcher to associate certain characteristics to different regimes.</p>
+</div>
+<div id="some-theoretical-properties-of-gmvar-model" class="section level2">
+<h2>Some theoretical properties of GMVAR model</h2>
+<div id="stationary-distribution" class="section level3">
+<h3>Stationary distribution</h3>
+<p> Consider the GMVAR process <span class="math inline">\(y_t\)</span> that satisfies the model assumptions. Then <span class="math inline">\(\boldsymbol{y}_t=(y_t,...,y_{t-p+1})\)</span> is a Markov Chain on <span class="math inline">\(\mathbb{R}^{dp}\)</span> with stationary distribution characterized by the density <span class="math display">\[
+f(\boldsymbol{y};\boldsymbol{\theta})=\sum_{m=1}^M\alpha_m n_{dp}(\boldsymbol{y};\upsilon_m).
+\]</span> Moreover, <span class="math inline">\(\boldsymbol{y}_t\)</span> is ergodic.</p>
+<p>Theorem 1 shows that the stationary distribution of <span class="math inline">\(\boldsymbol{y}_t\)</span> is a mixture of M multinormal distributions with constant mixing weights <span class="math inline">\(\alpha_m\)</span>. Consequently, all moments of the stationary distribution exist and are finite.</p>
+</div>
+<div id="interpretation-of-the-mixing-weights-alpha_m-and-alpha_mt" class="section level3">
+<h3>Interpretation of the mixing weights <span class="math inline">\(\alpha_m\)</span> and <span class="math inline">\(\alpha_{m,t}\)</span></h3>
+<p>According to Theorem 1 <span class="math inline">\(\alpha_m\)</span> immediately has the interpretation as the unconditional probability of the random vector <span class="math inline">\(\boldsymbol{y}_t\)</span> being generated from the <span class="math inline">\(m\)</span>th mixture component. Consequently <span class="math inline">\(\alpha_m\)</span> also represents the unconditional probability of the component <span class="math inline">\(y_t\)</span> being generated from the <span class="math inline">\(m\)</span>th mixture component (see Kalliovirta et al. 2016, Section 3.3 for more details).</p>
+<p>As noted, the mixing weights <span class="math inline">\(\alpha_{m,t}\)</span> are the conditional probabilities for the random vector <span class="math inline">\(y_t\)</span> being generated from the <span class="math inline">\(m\)</span>th mixture component. According the definition of the mixing weights, regimes with higher likelihood of the past <span class="math inline">\(p\)</span> observations are more likeli to generate the new observations but the likelihoods are also scaled with the mixing weight parameters <span class="math inline">\(\alpha_m\)</span>.</p>
+</div>
+<div id="properties-of-the-maximum-likelihood-estimator" class="section level3">
+<h3>Properties of the maximum likelihood estimator</h3>
+<p>Under general conditions (see Kalliovirta et al. 2016, Assumption 1), the maximum likelihood estimator for the parameters of the GMVAR model is strongly consistent.</p>
+<p>Under general conditions (namely, Assumptions 1 and 2 in Kalliovirta et al. 2016), the maximum likelihood estimator has the conventional limiting distribution (normal).</p>
+</div>
 </div>
 <div id="general-notations-and-unconstrained-models" class="section level2">
 <h2>General notations and unconstrained models</h2>
+<p>In this section, we cover the notation for parameter vectors (the same as in Kalliovirta et al. 2016 for unconstrained models) and explain how to impose linear constraints in <code>gmvarkit</code>.</p>
 <div id="general-notations" class="section level3">
 <h3>General notations</h3>
-<p>Defining a GMVAR model requires specifying the autoregressive degree <em>p</em> and the number of mixture components <em>M</em>. The number of time series in the system is denoted by <em>d</em>, and it’s assumed that <em>d</em> is larger than one.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> The form of the parameter vector depends on whether an unconstrained or constrained model is considered.</p>
+<p>Specifying the order of a GMVAR model requires specifying the autoregressive order <em>p</em> and the number of mixture components <em>M</em>. The number of time series in the system is denoted by <em>d</em>, and it’s assumed that <em>d</em> is larger than one.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> The form of the parameter vector depends on whether an unconstrained or constrained model is considered.</p>
 </div>
 <div id="parameter-vector-of-unconstrained-model" class="section level3">
 <h3>Parameter vector of unconstrained model</h3>
@@ -317,8 +340,9 @@ n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(
 <div id="estimating-a-gmvar-model" class="section level3">
 <h3>Estimating a GMVAR model</h3>
 <p><code>gmvarkit</code> provides the function <code>fitGMVAR</code> for estimating a GMVAR model. The maximum likelihood estimation is performed in two phases: in the first phase <code>fitGMVAR</code> uses a genetic algorithm to find starting values for gradient based variable metric algorithm, which it then uses to finalize the estimation in the second phase. It’s important to keep in mind that it’s not guaranteed that the numerical estimation algorithms end up in the global maximum point rather than a local one. Because of multimodality and challenging surface of the log-likelihood function, it’s actually expected that most of the estimation rounds won’t find the global maximum point. For this reason one should always perform multiple estimation rounds. Parallel computing is used to obtain the results faster. The number of CPU cores used can be set with the argument <code>ncores</code>, and the number of estimation rounds can be controlled with the argument <code>ncalls</code>.</p>
-<p>If the model estimates poorly, it is often because the number of mixture components <em>M</em> is chosen too large. One may also adjust the settings of the genetic algorithm employed, or set up an initial population with guesses for the estimates. This can by done by passing arguments in <code>fitGMVAR</code> to the function <code>GAfit</code> which implements the genetic algorithm. To check the available settings, read the documentation <code>?GAfit</code>. If the iteration limit is reached when estimating the model, the function <code>iterate_more</code> can be used to finish the estimation.</p>
-<p>Parameters of the estimated model are printed in an illustrative and easy to read form. In order to easily compare approximate standard errors to certain estimates, one can print the approximate standard errors of the estimates in the same form with the function <code>print_std_errors</code>. Numerical approximation of the gradient and Hessian matrix of the log-likelihood at the estimates can be obtained conveniently with the functions <code>get_gradient</code> and <code>get_hessian</code>, and eigenvalues of the Hessian can be obtained with the function <code>get_soc</code>.</p>
+<p>If the model estimates poorly, it is often because the number of mixture components <em>M</em> is chosen too large. One reason for is that the genetic algorithm is (with the default settings) designed to find solutions with non-zero mixing weights for all regimes. One may also adjust the settings of the genetic algorithm employed, or set up an initial population with guesses for the estimates. This can by done by passing arguments in <code>fitGMVAR</code> to the function <code>GAfit</code> which implements the genetic algorithm. To check the available settings, read the documentation <code>?GAfit</code>. If the iteration limit is reached when estimating the model, the function <code>iterate_more</code> can be used to finish the estimation.</p>
+<p>Parameters of the estimated model are printed in an illustrative and easy to read form. In order to easily compare approximate standard errors to certain estimates, one can print the approximate standard errors of the estimates in the same form with the function <code>print_std_errors</code>. Numerical approximation of the gradient and Hessian matrix of the log-likelihood at the estimates can be obtained conveniently with the functions <code>get_gradient</code> or <code>get_foc</code> and <code>get_hessian</code>, and eigenvalues of the Hessian can be obtained with the function <code>get_soc</code>.</p>
+<p>Profile log-likelihood functions of the parameters around the estimates can be plotted with the function <code>profile_logliks</code>.</p>
 <p>The estimated objects have their own print, plot, and summary methods.</p>
 <p>The function <code>alt_gmvar</code> can be used to build GMVAR model based on an arbitrary estimation round. This can be used to consider estimates pointed by local maximums instead of the ML estimate.</p>
 </div>
@@ -337,7 +361,7 @@ n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(
 </div>
 <div id="forecasting-gmvar-process" class="section level3">
 <h3>Forecasting GMVAR process</h3>
-<p>The package <code>gmvarkit</code> contains predict method <code>predict.gmvar</code> for forecasting GMVAR processes. For one step predictions using the exact formula for conditional mean is supported, but the forecasts further than that are based on independent simulations. The predictions are either sample means or medians and the confidence intervals are based on sample quantiles. The objects generated by <code>predict.gmvar</code> have their own plot method. We also encourage directly using the function <code>simulateGMVAR</code> for forecasting.</p>
+<p>The package <code>gmvarkit</code> contains predict method <code>predict.gmvar</code> for forecasting GMVAR processes. For one step predictions using the exact formula for conditional mean is supported, but the forecasts further than that are based on independent simulations. The predictions are either sample means or medians and the confidence intervals are based on sample quantiles. The objects generated by <code>predict.gmvar</code> have their own plot method. We also encourage directly using the function <code>simulateGMVAR</code> for forecasting (see the forecasting example in the documentation <code>?simulateGMVAR</code>).</p>
 </div>
 <div id="univariate-analysis" class="section level3">
 <h3>Univariate analysis</h3>
@@ -358,6 +382,9 @@ n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(
 </ol>
 </div>
 
+
+
+<!-- code folding -->
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

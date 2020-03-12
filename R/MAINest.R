@@ -98,7 +98,7 @@
 #' # package, but in a scaled form (similar to Kalliovirta et al. 2016).
 #' data(eurusd, package="gmvarkit")
 #' data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-#' colnames(data) <- colnames(eurusd)
+#' colnames(dat) <- colnames(eurusd)
 #'
 #' # GMVAR(1,2) model: 10 estimation rounds with seeds set
 #' # for reproducibility
@@ -109,7 +109,7 @@
 #'
 #' # GMVAR(2,2) model with mean parametrization
 #' fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
-#'                   ncalls=16, seeds=11:26)
+#'                   ncalls=16, seeds=1:16)
 #' fit22
 #'
 #' # GMVAR(2,2) model with autoregressive parameters restricted
@@ -129,7 +129,6 @@
 #' fit22c2
 #' }
 #' @export
-
 
 fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL, ncalls=round(10 + 9*log(M)),
                      ncores=min(2, ncalls, parallel::detectCores()), maxit=300, seeds=NULL, print_res=TRUE, ...) {
@@ -165,7 +164,6 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
   cat("Optimizing with the genetic algorithm...\n")
   GAresults <- pbapply::pblapply(1:ncalls, function(i1) GAfit(data=data, p=p, M=M, conditional=conditional, parametrization=parametrization,
                                                               constraints=constraints, seed=seeds[i1], ...), cl=cl)
-  parallel::stopCluster(cl=cl)
 
   loks <- vapply(1:ncalls, function(i1) loglikelihood_int(data, p, M, params=GAresults[[i1]], conditional=conditional,
                                                           parametrization=parametrization, constraints=constraints,
@@ -182,7 +180,6 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
     print_loks()
   }
 
-
   ### Optimization with the variable metric algorithm###
   loglik_fn <- function(params) {
     tryCatch(loglikelihood_int(data, p, M, params=params, conditional=conditional, parametrization=parametrization,
@@ -195,12 +192,8 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
     vapply(1:npars, function(i1) (loglik_fn(params + I[i1,]*h) - loglik_fn(params - I[i1,]*h))/(2*h), numeric(1))
   }
 
-  cl <- parallel::makeCluster(ncores)
-  parallel::clusterExport(cl, ls(environment(fitGMVAR)), envir = environment(fitGMVAR)) # assign all variables from package:gmvarkit
-  parallel::clusterEvalQ(cl, c(library(Brobdingnag), library(mvnfast), library(pbapply)))
-
   cat("Optimizing with variable metric algorithm...\n")
-  NEWTONresults <- pbapply::pblapply(1:ncalls, function(i1) optim(par=GAresults[[i1]], fn=loglik_fn, gr=loglik_grad, method=c("BFGS"),
+  NEWTONresults <- pbapply::pblapply(1:ncalls, function(i1) optim(par=GAresults[[i1]], fn=loglik_fn, gr=loglik_grad, method="BFGS",
                                                                   control=list(fnscale=-1, maxit=maxit)), cl=cl)
   parallel::stopCluster(cl=cl)
 
@@ -224,7 +217,7 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
     all_estimates <- lapply(all_estimates, function(pars) sort_components(p=p, M=M, d=d, params=pars))
   }
   if(best_fit$convergence == 1) {
-    message("Iteration limit was reached when estimating the best fitting individual! Consider further estimations with the function 'iterate_more()'")
+    message("Iteration limit was reached when estimating the best fitting individual! Consider further estimations with the function 'iterate_more'")
   }
   mixing_weights <- loglikelihood_int(data=data, p=p, M=M, params=params, conditional=conditional,
                                       parametrization=parametrization, constraints=constraints,

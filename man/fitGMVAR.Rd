@@ -4,11 +4,20 @@
 \alias{fitGMVAR}
 \title{Two-phase maximum likelihood estimation of a GMVAR model}
 \usage{
-fitGMVAR(data, p, M, conditional = TRUE,
-  parametrization = c("intercept", "mean"), constraints = NULL,
-  ncalls = round(10 + 9 * log(M)), ncores = min(2, ncalls,
-  parallel::detectCores()), maxit = 300, seeds = NULL,
-  print_res = TRUE, ...)
+fitGMVAR(
+  data,
+  p,
+  M,
+  conditional = TRUE,
+  parametrization = c("intercept", "mean"),
+  constraints = NULL,
+  ncalls = round(10 + 9 * log(M)),
+  ncores = min(2, ncalls, parallel::detectCores()),
+  maxit = 300,
+  seeds = NULL,
+  print_res = TRUE,
+  ...
+)
 }
 \arguments{
 \item{data}{a matrix or class \code{'ts'} object with \code{d>1} columns. Each column is taken to represent
@@ -126,7 +135,7 @@ Because of complexity and multimodality of the log-likelihood function, it's \st
 # package, but in a scaled form (similar to Kalliovirta et al. 2016).
 data(eurusd, package="gmvarkit")
 data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-colnames(data) <- colnames(eurusd)
+colnames(dat) <- colnames(eurusd)
 
 # GMVAR(1,2) model: 10 estimation rounds with seeds set
 # for reproducibility
@@ -137,7 +146,7 @@ summary(fit12)
 
 # GMVAR(2,2) model with mean parametrization
 fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
-                  ncalls=16, seeds=11:26)
+                  ncalls=16, seeds=1:16)
 fit22
 
 # GMVAR(2,2) model with autoregressive parameters restricted
