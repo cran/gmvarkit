@@ -31,24 +31,126 @@ reform_data <- function(data, p) {
 #'  No argument checks!
 #' @inherit in_paramspace_int references
 
-reform_constrained_pars <- function(p, M, d, params, constraints=NULL, change_na=FALSE) {
-  if(is.null(constraints)) {
+reform_constrained_pars <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, change_na=FALSE) {
+  if(is.null(constraints) && is.null(structural_pars)) {
+    return(params)
+  } else if(is.null(constraints) && !is.null(structural_pars) && !any(structural_pars$W == 0, na.rm=TRUE) && is.null(structural_pars$C_lambda)) {
     return(params)
   }
-  q <- ncol(constraints)
-  psi <- params[(M*d + 1):(M*d + q)]
-  if(change_na) {
-    if(length(psi[is.na(psi)]) > 0) warning("Replaced some NA values with -9.999")
-    psi[is.na(psi)] <- -9.999
+
+  # Obtain the AR coefficients from the constraints
+  if(is.null(constraints)) { # For SGMVAR model with constrained structural parameters but no AR constraints
+    q <- M*p*d^2
+    psi_expanded <- params[(d*M + 1):(d*M + d^2*p*M)] # AR coefficients (without constraints)
+  } else {
+    q <- ncol(constraints)
+    psi <- params[(M*d + 1):(M*d + q)]
+    if(change_na) {
+      if(anyNA(psi)) {
+        warning("Replaced some NA values with -9.999")
+        psiNA <- TRUE
+      } else {
+        psiNA <- FALSE
+      }
+      psi[is.na(psi)] <- -9.999
+    }
+    psi_expanded <- constraints%*%psi
   }
-  psi_expanded <- constraints%*%psi
-  pars <- as.vector(vapply(1:M, function(m) c(params[((m - 1)*d + 1):(m*d)], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
-                                              params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1):(M*d + q + m*d*(d + 1)/2)]),
-                    numeric(p*d^2 + d + d*(d + 1)/2)))
+
+  if(is.null(structural_pars)) { # Reduced form model
+    pars <- as.vector(vapply(1:M, function(m) c(params[((m - 1)*d + 1):(m*d)], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
+                                                params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1):(M*d + q + m*d*(d + 1)/2)]),
+                             numeric(p*d^2 + d + d*(d + 1)/2)))
+  } else { # Structural model
+    W <- structural_pars$W # Obtain the indices with zero constraints (the zeros don't exist in params)
+    n_zeros <- sum(W == 0, na.rm=TRUE)
+    new_W <- numeric(d^2)
+    W_pars <- params[(d*M + q + 1):(d*M + q + d^2 - n_zeros)]
+    new_W[W != 0 | is.na(W)] <- W_pars
+
+    if(M > 1) {
+      if(!is.null(structural_pars$C_lambda)) {
+        r <- ncol(structural_pars$C_lambda)
+        gamma <- params[(d*M + q + d^2 - n_zeros + 1):(d*M + q + d^2 - n_zeros + r)]
+        if(change_na) {
+          if(anyNA(gamma) && !psiNA) warning("Replaced some NA values with -9.999")
+          gamma[is.na(gamma)] <- -9.999
+        }
+        lambdas <- structural_pars$C_lambda%*%gamma
+      } else {
+        lambdas <- params[(d*M + q + d^2 - n_zeros + 1):(d*M + q + d^2 - n_zeros + d*(M - 1))]
+      }
+    } else {
+      lambdas <- numeric(0)
+    }
+    pars <- c(params[1:(M*d)], psi_expanded, vec(new_W), lambdas)
+  }
+
   if(M == 1) {
     return(pars)
   } else {
-    return(c(pars, params[(M*d + q + M*d*(d + 1)/2 + 1):(M*d + q + M*d*(d + 1)/2 + M - 1)]))
+    return(c(pars, params[(length(params) - M + 2):length(params)]))
+  }
+}
+
+
+#' @title Reform structural parameter vector into the "standard" form
+#'
+#' @description \code{reform_structural_pars} reforms (unconstrained) structural
+#'   parameter vector into the form that corresponds to reduced form parameter vectors.
+#'
+#' @inheritParams loglikelihood_int
+#' @inheritParams is_stationary
+#' @details If the structural parameter vector is a constrained one, use
+#'   \code{reform_constrained_pars} first to remove the constraints.
+#' @return Returns (unconstrained) "reduced form model" parameter vector.
+#' @section Warning:
+#'  No argument checks!
+#' @inherit in_paramspace_int references
+
+reform_structural_pars <- function(p, M, d, params, structural_pars=NULL) {
+  if(is.null(structural_pars)) {
+    return(params)
+  }
+  Omegas <- pick_Omegas(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+  allA <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+  phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+  make_upsilon <- function(phi0, Am, Omega) c(phi0, vec(Am), vech(Omega))
+  n_upsilon_pars <- d^2*p + d + d*(d + 1)/2
+  pars <- numeric(M*n_upsilon_pars) # no alphas
+  for(m in 1:M) {
+    pars[((m - 1)*n_upsilon_pars + 1):(m*n_upsilon_pars)] <- c(phi0[, m], as.vector(allA[, , , m]), vech(Omegas[, , m]))
+  }
+  if(M == 1) {
+    ret <- pars
+  } else {
+    alphas <- pick_alphas(p=p, M=M, d=d, params=params)
+    ret <- c(pars, alphas[-M]) # + alphas
+  }
+  ret
+}
+
+
+#' @title Get structural parameters that indicate there are no constraints
+#'
+#' @description \code{get_unconstrained_struct_pars} return structural parameters that indicate there are no constraints
+#'  (except possibly sign constraints).
+#'
+#' @inheritParams loglikelihood_int
+#' @return Returns a list with \code{$W} being \eqn{(d x d)} matrix of ones and \code{$C_lambda} being \code{NULL}. If the
+#'   supplied argument is \code{NULL}, returns \code{NULL}.
+#' @details Intended to be called after calling the function \code{reform_constrained_pars} to avoid remove the constraints
+#'   again in any further function calls as this will create bugs. Sign constraints are irrelevant in this context.
+#' @section Warning:
+#'  No argument checks!
+
+get_unconstrained_structural_pars <- function(structural_pars=NULL) {
+  if(is.null(structural_pars)) {
+    return(NULL)
+  } else {
+    d <- nrow(structural_pars$W)
+    new_W <- matrix(rep(1, d^2), nrow=d)
+    return(list(W=new_W))
   }
 }
 
@@ -80,36 +182,76 @@ form_boldA <- function(p, M, d, all_A) {
 #'   to mixing weights into a decreasing order.
 #'
 #' @inheritParams is_stationary
-#' @details Constrained parameter vectors are not supported!
-#' @return Returns sorted parameter vector with \eqn{\alpha_{1}>...>\alpha_{m}}, that has form
-#'   \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},...,\strong{\eqn{\upsilon_{M}}},
-#'   \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
-#'  \itemize{
-#'    \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
-#'    \item \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})}
-#'    \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
-#'  }
-#'  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
-#'  component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component, and \eqn{\alpha_{m}} is the
-#'  mixing weight parameter.
-#'  \eqn{vec()} is vectorization operator that stack columns of the given matrix into a vector. \eqn{vech()} stacks columns
-#'  of the given matrix from the principal diagonal downwards (including elements on the diagonal) to form a vector.
-#'  The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.
+#' @details Constrained parameter vectors are not supported (expect for constraints in W)!
+#'   For structural models, the order of the first mixture component is fixed by construction,
+#'   so the rest \eqn{m=2,...,M} mixture components are rearranged only by the mixing weight
+#'   parameters.
+#' @return Returns sorted parameter vector...
+#'   \describe{
+#'     \item{\strong{For reduced form GMVAR model:}}{
+#'        ...with \eqn{\alpha_{1}>...>\alpha_{M}}, that has form
+#'        \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},...,\strong{\eqn{\upsilon_{M}}},
+#'        \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+#'        \itemize{
+#'          \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
+#'          \item \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})}
+#'          \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
+#'        }
+#'     }
+#'     \item{\strong{For structural GMVAR model:}}{
+#'      ...with \eqn{\alpha_{2}>...>\alpha_{M}}, that has form
+#'       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+#'       vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+#'       \itemize{
+#'         \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+#'       }
+#'     }
+#'   }
+#'   Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+#'   component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component, and \eqn{\alpha_{m}} is the
+#'   mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the error term covariance
+#'   matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
+#'
+#'   \eqn{vec()} is vectorization operator that stack columns of the given matrix into a vector. \eqn{vech()} stacks columns
+#'   of the given matrix from the principal diagonal downwards (including elements on the diagonal) to form a vector.
+#'   The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace_int references
 
-sort_components <- function(p, M, d, params) {
+sort_components <- function(p, M, d, params, structural_pars=NULL) {
   alphas <- pick_alphas(p=p, M=M, d=d, params=params)
-  ord <- order(alphas, decreasing=TRUE, method="radix")
-  if(all(ord == 1:M)) {
-    return(params)
-  } else {
-    q <- d + p*d^2 + d*(d + 1)/2
-    qm1 <- (1:M - 1)*q
-    qm <- qm1[ord]
-    pars <- vapply(1:M, function(m) params[(qm[m] + 1):(qm[m] + q)], numeric(q))
-    c(pars, alphas[ord][-M])
+
+  if(is.null(structural_pars)) { # Reduced form model: sort all components by mixing weights
+    ord <- order(alphas, decreasing=TRUE, method="radix")
+    if(all(ord == 1:M)) {
+      return(params)
+    } else {
+      q <- d + p*d^2 + d*(d + 1)/2
+      qm1 <- (1:M - 1)*q
+      qm <- qm1[ord]
+      pars <- vapply(1:M, function(m) params[(qm[m] + 1):(qm[m] + q)], numeric(q))
+      return(c(pars, alphas[ord][-M]))
+    }
+  } else { # Structural model: sort the component 2,...,M by mixing weights (M > 2)
+    if(M < 3) return(params)
+    ord <- order(alphas[-1], decreasing=TRUE, method="radix")
+    if(all(ord == 1:(M - 1))) {
+      return(params)
+    } else {
+      n_zeros <- sum(structural_pars$W == 0)
+      phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+      A <- matrix(params[(d*M + 1):(d*M + d^2*p*M)], nrow=d^2*p, byrow=FALSE)
+      lambdas <- matrix(params[(d*M + d^2*p*M + d^2 - n_zeros + 1):(d*M + d^2*p*M + d^2 - n_zeros + d*(M - 1))],
+                        nrow=d, byrow=FALSE)
+      sort_pars <- function(parmat) c(parmat[,1], as.vector(parmat[,-1][,ord]))
+      new_phi0 <- sort_pars(phi0)
+      new_allA <- sort_pars(A)
+      new_lambdas <- as.vector(lambdas[,ord])
+      new_W <- params[(d*M + d^2*p*M + 1):(d*M + d^2*p*M + d^2 - n_zeros)]
+      new_alphas <- c(alphas[1], alphas[-1][ord])[-M]
+      return(c(new_phi0, new_allA, new_W, new_lambdas, new_alphas))
+    }
   }
 }
 
@@ -130,15 +272,15 @@ sort_components <- function(p, M, d, params) {
 #'  No argument checks!
 #' @inherit is_stationary references
 
-change_parametrization <- function(p, M, d, params, constraints=NULL, change_to=c("intercept", "mean")) {
+change_parametrization <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, change_to=c("intercept", "mean")) {
   re_params <- params
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints) # Parameters in regular form
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars) # Parameters in regular form
   change_to <- match.arg(change_to)
   Id <- diag(nrow=d)
-  all_A <- pick_allA(p=p, M=M, d=d, params=params)
-  all_phi0_or_mu <- pick_phi0(p=p, M=M, d=d, params=params)
+  all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+  all_phi0_or_mu <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
 
-  if(is.null(constraints)) {
+  if(is.null(constraints) && is.null(structural_pars)) {
     qm1 <- (1:M - 1)*(d + p*d^2 + d*(d + 1)/2)
   } else {
     qm1 <- (1:M - 1)*d
@@ -164,18 +306,29 @@ change_parametrization <- function(p, M, d, params, constraints=NULL, change_to=
 #'   of the pointed regime to the new given parameters.
 #'
 #' @inheritParams pick_regime
-#' @param regime_pars a size \eqn{((pd^2+d+d(d+1)/2)x1)} vector
-#'   \strong{\eqn{\upsilon_{m}}}\eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}.
+#' @param regime_pars
+#'   \describe{
+#'     \item{For reduced form models:}{a size \eqn{((pd^2+d+d(d+1)/2)x1)} vector
+#'       \strong{\eqn{\upsilon_{m}}}\eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}.}
+#'     \item{For structural models:}{a length \eqn{pd^2 + d} vector \eqn{(\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{)}.}
+#'   }
 #' @return Returns parameter vector with \code{m}:th regime changed to \code{regime_pars}.
+#' @details Does not currently support models with AR or lambda parameter constraints.
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace_int references
 
-
-change_regime <- function(p, M, d, params, m, regime_pars) {
-  qm1 <- (m-1)*(d + p*d^2 + d*(d + 1)/2)
-  params[(qm1 + 1):(qm1 + d + p*d^2 + d*(d + 1)/2)] <- regime_pars
-  params
+change_regime <- function(p, M, d, params, m, regime_pars, structural_pars=NULL) {
+  if(is.null(structural_pars)) {
+    qm1 <- (m - 1)*(d + p*d^2 + d*(d + 1)/2)
+    params[(qm1 + 1):(qm1 + d + p*d^2 + d*(d + 1)/2)] <- regime_pars
+    return(params)
+  } else {
+    n_zeros <- sum(structural_pars$W == 0, na.rm=TRUE)
+    params[(d*(m - 1) + 1):(d*m)] <- regime_pars[1:d] # phi0
+    params[(d*M + d^2*p*(m - 1) + 1):(d*M + d^2*p*(m - 1) + d^2*p)] <- regime_pars[(d + 1):(d + d^2*p)] # AR coefs
+    return(params)
+  }
 }
 
 

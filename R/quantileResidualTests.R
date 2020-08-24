@@ -17,8 +17,9 @@
 #'   associated (vectorized) individual statistics divided by their standard errors
 #'   (see \emph{Kalliovirta and Saikkonen 2010}, s.17-20) under the label \code{$ind_stats}.
 #' @inherit quantile_residuals references
-#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residuals}},
+#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residuals}}, \code{\link{GIRF}},
 #'   \code{\link{diagnostic_plot}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
+#'   \code{\link{LR_test}}, \code{\link{Wald_test}}
 #' @examples
 #' \donttest{
 #' ## These are long running examples that use parallel computing!
@@ -30,14 +31,24 @@
 #'
 #' # GMVAR(1,2) model with default settings
 #' fit12 <- fitGMVAR(data, p=1, M=2)
-#' qrtests12 <- quantile_residual_tests(fit12, nsimu=1)
+#' qrtests12 <- quantile_residual_tests(fit12)
 #' qrtests12
 #' plot(qrtests12)
+#'
+#' # Structural GMVAR(1,2) model identified with sign
+#' # constraints. The sign constraints (which fully identify
+#' # the shocks) are in line with the reduced form model,
+#' # so the test results are the same.
+#' W_122 <- matrix(c(1, NA, -1, 1), nrow=2)
+#' fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+#'   ncalls=10, seeds=1:10)
+#' qrtests12s <- quantile_residual_tests(fit12s)
+#' qrtests12s
 #'
 #' # GMVAR(2,2) model with mean parametrization
 #' fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
 #'   ncalls=1, seeds=20)
-#' qrtests22 <- quantile_residual_tests(fit22, nsimu=1)
+#' qrtests22 <- quantile_residual_tests(fit22)
 #' qrtests22
 #'
 #' # GMVAR(2,2) model with autoregressive parameters restricted
@@ -60,6 +71,7 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1:2, 4, 8), lags_ch=lags_ac
   conditional <- gmvar$model$conditional
   parametrization <- gmvar$model$parametrization
   constraints <- gmvar$model$constraints
+  structural_pars <- gmvar$model$structural_pars
   params <- gmvar$params
   data <- gmvar$data
   n_obs <- nrow(data)
@@ -85,7 +97,8 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1:2, 4, 8), lags_ch=lags_ac
       }
     }
     omg <- tryCatch(get_test_Omega(data=omega_data, p=p, M=M, params=params, conditional=conditional,
-                                   parametrization=parametrization, constraints=constraints, g=g, dim_g=dim_g),
+                                   parametrization=parametrization, constraints=constraints,
+                                   structural_pars=structural_pars, g=g, dim_g=dim_g),
                     error=function(e) {
                       print_message(which_test, which_lag, because_of="because of numerical problems")
                       return(NA)
@@ -232,7 +245,7 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1:2, 4, 8), lags_ch=lags_ac
 #' @return Returns the covariance matrix Omega described by \emph{Kalliovirta and Saikkonen 2010}.
 #' @inherit quantile_residuals references
 
-get_test_Omega <- function(data, p, M, params, conditional, parametrization, constraints, g, dim_g) {
+get_test_Omega <- function(data, p, M, params, conditional, parametrization, constraints, structural_pars=NULL, g, dim_g) {
 
   n_obs <- nrow(data)
   T_obs <- n_obs - p
@@ -241,15 +254,17 @@ get_test_Omega <- function(data, p, M, params, conditional, parametrization, con
 
   # Function used to to calculate gradient for function g
   g_fn <- function(pars) {
-    mod <- GMVAR(data=data, p=p, M=M, d=d, params=pars, conditional=conditional,
-                 parametrization=parametrization, constraints=constraints)
-    g(quantile_residuals(mod)) # a row for each t=1,...,T and column for each output of g
+    qresiduals <- quantile_residuals_int(data=data, p=p, M=M, params=pars, conditional=conditional,
+                                         parametrization=parametrization, constraints=constraints,
+                                         structural_pars=structural_pars)
+    g(qresiduals) # a row for each t=1,...,T and column for each output of g
   }
 
   # Function used to calculate gradient for log-likelihood
   loglik_fn <- function(pars) {
     loglikelihood_int(data, p, M, params=pars, conditional=conditional, parametrization=parametrization,
-                      constraints=constraints, check_params=TRUE, to_return="terms", minval=minval)
+                      constraints=constraints, structural_pars=structural_pars, check_params=TRUE,
+                      to_return="terms", minval=minval)
   }
 
   npars <- length(params)

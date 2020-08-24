@@ -41,6 +41,13 @@ A11_112 <- matrix(c(1.25, 0.06, 0.04, 1.34), nrow=2, byrow=FALSE)
 Omega1_112 <- matrix(c(0.93, -0.15, -0.15, 5.20), nrow=2, byrow=FALSE)
 theta_112 <- c(phi10_112, vec(A11_112), vech(Omega1_112))
 
+W_112 <- t(chol(Omega1_112))
+theta_112s <- c(phi10_112, vec(A11_112), vec(W_112)) # SGMVAR
+Omega1_112s <- tcrossprod(W_112)
+
+theta_112sWC <- c(phi10_112, vec(A11_112), Wvec(W_112)) # SGMVAR W constrained
+
+
 # p=1, M=2, d=2
 phi10_122 <- c(1.03, 2.36)
 A11_122 <- matrix(c(1, -0.06, -0.04, 1), nrow=2, byrow=FALSE)
@@ -52,6 +59,12 @@ alpha1_122 <- 0.37
 upsilon1_122 <- c(phi10_122, vec(A11_122), vech(Omega1_122))
 upsilon2_122 <- c(phi20_122, vec(A21_122), vech(Omega2_122))
 theta_122 <- c(upsilon1_122, upsilon2_122, alpha1_122)
+
+WL_122 <- diag_Omegas(Omega1_122, Omega2_122)
+W_122 <- matrix(WL_122[1:(2^2)], nrow=2, byrow=FALSE)
+lambdas_122 <- WL_122[(2^2 + 1):length(WL_122)]
+theta_122s <- c(phi10_122, phi20_122, vec(A11_122), vec(A21_122), vec(W_122), lambdas_122, alpha1_122) # SGMVAR
+
 
 # p=2, M=2, d=2
 phi10_222 <- c(1.03, 2.36)
@@ -66,6 +79,15 @@ alpha1_222 <- 0.37
 upsilon1_222 <- c(phi10_222, vec(A11_222), vec(A12_222), vech(Omega1_222))
 upsilon2_222 <- c(phi20_222, vec(A21_222), vec(A22_222), vech(Omega2_222))
 theta_222 <- c(upsilon1_222, upsilon2_222, alpha1_222)
+
+WL_222 <- diag_Omegas(Omega1_222, Omega2_222)
+W_222 <- matrix(WL_222[1:(2^2)], nrow=2, byrow=FALSE)
+lambdas_222 <- WL_222[(2^2 + 1):length(WL_222)]
+theta_222s <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(A21_222),
+                vec(A22_222), vec(W_222), lambdas_222, alpha1_222) # SGMVAR
+Omega1_222s <- tcrossprod(W_222)
+Omega2_222s <- W_222%*%tcrossprod(diag(lambdas_222), W_222)
+
 
 # p=3, M=3, d=2
 phi10_332 <- c(1.03, 2.36)
@@ -90,6 +112,24 @@ upsilon2_332 <- c(phi20_332, vec(A21_332), vec(A22_332), vec(A23_332), vech(Omeg
 upsilon3_332 <- c(phi30_332, vec(A31_332), vec(A32_332), vec(A33_332), vech(Omega3_332))
 theta_332 <- c(upsilon1_332, upsilon2_332, upsilon3_332, alpha1_332, alpha2_332)
 
+W_332 <- matrix(c(-0.8924620, 0, 0.3653923, -2.1643472), nrow=2, byrow=FALSE)
+lambdas2_332 <- c(7.16, 1.30)
+lambdas3_332 <- c(6.10, 1.22)
+theta_332s <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332),
+                vec(A21_332), vec(A22_332), vec(A23_332), vec(A31_332), vec(A32_332), vec(A33_332),
+                vec(W_332), lambdas2_332, lambdas3_332, alpha1_332, alpha2_332) # SGMVAR
+Omega1_332s <- tcrossprod(W_332)
+Omega2_332s <- W_332%*%tcrossprod(diag(lambdas2_332), W_332)
+Omega3_332s <- W_332%*%tcrossprod(diag(lambdas3_332), W_332)
+theta_332_froms <-  c(phi10_332, vec(A11_332), vec(A12_332), vec(A13_332), vech(Omega1_332s), # based on SGMVAR
+                      phi20_332, vec(A21_332), vec(A22_332), vec(A23_332), vech(Omega2_332s),
+                      phi30_332, vec(A31_332), vec(A32_332), vec(A33_332), vech(Omega3_332s),
+                      alpha1_332, alpha2_332)
+
+theta_332sWC <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332),
+                  vec(A21_332), vec(A22_332), vec(A23_332), vec(A31_332), vec(A32_332), vec(A33_332),
+                  Wvec(W_332), lambdas2_332, lambdas3_332, alpha1_332, alpha2_332) # SGMVAR W constrained
+
 # p=1, M=2, d=3
 phi10_123 <- c(1.1, 2.2, 3.3)
 A11_123 <- matrix(c(1, 0.21, 0.31, 0.12, 2, 0.32, 0.13, 0.23, 3), nrow=3, byrow=FALSE)
@@ -102,6 +142,12 @@ upsilon1_123 <- c(phi10_123, vec(A11_123), vech(Omega1_123))
 upsilon2_123 <- c(phi20_123, vec(A21_123), vech(Omega2_123))
 theta_123 <- c(upsilon1_123, upsilon2_123, alpha1_123)
 
+WL_123 <- diag_Omegas(Omega1_123, Omega2_123)
+W_123 <- matrix(WL_123[1:(3^2)], nrow=3, byrow=FALSE)
+lambdas_123 <- WL_123[(3^2 + 1):length(WL_123)]
+theta_123s <- c(phi10_123, phi20_123, vec(A11_123), vec(A21_123), vec(W_123), lambdas_123, alpha1_123) # SGMVAR
+
+
 # p=2, M=1, d=3
 phi10_213 <- c(1.1, 2.2, 3.3)
 A11_213 <- matrix(c(1, 0.21, 0.31, 0.12, 2, 0.32, 0.13, 0.23, 3), nrow=3, byrow=FALSE)
@@ -110,36 +156,95 @@ Omega1_213 <- matrix(c(1, 0.22, 0.33, 0.22, 2, 0.44, 0.33, 0.44, 3), nrow=3, byr
 upsilon1_213 <- c(phi10_213, vec(A11_213), vec(A12_213), vech(Omega1_213))
 theta_213 <- upsilon1_213
 
+W_213 <- t(chol(Omega1_213))
+theta_213s <- c(phi10_213, vec(A11_213), vec(A12_213), vec(W_213)) # SGMVAR
+
+theta_213sWC <- c(phi10_213, vec(A11_213), vec(A12_213), Wvec(W_213)) # SGMVAR W constrained
+
+
 ## A(M)(p)_(p)(M)(d)
 rbind_diags <- function(p, M, d) {
   I <- diag(p*d^2)
   Reduce(rbind, replicate(M, I, simplify=FALSE))
 }
 
-# Constraining AR-parameters to be the same for all regimes
+##  Constraining AR-parameters to be the same for all regimes
+
+# p=1, M=1, d=2
 C_112 <- rbind_diags(p=1, M=1, d=2)
 theta_112c <- c(phi10_112, vec(A11_112), vech(Omega1_112))
+
+theta_112csWAR <- c(phi10_112, vec(A11_112), Wvec(W_112)) # SGMVAR W and AR
+
+# p=1, M=2, d=2
 C_122 <- rbind_diags(p=1, M=2, d=2)
 theta_122c <- c(phi10_122, phi20_122, vec(A11_122), vech(Omega1_122), vech(Omega2_122), alpha1_122)
 theta_122c_expanded <- c(phi10_122, vec(A11_122), vech(Omega1_122), phi20_122, vec(A11_122), vech(Omega2_122), alpha1_122)
+
+C_lambda_122 <- matrix(c(1, 1), nrow=2)
+theta_122csL <- c(phi10_122, phi20_122, vec(A11_122), vec(A21_122), vec(W_122), 0.5, alpha1_122) # SGMVAR lambdas
+theta_122csL_expanded <- c(phi10_122, phi20_122, vec(A11_122), vec(A21_122), vec(W_122), 0.5, 0.5, alpha1_122)
+theta_122csLAR <- c(phi10_122, phi20_122, vec(A11_122), vec(W_122), 0.5, alpha1_122) # SGMVAR lambdas and AR
+theta_122csLAR_expanded <- c(phi10_122, phi20_122, vec(A11_122), vec(A11_122), vec(W_122), 0.5, 0.5, alpha1_122)
+
+# p=2, M=2, d=2
 C_222 <- rbind_diags(p=2, M=2, d=2)
 theta_222c <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vech(Omega1_222), vech(Omega2_222), alpha1_222)
 theta_222c_expanded <- c(phi10_222, vec(A11_222), vec(A12_222), vech(Omega1_222), phi20_222, vec(A11_222), vec(A12_222),
                          vech(Omega2_222), alpha1_222)
+
+C_lambda_222 <- matrix(c(1, 2), nrow=2)
+theta_222csL <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(A21_222),
+                  vec(A22_222), vec(W_222), 0.2, alpha1_222) # SGMVAR lambdas
+theta_222csL_expanded <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(A21_222),
+                           vec(A22_222), vec(W_222), 0.2, 2*0.2, alpha1_222)
+theta_222csLAR <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(W_222), 0.2, alpha1_222) # SGMVAR lambdas and AR
+theta_222csLAR_expanded <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(A11_222), vec(A12_222),
+                             vec(W_222), 0.2, 2*0.2, alpha1_222)
+
+
+# p=3, M=3, d=2
 C_332 <- rbind_diags(p=3, M=3, d=2)
 theta_332c <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), vech(Omega1_332), vech(Omega2_332),
                 vech(Omega3_332), alpha1_332, alpha2_332)
 theta_332c_expanded <- c(phi10_332, vec(A11_332), vec(A12_332), vec(A13_332), vech(Omega1_332), phi20_332, vec(A11_332),
                          vec(A12_332), vec(A13_332), vech(Omega2_332), phi30_332, vec(A11_332), vec(A12_332), vec(A13_332),
                          vech(Omega3_332), alpha1_332, alpha2_332)
+
+theta_332csWAR <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), Wvec(W_332), lambdas2_332,
+                    lambdas3_332, alpha1_332, alpha2_332) # SGMVAR W and AR
+theta_332csWAR_expanded <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), vec(A11_332),
+                             vec(A12_332), vec(A13_332), vec(A11_332), vec(A12_332), vec(A13_332), vec(W_332), lambdas2_332,
+                             lambdas3_332, alpha1_332, alpha2_332)
+
+C_lambda_332 <- matrix(c(1, 1, 0, 0, 0, 0, 1, 1), nrow=4, byrow=FALSE)
+theta_332csWL <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), vec(A21_332), vec(A22_332), vec(A23_332),
+                   vec(A31_332), vec(A32_332), vec(A33_332), Wvec(W_332), 1, 2, alpha1_332, alpha2_332) # SGMVAR W and L
+theta_332csWL_expanded <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), vec(A21_332), vec(A22_332), vec(A23_332),
+                            vec(A31_332), vec(A32_332), vec(A33_332), vec(W_332), 1, 1, 2, 2, alpha1_332, alpha2_332)
+theta_332csWLAR <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), Wvec(W_332), 1, 2,
+                     alpha1_332, alpha2_332) # SGMVAR W, L, and AR
+theta_332csWLAR_expanded <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332), vec(A11_332), vec(A12_332), vec(A13_332),
+                              vec(A11_332), vec(A12_332), vec(A13_332), vec(W_332), 1, 1, 2, 2, alpha1_332, alpha2_332)
+
+# p=1, M=2, d=3
 C_123 <- rbind_diags(p=1, M=2, d=3)
 theta_123c <- c(phi10_123, phi20_123, vec(A11_123), vech(Omega1_123), vech(Omega2_123), alpha1_123)
 theta_123c_expanded <- c(phi10_123, vec(A11_123), vech(Omega1_123), phi20_123, vec(A11_123), vech(Omega2_123), alpha1_123)
+
+C_lambda_123 <- matrix(c(1, 1, 0, 0, 0, 1), nrow=3, byrow=FALSE)
+theta_123csL <- c(phi10_123, phi20_123, vec(A11_123), vec(A21_123), vec(W_123), 1, 2, alpha1_123) # SGMVAR lambdas
+theta_123csL_expanded <- c(phi10_123, phi20_123, vec(A11_123), vec(A21_123), vec(W_123), 1, 1, 2, alpha1_123)
+theta_123csLAR <- c(phi10_123, phi20_123, vec(A11_123), vec(W_123), 1, 2, alpha1_123) # SGMVAR lambdas and AR
+theta_123csLAR_expanded <- c(phi10_123, phi20_123, vec(A11_123), vec(A11_123), vec(W_123), 1, 1, 2, alpha1_123)
+
+# p=2, M=1, d=3
 C_213 <- rbind_diags(p=2, M=1, d=3)
 theta_213c <- c(phi10_213, vec(A11_213), vec(A12_213), vech(Omega1_213))
+theta_213csWAR <- c(phi10_213, vec(A11_213), vec(A12_213), Wvec(W_213))
 
-# p=2, M=2, d=2, constraint AR-parameters to be the same for all regimes
-# and constraint the of-diagonal elements of AR-matrices to be zero.
+# p=2, M=2, d=2, constrain AR-parameters to be the same for all regimes
+# and constrain the of-diagonal elements of AR-matrices to be zero.
 mat0 <- matrix(c(1, rep(0, 10), 1, rep(0, 8), 1, rep(0, 10), 1), nrow=2*2^2, byrow=FALSE)
 C_222_2 <- rbind(mat0, mat0)
 A21_222_c2 <- A11_222_c2 <- matrix(c(1.26, 0, 0, 1.34), nrow=2, byrow=FALSE)
@@ -155,6 +260,13 @@ theta_222_c2_expanded <- c(phi10_222_c2, vec(A11_222_c2), vec(A12_222_c2), vech(
                            phi20_222_c2, vec(A21_222_c2), vec(A22_222_c2), vech(Omega2_222_c2),
                            alpha1_222_c2)
 
+WL_222c2 <- diag_Omegas(Omega1_222_c2, Omega2_222_c2)
+W_222c2 <- matrix(WL_222c2[1:(2^2)], nrow=2, byrow=FALSE)
+lambdas_222c2 <- WL_222c2[(2^2 + 1):length(WL_222c2)]
+theta_222_c2s <- c(phi10_222_c2, phi20_222_c2, 1.26, 1.34, -0.29, -0.36, vec(W_222c2), lambdas_222c2, alpha1_222_c2) # SGMVAR AR
+theta_222_c2s_expanded <- c(phi10_222_c2, phi20_222_c2, vec(A11_222_c2), vec(A12_222_c2), vec(A11_222_c2), vec(A12_222_c2),
+                            vec(W_222c2), lambdas_222c2, alpha1_222_c2)
+
 test_that("reform_constrained_pars works correctly", {
   expect_equal(reform_constrained_pars(p=1, M=1, d=2, params=theta_112c, constraints=C_112), theta_112)
   expect_equal(reform_constrained_pars(p=1, M=2, d=2, params=theta_122c, constraints=C_122), theta_122c_expanded)
@@ -163,10 +275,52 @@ test_that("reform_constrained_pars works correctly", {
   expect_equal(reform_constrained_pars(p=3, M=3, d=2, params=theta_332c, constraints=C_332), theta_332c_expanded)
   expect_equal(reform_constrained_pars(p=1, M=2, d=3, params=theta_123c, constraints=C_123), theta_123c_expanded)
   expect_equal(reform_constrained_pars(p=2, M=1, d=3, params=theta_213c, constraints=C_213), theta_213)
-
   expect_equal(reform_constrained_pars(p=2, M=2, d=2, params=theta_222_c2, constraints=C_222_2), theta_222_c2_expanded)
+
+  # SGMVAR only W constrained
+  expect_equal(reform_constrained_pars(p=1, M=1, d=2, params=theta_112sWC, structural_pars=list(W=W_112)), theta_112s)
+  expect_equal(reform_constrained_pars(p=3, M=3, d=2, params=theta_332sWC, structural_pars=list(W=W_332)), theta_332s)
+  expect_equal(reform_constrained_pars(p=2, M=1, d=3, params=theta_213sWC, structural_pars=list(W=W_213)), theta_213s)
+
+  # SGMVAR only lambdas constrained
+  expect_equal(reform_constrained_pars(p=1, M=2, d=2, params=theta_122csL, structural_pars=list(W=W_122, C_lambda=C_lambda_122)), theta_122csL_expanded)
+  expect_equal(reform_constrained_pars(p=2, M=2, d=2, params=theta_222csL, structural_pars=list(W=W_222, C_lambda=C_lambda_222)), theta_222csL_expanded)
+  expect_equal(reform_constrained_pars(p=1, M=2, d=3, params=theta_123csL, structural_pars=list(W=W_123, C_lambda=C_lambda_123)), theta_123csL_expanded)
+
+  # SGMVAR AR parameters only constrained
+  expect_equal(reform_constrained_pars(p=2, M=2, d=2, params=theta_222_c2s, constraints=C_222_2, structural_pars=list(W=W_222c2)),
+               theta_222_c2s_expanded)
+
+  # SGMVAR W and AR parameters constrained
+  expect_equal(reform_constrained_pars(p=1, M=1, d=2, params=theta_112csWAR, constraints=C_112, structural_pars=list(W=W_112)), theta_112s)
+  expect_equal(reform_constrained_pars(p=3, M=3, d=2, params=theta_332csWAR, constraints=C_332, structural_pars=list(W=W_332)), theta_332csWAR_expanded)
+  expect_equal(reform_constrained_pars(p=2, M=1, d=3, params=theta_213csWAR, constraints=C_213, structural_pars=list(W=W_213)), theta_213s)
+
+  # SGMVAR lambdas and AR parameters
+  expect_equal(reform_constrained_pars(p=1, M=2, d=2, params=theta_122csLAR, constraints=C_122, structural_pars=list(W=W_122, C_lambda=C_lambda_122)),
+               theta_122csLAR_expanded)
+  expect_equal(reform_constrained_pars(p=2, M=2, d=2, params=theta_222csLAR, constraints=C_222, structural_pars=list(W=W_222, C_lambda=C_lambda_222)),
+               theta_222csLAR_expanded)
+  expect_equal(reform_constrained_pars(p=1, M=2, d=3, params=theta_123csLAR, constraints=C_123, structural_pars=list(W=W_123, C_lambda=C_lambda_123)),
+               theta_123csLAR_expanded)
+
+  # SGMVAR W and Lambda parameters constrained
+  expect_equal(reform_constrained_pars(p=3, M=3, d=2, params=theta_332csWL, structural_pars=list(W=W_332, C_lambda=C_lambda_332)),
+               theta_332csWL_expanded)
+
+  # SGMVAR W, Lambda, and AR parameters constrained
+  expect_equal(reform_constrained_pars(p=3, M=3, d=2, params=theta_332csWLAR, constraints=C_332, structural_pars=list(W=W_332, C_lambda=C_lambda_332)),
+               theta_332csWLAR_expanded)
 })
 
+test_that("reform_structural_pars works correctly", {
+  expect_equal(reform_structural_pars(p=1, M=1, d=2, params=theta_112s, structural_pars=list(W=W_112)), theta_112, tolerance=1e-4)
+  expect_equal(reform_structural_pars(p=1, M=2, d=2, params=theta_122s, structural_pars=list(W=W_122)), theta_122, tolerance=1e-4)
+  expect_equal(reform_structural_pars(p=2, M=2, d=2, params=theta_222s, structural_pars=list(W=W_222)), theta_222, tolerance=1e-4)
+  expect_equal(reform_structural_pars(p=3, M=3, d=2, params=theta_332s, structural_pars=list(W=W_332)), theta_332_froms, tolerance=1e-4)
+  expect_equal(reform_structural_pars(p=1, M=2, d=3, params=theta_123s, structural_pars=list(W=W_123)), theta_123, tolerance=1e-4)
+  expect_equal(reform_structural_pars(p=2, M=1, d=3, params=theta_213s, structural_pars=list(W=W_213)), theta_213, tolerance=1e-4)
+})
 
 allA_112 <- pick_allA(p=1, M=1, d=2, params=theta_112)
 allA_122 <- pick_allA(p=1, M=2, d=2, params=theta_122)
@@ -200,11 +354,19 @@ test_that("form_boldA works correctly", {
 })
 
 
+## A(M)(p)_(p)(M)(d)
+
+# p=3, M=3, d=2
 alpha1_332_2 <- 0.1; alpha2_332_2 <- 0.4
 theta_332_2 <- c(upsilon1_332, upsilon2_332, upsilon3_332, alpha1_332_2, alpha2_332_2)
 alpha1_332_3 <- 0.5; alpha2_332_3 <- 0.2
 theta_332_3 <- c(upsilon1_332, upsilon2_332, upsilon3_332, alpha1_332_3, alpha2_332_3)
 
+theta_332s_2 <- c(phi10_332, phi20_332, phi30_332, vec(A11_332), vec(A12_332), vec(A13_332),
+                  vec(A21_332), vec(A22_332), vec(A23_332), vec(A31_332), vec(A32_332), vec(A33_332),
+                  Wvec(W_332), lambdas2_332, lambdas3_332, alpha1_332_2, alpha2_332_2) # SGMVAR
+
+# p=3, M=4, d=2
 upsilon1_342 <- upsilon1_332; upsilon2_342 <- upsilon2_332; upsilon3_342 <- upsilon3_332; upsilon4_342 <- upsilon3_342+0.07
 alpha1_342 <- 0.1; alpha2_342 <- 0.2; alpha3_342 <- 0.3
 theta_342 <- c(upsilon1_342, upsilon2_342, upsilon3_342, upsilon4_342, alpha1_342, alpha2_342, alpha3_342)
@@ -213,6 +375,23 @@ theta_342_2 <- c(upsilon1_342, upsilon2_342, upsilon3_342, upsilon4_342, alpha1_
 alpha1_342_3 <- 0.3; alpha2_342_3 <- 0.4; alpha3_342_3 <- 0.1
 theta_342_3 <- c(upsilon1_342, upsilon2_342, upsilon3_342, upsilon4_342, alpha1_342_3, alpha2_342_3, alpha3_342_3)
 
+phi1_342 <- c(vec(A11_332), vec(A12_332), vec(A13_332))
+phi2_342 <- c(vec(A21_332), vec(A22_332), vec(A23_332))
+phi3_342 <- c(vec(A31_332), vec(A32_332), vec(A33_332))
+phi4_342 <- phi3_342 + 0.1
+phi30_342 <- phi30_332; phi20_342 <- phi20_332; phi10_342 <- phi10_332
+phi40_342 <- phi30_342 + 0.1
+lambdas2_342 <- lambdas2_332; lambdas3_342 <- lambdas3_332
+lambdas4_342 <- lambdas3_342 + 0.2
+W_342 <- W_332
+theta_342s <- c(phi10_342, phi20_342, phi30_342, phi40_342, phi1_342, phi2_342, phi3_342, phi4_342,
+                Wvec(W_342), lambdas2_342, lambdas3_342, lambdas4_342, alpha1_342, alpha2_342, alpha3_342) # SGMVAR
+theta_342s_2 <- c(phi10_342, phi20_342, phi30_342, phi40_342, phi1_342, phi2_342, phi3_342, phi4_342,
+                  Wvec(W_342), lambdas2_342, lambdas3_342, lambdas4_342, alpha1_342_2, alpha2_342_2, alpha3_342_2) # SGMVAR
+theta_342s_3 <- c(phi10_342, phi20_342, phi30_342, phi40_342, phi1_342, phi2_342, phi3_342, phi4_342,
+                  Wvec(W_342), lambdas2_342, lambdas3_342, lambdas4_342, alpha1_342_3, alpha2_342_3, alpha3_342_3) # SGMVAR
+
+# p=1, M=2, d=3
 alpha1_123_2 <- 0.3
 theta_123_2 <- c(upsilon1_123, upsilon2_123, alpha1_123_2)
 
@@ -232,13 +411,32 @@ test_that("sort_components works correctly", {
   expect_equal(sort_components(p=1, M=2, d=3, params=theta_123), theta_123)
   expect_equal(sort_components(p=1, M=2, d=3, params=theta_123_2),  c(upsilon2_123, upsilon1_123, 1-alpha1_123_2))
   expect_equal(sort_components(p=2, M=1, d=3, params=theta_213), theta_213)
+
+  # SGMVAR
+  expect_equal(sort_components(p=1, M=2, d=2, params=theta_122s, structural_pars=list(W=W_122)), theta_122s)
+  expect_equal(sort_components(p=3, M=3, d=2, params=theta_332s, structural_pars=list(W=W_332)), theta_332s)
+  expect_equal(sort_components(p=3, M=3, d=2, params=theta_332s_2, structural_pars=list(W=W_332)),
+               c(phi10_332, phi30_332, phi20_332, vec(A11_332), vec(A12_332), vec(A13_332),
+                 vec(A31_332), vec(A32_332), vec(A33_332), vec(A21_332), vec(A22_332), vec(A23_332),
+                 Wvec(W_332), lambdas3_332, lambdas2_332, alpha1_332_2, 1 - alpha1_332_2 - alpha2_332_2))
+  expect_equal(sort_components(p=3, M=4, d=2, params=theta_342s, structural_pars=list(W=W_342)),
+               c(phi10_342, phi40_342, phi30_342, phi20_342, phi1_342, phi4_342, phi3_342, phi2_342,
+                 Wvec(W_342), lambdas4_342, lambdas3_342, lambdas2_342,
+                 alpha1_342, 1 - alpha2_342 - alpha1_342 - alpha3_342, alpha3_342))
+  expect_equal(sort_components(p=3, M=4, d=2, params=theta_342s_2, structural_pars=list(W=W_342)),
+               c(phi10_342, phi30_342, phi20_342, phi40_342, phi1_342, phi3_342, phi2_342, phi4_342,
+                 Wvec(W_342), lambdas3_342, lambdas2_342, lambdas4_342, alpha1_342_2, alpha3_342_2, alpha2_342_2))
+  expect_equal(sort_components(p=3, M=4, d=2, params=theta_342s_3, structural_pars=list(W=W_342)),
+               c(phi10_342, phi20_342, phi40_342, phi30_342, phi1_342, phi2_342, phi4_342, phi3_342,
+                 Wvec(W_342), lambdas2_342, lambdas4_342, lambdas3_342,
+                 alpha1_342_3, alpha2_342_3, 1 - alpha1_342_3 - alpha2_342_3 - alpha3_342_3))
 })
 
 
-calc_mu <- function(p, M, d, params, constraints=NULL) {
-  params <- reform_constrained_pars(p, M, d, params, constraints)
-  all_A <- pick_allA(p=p, M=M, d=d, params=params)
-  all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params)
+calc_mu <- function(p, M, d, params, constraints=NULL, structural_pars=NULL) {
+  params <- reform_constrained_pars(p, M, d, params, constraints=constraints, structural_pars=structural_pars)
+  all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+  all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
   vapply(1:M, function(m) solve(diag(d) - rowSums(all_A[, , , m, drop=FALSE], dims=2), all_phi0[,m]), numeric(d))
 }
 
@@ -255,6 +453,14 @@ theta_222c_mu <- change_parametrization(p=2, M=2, d=2, params=theta_222c, constr
 theta_222c_mu2 <- change_parametrization(p=2, M=2, d=2, params=theta_222_c2, constraints=C_222_2, change_to="mean")
 theta_123c_mu <- change_parametrization(p=1, M=2, d=3, params=theta_123c, constraints=C_123, change_to="mean")
 
+# SGMVAR
+theta_112s_mu <- change_parametrization(p=1, M=1, d=2, params=theta_112s, structural_pars=list(W=W_112), change_to="mean")
+theta_222s_mu <- change_parametrization(p=2, M=2, d=2, params=theta_222s, structural_pars=list(W=W_222), change_to="mean")
+theta_123s_mu <- change_parametrization(p=1, M=2, d=3, params=theta_123s, structural_pars=list(W=W_123), change_to="mean")
+
+theta_112csWAR_mu <- change_parametrization(p=1, M=1, d=2, params=theta_112csWAR, structural_pars=list(W=W_112), constraints=C_112, change_to="mean")
+theta_222csLAR_mu <- change_parametrization(p=2, M=2, d=2, params=theta_222csLAR, structural_pars=list(W=W_222), constraints=C_222, change_to="mean")
+theta_123csL_mu <- change_parametrization(p=1, M=2, d=3, params=theta_123csL, structural_pars=list(W=W_123), constraints=NULL, change_to="mean")
 
 test_that("change_parametrization works correctly", {
   expect_equal(pick_phi0(p=1, M=1, d=2, params=theta_112_mu), calc_mu(p=1, M=1, d=2, params=theta_112))
@@ -289,13 +495,56 @@ test_that("change_parametrization works correctly", {
 
   expect_equal(matrix(theta_123c_mu[1:(2*3)], nrow=3, byrow=FALSE), calc_mu(p=1, M=2, d=3, constraints=C_123, params=theta_123c))
   expect_equal(change_parametrization(p=1, M=2, d=3, params=theta_123c_mu, constraints=C_123, change_to="intercept"), theta_123c)
+
+  # SGMVAR
+  expect_equal(pick_phi0(p=1, M=1, d=2, params=theta_112s_mu, structural_pars=list(W=W_112)),
+               calc_mu(p=1, M=1, d=2, params=theta_112s, structural_pars=list(W=W_112)))
+  expect_equal(change_parametrization(p=1, M=1, d=2, params=theta_112s_mu, structural_pars=list(W=W_112), change_to="intercept"), theta_112s)
+
+  expect_equal(pick_phi0(p=2, M=2, d=2, params=theta_222s_mu, structural_pars=list(W=W_222)),
+               calc_mu(p=2, M=2, d=2, params=theta_222s, structural_pars=list(W=W_222)))
+  expect_equal(change_parametrization(p=2, M=2, d=2, params=theta_222s_mu, structural_pars=list(W=W_222), change_to="intercept"), theta_222s)
+
+  expect_equal(pick_phi0(p=1, M=2, d=3, params=theta_123s_mu, structural_pars=list(W=W_123)),
+               calc_mu(p=1, M=2, d=3, params=theta_123s, structural_pars=list(W=W_123)))
+  expect_equal(change_parametrization(p=1, M=2, d=3, params=theta_123s_mu, change_to="intercept", structural_pars=list(W=W_123)), theta_123s)
+
+  expect_equal(matrix(theta_112csWAR_mu[1:(1*2)], nrow=2, byrow=FALSE),
+               calc_mu(p=1, M=1, d=2, constraints=C_112, structural_pars=list(W=W_112), params=theta_112csWAR))
+  expect_equal(change_parametrization(p=1, M=1, d=2, params=theta_112csWAR_mu, constraints=C_112, structural_pars=list(W=W_112), change_to="intercept"),
+               theta_112csWAR)
+
+  expect_equal(matrix(theta_222csLAR_mu[1:(2*2)], nrow=2, byrow=FALSE),
+               calc_mu(p=2, M=2, d=2, constraints=C_222, structural_pars=list(W=W_222), params=theta_222csLAR))
+  expect_equal(change_parametrization(p=2, M=2, d=2, params=theta_222csLAR_mu, constraints=C_222, structural_pars=list(W=W_222), change_to="intercept"),
+               theta_222csLAR)
+
+  expect_equal(matrix(theta_123csL_mu[1:(2*3)], nrow=3, byrow=FALSE),
+               calc_mu(p=1, M=2, d=3, constraints=NULL, structural_pars=list(W=W_123), params=theta_123csL))
+  expect_equal(change_parametrization(p=1, M=2, d=3, params=theta_123csL_mu, constraints=NULL, structural_pars=list(W=W_123), change_to="intercept"),
+               theta_123csL)
 })
+
 
 theta_122_cr <- c(upsilon2_122, upsilon2_122, alpha1_122)
 theta_222_cr <- c(upsilon1_222, upsilon1_222, alpha1_222)
 theta_332_cr <- c(upsilon1_332, upsilon2_332, upsilon2_332, alpha1_332, alpha2_332)
 theta_123_cr1 <- c(upsilon1_123, upsilon1_123, alpha1_123)
 theta_123_cr2 <- c(upsilon2_123, upsilon2_123, alpha1_123)
+
+theta_222s <- c(phi10_222, phi20_222, vec(A11_222), vec(A12_222), vec(A21_222),
+                vec(A22_222), vec(W_222), lambdas_222, alpha1_222)
+
+## A(M)(p)_(p)(M)(d)
+theta_122_crs <- c(phi10_122, phi10_122, vec(A11_122), vec(A11_122), Wvec(W_122), lambdas_122, alpha1_122)
+theta_122_crs2 <- c(phi20_122, phi20_122, vec(A21_122), vec(A21_122), Wvec(W_122), lambdas_122, alpha1_122)
+theta_222_crs <- c(phi10_222, phi10_222, vec(A11_222), vec(A12_222), vec(A11_222), vec(A12_222), Wvec(W_222), lambdas_222, alpha1_222)
+theta_332_crs <- c(phi10_332, phi20_332, phi20_332, vec(A11_332), vec(A12_332), vec(A13_332),
+                   vec(A21_332), vec(A22_332), vec(A23_332), vec(A21_332), vec(A22_332), vec(A23_332),
+                   Wvec(W_332), lambdas2_332, lambdas3_332, alpha1_332, alpha2_332)
+theta_123_crs <- c(phi10_123, phi10_123, vec(A11_123), vec(A11_123), Wvec(W_123), lambdas_123, alpha1_123)
+theta_123_crs2 <- c(phi20_123, phi20_123, vec(A21_123), vec(A21_123), Wvec(W_123), lambdas_123, alpha1_123)
+
 
 
 test_that("change_regime works correctly", {
@@ -304,5 +553,49 @@ test_that("change_regime works correctly", {
   expect_equal(change_regime(p=3, M=3, d=2, params=theta_332, m=3, regime_pars=upsilon2_332), theta_332_cr)
   expect_equal(change_regime(p=1, M=2, d=3, params=theta_123, m=2, regime_pars=upsilon1_123), theta_123_cr1)
   expect_equal(change_regime(p=1, M=2, d=3, params=theta_123, m=1, regime_pars=upsilon2_123), theta_123_cr2)
+
+  # SGMVAR
+  rpars122_m1 <-c(phi20_122, vec(A21_122))
+  rpars122_m2 <-c(phi10_122, vec(A11_122))
+  expect_equal(change_regime(p=1, M=2, d=2, params=theta_122s, m=2, regime_pars=rpars122_m2,
+                             structural_pars=list(W=W_122)), theta_122_crs, tol=1-6)
+  expect_equal(change_regime(p=1, M=2, d=2, params=theta_122s, m=1, regime_pars=rpars122_m1,
+                             structural_pars=list(W=W_122)), theta_122_crs2, tol=1e-6)
+
+  rpars222_m2 <- c(phi10_222, vec(A11_222), vec(A12_222))
+  expect_equal(change_regime(p=2, M=2, d=2, params=theta_222s, m=2, regime_pars=rpars222_m2,
+                             structural_pars=list(W=W_222)), theta_222_crs, tol=1-6)
+
+  rpars332_m3 <- c(phi20_332, vec(A21_332), vec(A22_332), vec(A23_332))
+  expect_equal(change_regime(p=3, M=3, d=2, params=theta_332sWC, m=3, regime_pars=rpars332_m3,
+                             structural_pars=list(W=W_332)), theta_332_crs, tol=1-6)
+
+  rpars123_m2 <- c(phi10_123, vec(A11_123))
+  expect_equal(change_regime(p=1, M=2, d=3, params=theta_123s, m=2, regime_pars=rpars123_m2,
+                             structural_pars=list(W=W_123)), theta_123_crs, tol=1-6)
+  rpars123_m1 <- c(phi20_123, vec(A21_123))
+  expect_equal(change_regime(p=1, M=2, d=3, params=theta_123s, m=1, regime_pars=rpars123_m1,
+                             structural_pars=list(W=W_123)), theta_123_crs2, tol=1-6)
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

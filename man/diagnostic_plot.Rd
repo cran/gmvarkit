@@ -68,9 +68,11 @@ diagnostic_plot(mod222c, type="ac", maxlag=12)
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{
 \code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
- \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
+ \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
 }

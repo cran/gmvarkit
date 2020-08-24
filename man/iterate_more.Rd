@@ -45,6 +45,17 @@ fit12
 fit12_2 <- iterate_more(fit12)
 fit12_2
 
+# Structural GMVAR(1,2) model identified with sign
+# constraints. Only 10 iterations of the variable metric
+# algorithm
+W_122 <- matrix(c(1, -1, NA, 1), nrow=2)
+fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+  ncalls=10, maxit=10, seeds=1:10)
+fit12s
+
+# Iterate more:
+fit12s_2 <- iterate_more(fit12s)
+fit12s_2
 
 # GMVAR(2,2) model with autoregressive parameters restricted
 # to be the same for all regimes, only 10 iterations of the
@@ -73,6 +84,8 @@ fit32_2
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{

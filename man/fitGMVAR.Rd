@@ -11,6 +11,7 @@ fitGMVAR(
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
+  structural_pars = NULL,
   ncalls = round(10 + 9 * log(M)),
   ncores = min(2, ncalls, parallel::detectCores()),
   maxit = 300,
@@ -27,8 +28,7 @@ a single time series. \code{NA} values are not supported.}
 
 \item{M}{a positive integer specifying the number of mixture components.}
 
-\item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
-should be used.}
+\item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function}
 
 \item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
 intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
@@ -36,11 +36,26 @@ intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
 (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M}) = }\strong{\eqn{C \psi}},
-where \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p}) (pd^2 x 1), m=1,...,M}
-contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains the constrained parameters.
+where \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p}) (pd^2 x 1), m=1,...,M},
+contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains the related parameters.
 For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
+
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
+the following elements:
+\itemize{
+  \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
+    unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
+    negative sign constraint, and zero indicating that the element is constrained to zero.
+  \item \code{C_lambda} - a \eqn{(d(M-1) x r)} constraint matrix that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \strong{\eqn{\gamma}} is the new \eqn{(r x 1)}
+    parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
+    must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
+    should not be constrained.
+}
+See Virolainen (2020) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
+a time-varying diagonal matrix with positive diagonal entries).}
 
 \item{ncalls}{the number of estimation rounds that should be performed.}
 
@@ -56,41 +71,60 @@ or \code{NULL} for not initializing the seed. Exists for creating reproducible r
 \item{...}{additional settings passed to the function \code{GAfit} employing the genetic algorithm.}
 }
 \value{
-Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Multivariate quantile residuals
-  (Kalliovirta and Saikkonen 2010) are also computed and included in the returned object. In addition, the returned
-  object contains the estimates and log-likelihood values from all the estimation rounds performed.
+Returns an object of class \code{'gmvar'} defining the estimated (reduced form or structural) GMVAR model.
+  Multivariate quantile residuals (Kalliovirta and Saikkonen 2010) are also computed and included in the returned object.
+  In addition, the returned object contains the estimates and log-likelihood values from all the estimation rounds performed.
   The estimated parameter vector can be obtained at \code{gmvar$params} (and corresponding approximate standard errors
   at \code{gmvar$std_errors}) and it is...
   \describe{
-    \item{\strong{Unconstrained models:}}{
-      a size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} vector that has form
+    \item{\strong{For unconstrained models:}}{
+      ...a size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} vector that has form
       \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
-      ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+      ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where
       \itemize{
         \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
         \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
         \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
       }
     }
-    \item{\strong{Constrained models:}}{
-      a size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} vector that has form
+    \item{\strong{For constrained models:}}{
+      ...a size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} vector that has form
       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi}}
-      \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where:
+      \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
       \itemize{
         \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
-        \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}. Here \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
+        \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
         constraint matrix.
       }
     }
+    \item{\strong{For structural GMVAR model:}}{
+      ...a vector that has the form
+      \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+      \itemize{
+        \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+      }
+      \describe{
+        \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+        \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+        \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+        \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
+         the sign constraints.}
+        \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
+         with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+        \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
+         constraint matrix.}
+      }
+    }
   }
-  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
-  the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
-  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}th coefficient matrix of the \eqn{m}th
+  mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
+  \eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the
+  error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks
-  columns of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-  The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} which introduces
-  the GMVAR model.
+  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
+  of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
+  The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.
 
   Remark that the first autocovariance/correlation matrix in \code{$uncond_moments} is for the lag zero,
   the second one for the lag one, etc.
@@ -103,23 +137,33 @@ Returns an object of class \code{'gmvar'} defining the estimated GMVAR model. Mu
 \details{
 Because of complexity and multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
  algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in
- some local maximum point instead. Therefore a number of estimation rounds is required for reliable results. Because
- of the nature of the model, the estimation may fail especially in the cases where the number of mixture components
- is chosen too large.
+ some local maximum or saddle point instead. Therefore, a (sometimes large) number of estimation rounds is required
+ for reliable results. Because of the nature of the model, the estimation may fail especially in the cases where the
+ number of mixture components is chosen too large.
 
  The estimation process is computationally heavy and it might take considerably long time for large models with
  large number of observations. If the iteration limit \code{maxit} in the variable metric algorithm is reached,
  one can continue the estimation by iterating more with the function \code{iterate_more}. Alternatively, one may
- use the found estimates as starting values for the genetic algorithm and and employ another round of estimation.
+ use the found estimates as starting values for the genetic algorithm and and employ another round of estimation
+ (see \code{?GAfit} how to set up an initial population with the dot parameters).
 
  The code of the genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)} but it
  includes some extra features that were found useful for this particular estimation problem. For instance,
  the genetic algorithm uses a slightly modified version of the individually adaptive crossover and mutation
- rates descriped by \emph{Patnaik and Srinivas (1994)} and employs (50\%) fitness inheritance discussed
+ rates described by \emph{Patnaik and Srinivas (1994)} and employs (50\%) fitness inheritance discussed
  by \emph{Smith, Dike and Stegmann (1995)}.
 
  The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim}
  from the package \code{stats}.
+
+ Finally, note that the structural models are even more difficult to estimate than the reduced form models due to
+ the different parametrization of the covariance matrices. If necessary, an initial population may be constructed
+ for the genetic algorithm based on the estimation results of a reduced form model. It does not seem unambiguous,
+ however, how to do that so that the (structural) parameter constraints are satisfied. Also, be aware that if the
+ lambda parameters are constrained in any other way than by restricting some of them to be identical, the parameter
+ "lambda_scale" of the genetic algorithm (see \code{?GAfit}) needs to be carefully adjusted accordingly.
+ Be aware that if a structural model is considered and the lambda parameters are constrained in some other way
+ than constraining some of them to be identical, the settings of the genetic algorithm may have to be adjusted.
 }
 \section{S3 methods}{
 
@@ -135,7 +179,7 @@ Because of complexity and multimodality of the log-likelihood function, it's \st
 # package, but in a scaled form (similar to Kalliovirta et al. 2016).
 data(eurusd, package="gmvarkit")
 data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-colnames(dat) <- colnames(eurusd)
+colnames(data) <- colnames(eurusd)
 
 # GMVAR(1,2) model: 10 estimation rounds with seeds set
 # for reproducibility
@@ -143,11 +187,34 @@ fit12 <- fitGMVAR(data, p=1, M=2, ncalls=10, seeds=1:10)
 fit12
 plot(fit12)
 summary(fit12)
+print_std_errors(fit12)
+profile_logliks(fit12)
+
+# Structural GMVAR(1,2) model identified with sign
+# constraints. The sign constraints (which fully identify
+# the shocks) are in line with the reduced form model,
+# so the maximized loglikelihood is the same.
+W_122 <- matrix(c(1, NA, -1, 1), nrow=2)
+fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+  ncalls=10, seeds=1:10)
+fit12s
 
 # GMVAR(2,2) model with mean parametrization
 fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
                   ncalls=16, seeds=1:16)
 fit22
+
+# Structural GMVAR(2,2) model with the lambda parameters restricted
+# to be identical (in the second regime) and the shocks identified
+# with diagonal of the B-matrix normalized positive and one zero constraint.
+# The resulting model has error term covariance matrices that are
+# multiplicatives of each other, while the identification equals to
+# identification through Cholesky decomposition.
+W_222 <- matrix(c(1, NA, 0, 1), nrow=2)
+C_lambda_222 <- matrix(c(1, 1), nrow=2)
+fit22s <- fitGMVAR(data, p=2, M=2, structural_pars=list(W=W_222, C_lambda=C_lambda_222),
+  ncalls=20, seeds=1:20)
+fit22s
 
 # GMVAR(2,2) model with autoregressive parameters restricted
 # to be the same for both regimes
@@ -179,10 +246,13 @@ fit22c2
          \emph{Transactions on Systems, Man and Cybernetics} \strong{24}, 656-667.
    \item Smith R.E., Dike B.A., Stegmann S.A. 1995. Fitness inheritance in genetic algorithms.
          \emph{Proceedings of the 1995 ACM Symposium on Applied Computing}, 345-350.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{
 \code{\link{GMVAR}}, \code{\link{iterate_more}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
   \code{\link{simulateGMVAR}}, \code{\link{quantile_residual_tests}}, \code{\link{print_std_errors}},
-  \code{\link{swap_parametrization}}, \code{\link{get_gradient}}
+  \code{\link{swap_parametrization}}, \code{\link{get_gradient}}, \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}},
+  \code{\link{gmvar_to_sgmvar}}, \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}
 }

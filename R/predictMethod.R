@@ -27,6 +27,7 @@
 #'    \item{$mix_pred}{Point forecasts for the mixing weights}
 #'    \item{mix_pred_int}{Individual prediction intervals for mixing weights, as \code{[, , m]}, m=1,..,M.}
 #'  }
+#' @seealso \code{\link{GIRF}}
 #' @inherit in_paramspace_int references
 #' @examples
 #' \donttest{
@@ -56,6 +57,15 @@
 #' p2
 #' p3 <- predict(fit12, n_ahead=10, pi_type="upper")
 #' p3
+#'
+#' # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+#' params222s <- c(-11.964, 155.024, 11.636, 124.988, 1.314, 0.145, 0.094, 1.292,
+#'  -0.389, -0.07, -0.109, -0.281, 1.248, 0.077, -0.04, 1.266, -0.272, -0.074,
+#'   0.034, -0.313, 0.903, 0.718, -0.324, 2.079, 7.00, 1.44, 0.742)
+#' W_222 <- matrix(c(1, NA, -1, 1), nrow=2, byrow=FALSE)
+#' mod222s <- GMVAR(data, p=2, M=2, params=params222s, parametrization="mean",
+#'  structural_pars=list(W=W_222))
+#' p1 <- predict(mod222s, n_ahead=10)
 #' }
 #' @export
 
@@ -94,20 +104,23 @@ predict.gmvar <- function(object, ..., n_ahead, n_simu=2000, pi=c(0.95, 0.80), p
     M <- gmvar$model$M
     d <- gmvar$model$d
     constraints <- gmvar$model$constraints
+    structural_pars <- gmvar$model$structural_pars
+
     params <- gmvar$params
     n_obs <- nrow(data)
     mw <- loglikelihood_int(data, p, M, params=params, conditional=gmvar$model$conditional,
-                            constraints=constraints, to_return="mw_tplus1")
+                            constraints=constraints, structural_pars=structural_pars, to_return="mw_tplus1")
     mw <- mw[nrow(mw),]
 
     # Collect parameter values
     if(gmvar$model$parametrization == "mean") {
       params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=constraints,
-                                       change_to="intercept")
+                                       structural_pars=structural_pars, change_to="intercept")
     }
-    params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints)
-    all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params)
-    all_A <- pick_allA(p=p, M=M, d=d, params=params)
+    params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars)
+    structural_pars <- get_unconstrained_structural_pars(structural_pars)
+    all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
+    all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
 
     # Calculate the conditional mean
     pred <- rowSums(vapply(1:M, function(m) mw[m]*(all_phi0[, m] + rowSums(vapply(1:p, function(i1) all_A[, , i1, m]%*%data[n_obs + 1 - i1,],
@@ -164,7 +177,7 @@ predict.gmvar <- function(object, ..., n_ahead, n_simu=2000, pi=c(0.95, 0.80), p
     if(pi_type != "none") {
       if(length(q_tocalc) == 1) {
         pred_ints <- array(pred_ints, dim=c(n_ahead, ncol(data), length(q_tocalc)), dimnames=list(NULL, colnames(sample), q_tocalc)) # Make it an array with length(q_tocalc) slices
-        mix_pred_ints <- array(pred_ints, dim=c(n_ahead, gmvar$model$M, length(q_tocalc)), dimnames=list(NULL, colnames(alpha_mt), q_tocalc))
+        mix_pred_ints <- array(mix_pred_ints, dim=c(n_ahead, gmvar$model$M, length(q_tocalc)), dimnames=list(NULL, colnames(alpha_mt), q_tocalc))
         pred_ints <- aperm(pred_ints, perm=c(1, 3, 2))
         mix_pred_ints <- aperm(mix_pred_ints, perm=c(1, 3, 2))
       } else {

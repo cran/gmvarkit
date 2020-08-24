@@ -36,15 +36,35 @@
 #'         constraint matrix.
 #'       }
 #'     }
+#'     \item{\strong{For structural GMVAR model:}}{
+#'       Should have the form
+#'       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+#'       vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+#'       \itemize{
+#'         \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+#'       }
+#'       \describe{
+#'         \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+#'         \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+#'         \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+#'         \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
+#'          the sign constraints.}
+#'         \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
+#'          with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+#'         \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
+#'          constraint matrix.}
+#'       }
+#'     }
 #'   }
-#'   Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
-#'   the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
-#'   mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
-#'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with the regimewise mean \eqn{\mu_{m}}.
+#'   Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}th coefficient matrix of the \eqn{m}th
+#'   mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
+#'   \eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the
+#'   error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
+#'   If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
 #'   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 #'   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-#'   The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} which introduces
-#'   the GMVAR model.
+#'   The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.
+#' @param conditional a logical argument specifying whether the conditional or exact log-likelihood function
 #' @param mu_scale a size \eqn{(dx1)} vector defining \strong{means} of the normal distributions from which each
 #'   mean parameter \eqn{\mu_{m}} is drawn from in random mutations. Default is \code{colMeans(data)}. Note that
 #'   mean-parametrization is always used for optimization in \code{GAfit} - even when \code{parametrization=="intercept"}.
@@ -58,7 +78,38 @@
 #'   deviations of the diagonal elements are \code{sqrt(2/d)*omega_scale[i]}
 #'   and for non-diagonal elements they are \code{sqrt(1/d*omega_scale[i]*omega_scale[j])}.
 #'   Note that for \code{d>4} this scale may need to be chosen carefully. Default in \code{GAfit} is
-#'   \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}.
+#'   \code{var(stats::ar(data[,i], order.max=10)$resid, na.rm=TRUE), i=1,...,d}. This argument is ignored if
+#'   structural model is considered.
+#' @param W_scale a size \eqn{(dx1)} strictly positive vector partly specifying the scale and variability of the
+#'   random covariance matrices in random mutations. The elements of the matrix \eqn{W} are drawn independently
+#'   from such normal distributions that the expectation of the main \strong{diagonal} elements of the first
+#'   regime's error term covariance matrix \eqn{\Omega_1 = WW'} is \code{W_scale}. The distribution of \eqn{\Omega_1}
+#'   will be in some sense like a Wishart distribution but with the columns (elements) of \eqn{W} obeying the given
+#'   constraints. The constraints are accounted for by setting the element to be always zero if it is subject to a zero
+#'   constraint and for sign constraints the absolute value or negative the absolute value are taken, and then the
+#'   variances of the elements of \eqn{W} are adjusted accordingly. This argument is ignored if reduced form model
+#'   is considered.
+#' @param lambda_scale a length \eqn{M - 1} vector specifying the \strong{standard deviation} of the mean zero normal
+#'   distribution from which the eigenvalue \eqn{\lambda_{mi}} parameters are drawn from in random mutations.
+#'   As the eigenvalues should always be positive, the absolute value is taken. The elements of \code{lambda_scale}
+#'   should be strictly positive real numbers with the \eqn{m-1}th element giving the degrees of freedom for the \eqn{m}th
+#'   regime. The expected value of the main \strong{diagonal} elements \eqn{ij} of the \eqn{m}th \eqn{(m>1)} error term covariance
+#'   matrix will be \code{W_scale[i]*(d - n_i)^(-1)*sum(lambdas*ind_fun)} where the \eqn{(d x 1)} vector \code{lambdas} is
+#'   drawn from the absolute value of the t-distribution, \code{n_i} is the number of zero constraints in the \eqn{i}th
+#'   row of \eqn{W} and \code{ind_fun} is an indicator function that takes the value one iff the \eqn{ij}th element of
+#'   \eqn{W} is not constrained to zero. Basically, larger lambdas (or smaller degrees of freedom) imply larger variance.
+#'
+#'   If the lambda parameters are \strong{constrained} with the \eqn{(d(M - 1) x r)} constraint matrix \eqn{C_lambda},
+#'   then provide a length \eqn{r} vector specifying the standard deviation of the (absolute value of the) mean zero
+#'   normal distribution each of the \eqn{\gamma} parameters are drawn from (the \eqn{\gamma} is a \eqn{(r x 1)} vector).
+#'   The expected value of the main diagonal elements of the covariance matrices then depend on the constraints.
+#'
+#'   This argument is ignored if \eqn{M==1} or a reduced form model is considered. Default is \code{rep(3, times=M-1)}
+#'   if lambdas are not constrained and \code{rep(3, times=r)} if lambdas are constrained.
+#'
+#'   As with omega_scale and W_scale, this argument should be adjusted carefully if specified by hand. \strong{NOTE}
+#'   that if lambdas are constrained in some other way than restricting some of them to be identical, this parameter
+#'   should be adjusted accordingly in order to the estimation succeed!
 #' @param ar_scale a positive real number adjusting how large AR parameter values are typically generated in
 #'   some random mutations. See the function \code{random_coefmats2} for details. This is ignored when estimating
 #'   constrained models.
@@ -106,13 +157,16 @@
 #'          \emph{Transactions on Systems, Man and Cybernetics} \strong{24}, 656-667.
 #'    \item Smith R.E., Dike B.A., Stegmann S.A. 1995. Fitness inheritance in genetic algorithms.
 #'          \emph{Proceedings of the 1995 ACM Symposium on Applied Computing}, 345-350.
+#'    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+#'      paper, available as arXiv:2007.04713.
 #'  }
 #'  @export
 
 
-GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL, ngen=200, popsize,
-                  smart_mu=min(100, ceiling(0.5*ngen)), initpop=NULL, mu_scale, mu_scale2, omega_scale, ar_scale=1,
-                  regime_force_scale=1, red_criteria=c(0.05, 0.01), to_return=c("alt_ind", "best_ind"), minval, seed=NULL) {
+GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL, structural_pars=NULL,
+                  ngen=200, popsize, smart_mu=min(100, ceiling(0.5*ngen)), initpop=NULL, mu_scale, mu_scale2, omega_scale, W_scale,
+                  lambda_scale, ar_scale=1, regime_force_scale=1, red_criteria=c(0.05, 0.01), to_return=c("alt_ind", "best_ind"),
+                  minval, seed=NULL) {
 
   # Required values and premilinary checks
   set.seed(seed)
@@ -122,11 +176,11 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
   data <- check_data(data=data, p=p)
   d <- ncol(data)
   n_obs <- nrow(data)
-  check_constraints(p=p, M=M, d=d, constraints=constraints)
-  npars <- n_params(p=p, M=M, d=d, constraints=constraints)
+  check_constraints(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
+  npars <- n_params(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
 
   # Defaults and checks
-  if(!all_pos_ints(c(ngen, smart_mu))) stop("Arguments ngen and smart_mu has to be positive integers")
+  if(!all_pos_ints(c(ngen, smart_mu))) stop("Arguments ngen and smart_mu have to be positive integers")
   if(missing(popsize)) {
     popsize <- 50*ceiling(sqrt(npars))
   } else if(popsize < 2 | popsize %% 2 != 0) {
@@ -152,6 +206,21 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
   } else if(!(length(omega_scale) == d & all(omega_scale > 0))) {
     stop("omega_scale must be numeric vector with length d and positive elements")
   }
+  if(missing(W_scale)) {
+    W_scale <- omega_scale
+  } else if(!(length(W_scale) == d & all(W_scale > 0))) {
+    stop("W_scale must be numeric vector with length d and positive elements")
+  }
+  if(is.null(structural_pars$C_lambda)) {
+    n_lambs <- M - 1
+  } else {
+    n_lambs <- ncol(structural_pars$C_lambda)
+  }
+  if(missing(lambda_scale)) {
+    lambda_scale <- rep(3, times=n_lambs) # numeric(0) if M == 1
+  } else if(!(length(lambda_scale) == n_lambs & all(lambda_scale > 0.1))) {
+    stop("lambda_scale must be numeric vector with length M-1 (r if lambdas are constrained) and elements larger than 0.1")
+  }
   if(length(ar_scale) != 1 | ar_scale <= 0) {
     stop("ar_scale must be positive and have length one")
   }
@@ -165,12 +234,14 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
     G <- numeric(0)
     for(i1 in 1:nattempts) {
       if(is.null(constraints)) {
-        inds <- replicate(popsize, random_ind2(p=p, M=M, d=d, mu_scale=mu_scale, mu_scale2=mu_scale2, omega_scale=omega_scale, ar_scale=ar_scale))
+        inds <- replicate(popsize, random_ind2(p=p, M=M, d=d, mu_scale=mu_scale, mu_scale2=mu_scale2, omega_scale=omega_scale, ar_scale=ar_scale,
+                                               W_scale=W_scale, lambda_scale=lambda_scale, structural_pars=structural_pars))
       } else {
-        inds <- replicate(popsize, random_ind(p=p, M=M, d=d, constraints=constraints, mu_scale=mu_scale, mu_scale2=mu_scale2, omega_scale=omega_scale))
+        inds <- replicate(popsize, random_ind(p=p, M=M, d=d, constraints=constraints, mu_scale=mu_scale, mu_scale2=mu_scale2, omega_scale=omega_scale,
+                                              W_scale=W_scale, lambda_scale=lambda_scale, structural_pars=structural_pars))
       }
       ind_loks <- vapply(1:popsize, function(i2) loglikelihood_int(data=data, p=p, M=M, params=inds[,i2], conditional=conditional,
-                                                                   parametrization="mean", constraints=constraints,
+                                                                   parametrization="mean", constraints=constraints, structural_pars=structural_pars,
                                                                    check_params=TRUE, to_return="loglik", minval=minval),numeric(1))
       G <- cbind(G, inds[, ind_loks > minval]) # Take good enough individuals
       if(ncol(G) >= popsize) {
@@ -178,7 +249,7 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
         break
       } else if(i1 == nattempts) {
         if(length(G) == 0) {
-          stop("Failed to create initial population with good enough individuals. Consider setting up the initial population by hand using the argument 'initpop' of the function 'GAfit'.")
+          stop("Failed to create initial population with good enough individuals. Check if there is something weird in the data or in the provided constraints? You can also set up the initial population manually using the argument 'initpop' of the function 'GAfit'.")
         } else {
           G <- G[,sample.int(ncol(G), size=popsize, replace=TRUE)]
         }
@@ -188,12 +259,12 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
     stopifnot(is.list(initpop))
     for(i1 in 1:length(initpop)) {
       ind <- initpop[[i1]]
-      tryCatch(check_parameters(p=p, M=M, d=d, params=ind, constraints=constraints),
+      tryCatch(check_parameters(p=p, M=M, d=d, params=ind, constraints=constraints, structural_pars=structural_pars),
                error=function(e) stop(paste("Problem with individual", i1, "in the initial population: "), e))
-      if(parametrization=="intercept") {
-        ind <- change_parametrization(p=p, M=M, d=d, params=ind, constraints=constraints, change_to="mean")
+      if(parametrization == "intercept") {
+        ind <- change_parametrization(p=p, M=M, d=d, params=ind, constraints=constraints, structural_pars=structural_pars, change_to="mean")
       }
-      initpop[[i1]] <- sort_components(p=p, M=M, d=d, params=ind)
+      initpop[[i1]] <- sort_components(p=p, M=M, d=d, params=ind, structural_pars=structural_pars)
     }
     G <- replicate(popsize, initpop[[sample.int(length(initpop), size=1)]])
   }
@@ -204,7 +275,7 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
   }
 
   # Initial setup
-  generations <- array(dim=c(npars, popsize, ngen))
+  generations <- array(NA, dim=c(npars, popsize, ngen))
   logliks <- matrix(minval, nrow=ngen, ncol=popsize)
   redundants <- matrix(M, nrow=ngen, ncol=popsize) # Store the number of redundant regimes of each individual
   which_redundant_alt <- 1:M
@@ -227,11 +298,12 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
     if(i1 == 1) {
       for(i2 in 1:popsize) {
         loks_and_mw <- loglikelihood_int(data, p, M, params=G[,i2], conditional=conditional, parametrization="mean",
-                                         constraints=constraints, to_return="loglik_and_mw", check_params=TRUE, minval=minval)
+                                         constraints=constraints, structural_pars=structural_pars, to_return="loglik_and_mw",
+                                         check_params=TRUE, minval=minval)
         fill_lok_and_red(i1, i2, loks_and_mw)
       }
     } else {
-      # Proportional fitness inheritance: individual has 50% change to inherit fitness if it's a result of crossover
+      # Proportional fitness inheritance: individual has 50% change to inherit fitness if it's a result of crossover.
       # Variable "I" tells the proportions of parent material.
       I2 <- rep(I, each=2)
       which_did_co <- which(1 - which_not_co == 1)
@@ -262,23 +334,24 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
           } else {
             if(stat_mu == TRUE & mutate[i2] == 1) {
               loks_and_mw <- tryCatch(loglikelihood_int(data, p, M, params=G[,i2], conditional=conditional, parametrization="mean",
-                                               constraints=constraints, to_return="loglik_and_mw",
-                                               check_params=FALSE, minval=minval), error=function(e) minval)
+                                                        constraints=constraints, structural_pars=structural_pars, to_return="loglik_and_mw",
+                                                        check_params=FALSE, minval=minval), error=function(e) minval)
             } else {
               loks_and_mw <- loglikelihood_int(data, p, M, params=G[,i2], conditional=conditional, parametrization="mean",
-                                               constraints=constraints, to_return="loglik_and_mw", check_params=TRUE, minval=minval)
+                                               constraints=constraints, structural_pars=structural_pars, to_return="loglik_and_mw",
+                                               check_params=TRUE, minval=minval)
             }
             fill_lok_and_red(i1, i2, loks_and_mw)
          }
       }
     }
 
-    # Take care of individuals that are not good enough + calculate the numbers redudant regimes
+    # Take care of individuals that are not good enough + calculate the numbers redundant regimes
     logliks[i1, which(logliks[i1,] < minval)] <- minval
     redundants[i1, which(logliks[i1,] <= minval)] <- M
 
 
-    ## Natural selection and the reproduction pool ##
+    ## Selection and the reproduction pool ##
     if(length(unique(logliks[i1,])) == 1) {
       choosing_probs <- rep(1, popsize) # If all individuals are the same, the surviving probability weight is 1.
     } else {
@@ -287,7 +360,7 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
       choosing_probs <- T_values/sum(T_values) # The surviving probability weights
     }
 
-    # Draw popsize individuals "with put back" and form the reproduction pool H.
+    # Draw popsize individuals with replacement and form the reproduction pool H.
     survivors <- sample(1:popsize, size=popsize, replace=TRUE, prob=choosing_probs)
     H <- G[,survivors]
 
@@ -320,10 +393,11 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
 
     # Get the best individual so far and check for reduntant regimes
     best_index0 <- which(logliks == max(logliks), arr.ind=TRUE)
-    best_index <- best_index0[order(best_index0[,1], decreasing=FALSE)[1],] # First generation when the best loglik occured (because of fitness inheritance)
+    best_index <- best_index0[order(best_index0[,1], decreasing=FALSE)[1],] # First generation when the best loglik occurred (because of fitness inheritance)
     best_ind <- generations[, best_index[2], best_index[1]]
     best_mw <- loglikelihood_int(data, p, M, params=best_ind, conditional=conditional, parametrization="mean",
-                                 constraints=constraints, to_return="mw", check_params=FALSE, minval=minval)
+                                 constraints=constraints, structural_pars=structural_pars, to_return="mw",
+                                 check_params=FALSE, minval=minval)
     which_redundant <- which(vapply(1:M, function(i2) sum(best_mw[,i2] > red_criteria[1]) < red_criteria[2]*n_obs, logical(1))) # Which regimes are wasted
 
     # Keep track of "the alternative best individual" that has (weakly) less reduntant regimes than the current best one.
@@ -350,12 +424,16 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
         stat_mu <- FALSE
         H2[,which_mutate] <- vapply(1:length(which_mutate), function(x) random_ind(p=p, M=M, d=d, constraints=constraints,
                                                                                    mu_scale=mu_scale, mu_scale2=mu_scale2,
-                                                                                   omega_scale=omega_scale), numeric(npars))
-      } else { # For stationarity with algorithm (slower), Ansley and Kohn (1986)
+                                                                                   omega_scale=omega_scale, W_scale=W_scale,
+                                                                                   lambda_scale=lambda_scale,
+                                                                                   structural_pars=structural_pars), numeric(npars))
+      } else { # For stationarity with algorithm (slower but can skip stationarity test), Ansley and Kohn (1986)
         stat_mu <- TRUE
         H2[,which_mutate] <- vapply(1:length(which_mutate), function(x) random_ind2(p=p, M=M, d=d, mu_scale=mu_scale,
                                                                                     mu_scale2=mu_scale2, omega_scale=omega_scale,
-                                                                                    ar_scale=ar_scale), numeric(npars))
+                                                                                    ar_scale=ar_scale, W_scale=W_scale,
+                                                                                    lambda_scale=lambda_scale,
+                                                                                    structural_pars=structural_pars), numeric(npars))
       }
     } else if(length(which_mutate) >= 1) { # Smart mutations
       stat_mu <- FALSE
@@ -376,7 +454,7 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
 
       ## 'Smart mutation': mutate close to a well fitting individual. We obviously don't mutate close to
       # redundant regimes but draw them at random ('rand_to_use' in what follows).
-      if(!is.null(constraints) | length(which_redundant) <= length(which_redundant_alt) | runif(1) > 0.5) {
+      if(!is.null(constraints) | length(which_redundant) <= length(which_redundant_alt) | runif(1) > 0.5 | !is.null(structural_pars)) {
         # The first option for smart mutations: smart mutate to 'alt_ind' which is the best fitting individual
         # with least redundant regimes.
         # Note that best_ind == alt_ind when length(which_redundant) <= length(which_redundant_alt).
@@ -399,7 +477,7 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
 
         # Pick the nonredundant regimes of best_ind and alt_ind
         non_red_regs_best <- vapply((1:M)[-which_redundant], function(i2) pick_regime(p=p, M=M, d=d, params=best_ind, m=i2), numeric(p*d^2 + d + d*(d+1)/2))
-        if(length(which_redundant_alt) == 0) { # Special case for techinal reasons
+        if(length(which_redundant_alt) == 0) { # Special case for technical reasons
           non_red_regs_alt <- vapply(1:M, function(i2) pick_regime(p=p, M=M, d=d, params=alt_ind, m=i2), numeric(p*d^2 + d + d*(d+1)/2))
         } else {
           non_red_regs_alt <- vapply((1:M)[-which_redundant_alt], function(i2) pick_regime(p=p, M=M, d=d, params=alt_ind, m=i2), numeric(p*d^2 + d + d*(d+1)/2))
@@ -426,12 +504,14 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
       H2[,which_mutate] <- vapply(1:length(which_mutate), function(i2) smart_ind(p, M, d, params=ind_to_use, constraints=constraints,
                                                                                  accuracy=accuracy[i2], which_random=rand_to_use,
                                                                                  mu_scale=mu_scale, mu_scale2=mu_scale2,
-                                                                                 omega_scale=omega_scale, ar_scale=ar_scale), numeric(npars))
+                                                                                 omega_scale=omega_scale, ar_scale=ar_scale,
+                                                                                 W_scale=W_scale, lambda_scale=lambda_scale,
+                                                                                 structural_pars=structural_pars), numeric(npars))
     }
 
     # Sort components according to the mixing weight parameters. No sorting if constraints are employed.
-    if(is.null(constraints)) {
-      H2 <- vapply(1:popsize, function(i2) sort_components(p=p, M=M, d=d, params=H2[,i2]), numeric(npars))
+    if(is.null(constraints) && is.null(structural_pars$C_lambda)) {
+      H2 <- vapply(1:popsize, function(i2) sort_components(p=p, M=M, d=d, params=H2[,i2], structural_pars=structural_pars), numeric(npars))
     }
 
     # Save the results and set up new generation
@@ -445,10 +525,10 @@ GAfit <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "
   }
 
   # GA always optimizes with mean parametrization. Return intercept-parametrized estimate if parametrization=="intercept".
-  if(parametrization=="mean") {
+  if(parametrization == "mean") {
     return(ret)
   } else {
-    return(change_parametrization(p=p, M=M, d=d, params=ret, constraints=constraints, change_to="intercept"))
+    return(change_parametrization(p=p, M=M, d=d, params=ret, constraints=constraints, structural_pars=structural_pars, change_to="intercept"))
   }
 }
 

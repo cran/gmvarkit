@@ -82,6 +82,14 @@ colnames(data) <- colnames(eurusd)
 fit12 <- fitGMVAR(data, p=1, M=2, ncalls=10, seeds=1:10)
 fit12
 profile_logliks(fit12)
+
+# Structural GMVAR(1,2) model identified with sign
+# constraints.
+W_122 <- matrix(c(1, -1, NA, 1), nrow=2)
+fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+  ncalls=10, seeds=1:10)
+profile_logliks(fit12s)
+
 # GMVAR(2,2) model with mean parametrization
 fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
                   ncalls=16, seeds=11:26)
@@ -107,10 +115,13 @@ profile_logliks(fit22c2)
 \itemize{
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
            \emph{Journal of Econometrics}, \strong{192}, 485-498.
-   \item Lutkepohl H. 2005. New Introduction to Multiple Time Series Analysis,
+   \item Lütkepohl H. 2005. New Introduction to Multiple Time Series Analysis,
            \emph{Springer}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{
-\code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}
+\code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}},
+  \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}}
 }

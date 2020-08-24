@@ -4,7 +4,7 @@
 \alias{sort_components}
 \title{Sort components in parameter vector according to mixing weights into a decreasing order}
 \usage{
-sort_components(p, M, d, params)
+sort_components(p, M, d, params, structural_pars = NULL)
 }
 \arguments{
 \item{p}{a positive integer specifying the autoregressive order of the model.}
@@ -13,45 +13,93 @@ sort_components(p, M, d, params)
 
 \item{d}{the number of time series in the system.}
 
-\item{params}{a real valued vector specifying the parameter values. Should be size
-  \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
+\item{params}{a real valued vector specifying the parameter values.
+  \describe{
+    \item{\strong{For reduced form model:}}{
+      Should be size
+      \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
       ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
       \itemize{
         \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
         \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
         \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
       }
+    }
+    \item{\strong{For structural GMVAR model:}}{
+      Should have the form
+      \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+      \itemize{
+        \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+      }
+    }
+  }
   Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of
   the \eqn{m}:th mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th
-  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter.
+  mixture component, and \eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are
+  structural parameters replacing the error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}}
+  and \eqn{\lambda_{mi}} are dropped.
 
-  If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
+  If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with the regimewise mean \eqn{\mu_{m}}.
   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
   The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.}
+
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
+the following elements:
+\itemize{
+  \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
+    unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
+    negative sign constraint, and zero indicating that the element is constrained to zero.
+  \item \code{C_lambda} - a \eqn{(d(M-1) x r)} constraint matrix that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \strong{\eqn{\gamma}} is the new \eqn{(r x 1)}
+    parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
+    must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
+    should not be constrained.
+}
+See Virolainen (2020) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
+a time-varying diagonal matrix with positive diagonal entries).}
 }
 \value{
-Returns sorted parameter vector with \eqn{\alpha_{1}>...>\alpha_{m}}, that has form
-  \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},...,\strong{\eqn{\upsilon_{M}}},
-  \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
- \itemize{
-   \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
-   \item \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})}
-   \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
- }
- Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
- component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component, and \eqn{\alpha_{m}} is the
- mixing weight parameter.
- \eqn{vec()} is vectorization operator that stack columns of the given matrix into a vector. \eqn{vech()} stacks columns
- of the given matrix from the principal diagonal downwards (including elements on the diagonal) to form a vector.
- The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.
+Returns sorted parameter vector...
+  \describe{
+    \item{\strong{For reduced form GMVAR model:}}{
+       ...with \eqn{\alpha_{1}>...>\alpha_{M}}, that has form
+       \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon_{1}}},...,\strong{\eqn{\upsilon_{M}}},
+       \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+       \itemize{
+         \item \strong{\eqn{\upsilon_{m}}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{,\sigma_{m})}
+         \item \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})}
+         \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
+       }
+    }
+    \item{\strong{For structural GMVAR model:}}{
+     ...with \eqn{\alpha_{2}>...>\alpha_{M}}, that has form
+      \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+      \itemize{
+        \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+      }
+    }
+  }
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+  component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th component, and \eqn{\alpha_{m}} is the
+  mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the error term covariance
+  matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
+
+  \eqn{vec()} is vectorization operator that stack columns of the given matrix into a vector. \eqn{vech()} stacks columns
+  of the given matrix from the principal diagonal downwards (including elements on the diagonal) to form a vector.
+  The notation is in line with the cited article by KMS (2016) introducing the GMVAR model.
 }
 \description{
 \code{sort_components} sorts mixture components in the parameter vector according
   to mixing weights into a decreasing order.
 }
 \details{
-Constrained parameter vectors are not supported!
+Constrained parameter vectors are not supported (expect for constraints in W)!
+  For structural models, the order of the first mixture component is fixed by construction,
+  so the rest \eqn{m=2,...,M} mixture components are rearranged only by the mixing weight
+  parameters.
 }
 \section{Warning}{
 
@@ -62,5 +110,7 @@ Constrained parameter vectors are not supported!
 \itemize{
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }

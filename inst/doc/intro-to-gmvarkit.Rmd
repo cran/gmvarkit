@@ -17,13 +17,18 @@ knitr::opts_chunk$set(
 )
 ```
 
-The package `gmvarkit` contains tools to estimate and analyze Gaussian Mixture Vector Autoregressive (GMVAR) model (see Kalliovirta et. al. 2016). We briefly give the definition of the GMVAR model in this vignette, and also very briefly cover some its attractive theoretical and practical properties. For more comprehensive discussion, we refer to the cited article by Kalliovirta, Meitz, and Saikkonen (2016). 
+## Introduction
+The package `gmvarkit` contains tools to estimate and analyze both reduced form and structural Gaussian mixture vector autoregressive (GMVAR) model (Kalliovirta, Meitz, and Saikkonen, 2016, and Virolainen, 2020). In this vignette, we first define the reduced form GMVAR model, briefly discuss some of its properties, and explain how to use the functions in `gmvarkit` to estimate the model, examine the estimates, check its adequacy with quantile residual diagnostics, simulate from the process, and forecast future observations of the process. Then, we define the structural GMVAR model, discuss its identification, and explain how to use the functions in `gmvarkit` to estimate generalized impulse response function and to test hypotheses regarding the paremeters. Most of the functions work with both, reduced form and structural models, but particularly the one for estimating generalized impulse response function accomodates structural models. 
 
-See the readme file for a short introduction on how to use `gmvarkit`.
+For more comprehensive discussion on the reduced form model, see the cited article by Kalliovirta, Meitz, and Saikkonen (2016), and for the structural model, see the cited article by Virolainen (2020). For a shorter introduction and demonstration on how to use `gmvarkit`, see the readme file.
 
-The GMVAR models in `gmvarkit` are defined as class `gmvar` S3 objects which can be created with the estimation function `fitGMVAR` or with the constructor function `GMVAR`. The created `gmvar` objects are then be conveniently used as main arguments in many other functions that allow, for example, model diagnostics, simulations, and forecasting. Therefore, after estimating a GMVAR model it's easy to use the other functions for further analysis. However, some tasks such as imposing linear constraints, creating GMVAR models without estimation, or setting up initial population for the genetic algorithm employed by the estimation function, require accurate understanding on how the parameter vectors are constructed in this package. 
+### Some general notes on gmvarkit
+The GMVAR models in `gmvarkit` are defined as class `gmvar` S3 objects which can be created with the estimation function `fitGMVAR` or with the constructor function `GMVAR`. The created `gmvar` objects are then be conveniently used as main arguments in many other functions that allow, for example, model diagnostics, simulations, and forecasting - similarly to many of the popular R packages. Therefore, after estimating a GMVAR model, it's easy to use the other functions for further analysis. Some tasks, however, such as creating GMVAR models without estimation, or setting up initial population for the genetic algorithm employed by the estimation function, require accurate understanding on how the parameter vectors are constructed in this package. 
 
 The notations for (unconstrained) parameter vector are in line with the cited article by Kalliovirta et. al. (2016), but for clarity we repeat these notations in the second section of this vignette. In the third section, we show how to apply general linear constraints to the autoregressive parameters of a GMVAR model. Two examples are given to demonstrate how to use the general formula. In the fourth section we have listed some useful functions and methods found in `gmvarkit` and briefly explain how they work and how to use them. 
+HUOM TAMA PITAA PAIVITTAA
+
+# Reduced form GMVAR model
 
 ## Definition of the GMVAR model
 The Gaussian mixture vector autoregressive (GMVAR) model with $M$ mixture components and autoregressive order $p$, which we refer to as the GMVAR($p,M$) model, is a mixture of $M$ stationary Gaussian VAR($p$) models with time varying mixing weights. At each point of time $t$, a GMVAR process generates an observation from one of its mixture components (also called regimes) according to the probabilities pointed by the mixing weights. 
@@ -37,7 +42,7 @@ where $\Omega_{m}$ is a conditional positive definite covariance matrix, NID sta
 $$
 \mu_{m,t} = \varphi_{m,0} + \sum_{i=1}^p A_{m,i}y_{t-i}
 $$
-is interpreted as the conditional mean of the $m$th mixture components. The terms $\varphi_{m,0}$ $(d\times 1)$ are intercept parameters and $A_{m,i}$ $(d\times d)$ are the autoregressive (AR) matrices. The random vectors $\varepsilon_t$ are assumed to be independent from $\mathcal{F}_{t-1}$ and conditionally indepedent from $\boldsymbol{s}_{t}$ given $\mathcal{F}_{t-1}$. The probabilities $\alpha_{m,t}$ are referred to as the mixing weights.
+is interpreted as the conditional mean of the $m$th mixture components. The terms $\varphi_{m,0}$ $(d\times 1)$ are intercept parameters and $A_{m,i}$ $(d\times d)$ are the autoregressive (AR) matrices. The random vectors $\varepsilon_t$ are assumed to be independent from $\mathcal{F}_{t-1}$ and conditionally independent from $\boldsymbol{s}_{t}$ given $\mathcal{F}_{t-1}$. The probabilities $\alpha_{m,t}$ are referred to as the mixing weights.
 
 For each $m=1,...,M$, the AR matrices $A_{m,i}$, $i=1,...,p$ are assumed to satisfy the usual stability condition of VAR models. Namely, denoting
 $$
@@ -62,7 +67,6 @@ $$
 \text{E}[y_t|\mathcal{F}_{t-1}]=\sum_{m=1}^M\alpha_{m,t}\mu_{m,t}, \quad \text{Cov}[y_t|\mathcal{F}_{t-1}]=\sum_{m=1}^M\alpha_{m,t}\Omega_m + \sum_{m=1}^M\alpha_{m,t}\left(\mu_{m,t} - \sum_{n=1}^M\alpha_{n,t}\mu_{n,t} \right)\left(\mu_{m,t} - \sum_{n=1}^M\alpha_{n,t}\mu_{n,t} \right)'.
 $$
 
-
 In order to define the mixing weights $\alpha_{m,t}$, consider first auxiliary stationary Gaussian VAR-processes $z_{m,t}$, and the related $dp$-dimensional random vectors $\boldsymbol{z}_{t,m}=(z_{t,m},...,z_{m,t-p+1})$. The density of $\boldsymbol{z}_{t,m}$ is 
 \begin{equation}\label{dpdensities}
 n_{dp}(\boldsymbol{z}_{t,m};\mu_m,\boldsymbol{\Sigma}_{m,p})=(2\pi)^{-dp/2}\det(\boldsymbol{\Sigma}_{m,p})^{-1/2}\exp\left\lbrace -\frac{1}{2}(\boldsymbol{z}_{t,m} - \boldsymbol{1}_p\otimes\mu_m)´\boldsymbol{\Sigma}_{m,p}^{-1}(\boldsymbol{z}_{t,m} - \boldsymbol{1}_p\otimes\mu_m)\right\rbrace ,
@@ -78,7 +82,6 @@ $$
 \end{bmatrix}
 \enspace (dp\times dp).
 $$
-
 Denoting $\boldsymbol{y}_{t-1}=(y_{t-1},...,y_{t-p})$ $(dp\times 1)$, the mixing weights of the GMVAR model are defined as 
 $$
 \alpha_{m,t} = \frac{\alpha_mn_{dp}(\boldsymbol{y}_{t-1};\mu_m,\boldsymbol{\Sigma}_{m,p})}{\sum_{n=1}^M\alpha_nn_{dp}(\boldsymbol{y}_{t-1};\mu_n,\boldsymbol{\Sigma}_{n,p})},
@@ -94,24 +97,23 @@ f(\boldsymbol{y};\boldsymbol{\theta})=\sum_{m=1}^M\alpha_m n_{dp}(\boldsymbol{y}
 $$
 Moreover, $\boldsymbol{y}_t$ is ergodic.
 
-Theorem 1 shows that the stationary distribution of $\boldsymbol{y}_t$ is a mixture of M multinormal distributions with constant mixing weights $\alpha_m$. Consequently, all moments of the stationary distribution exist and are finite. 
+Theorem 1 shows that the stationary distribution of $\boldsymbol{y}_t$ is a mixture of $M$ multinormal distributions with constant mixing weights $\alpha_m$. Consequently, all moments of the stationary distribution exist and are finite. 
 
 ### Interpretation of the mixing weights $\alpha_m$ and $\alpha_{m,t}$
-According to Theorem 1 $\alpha_m$ immediately has the interpretation as the unconditional probability of the random vector $\boldsymbol{y}_t$ being generated from the $m$th mixture component. Consequently $\alpha_m$ also represents the unconditional probability of the component $y_t$ being generated from the $m$th mixture component (see Kalliovirta et al. 2016, Section 3.3 for more details).
+Based on Theorem 1 $\alpha_m$ has the interpretation as the unconditional probability of the random vector $\boldsymbol{y}_t$ being generated from the $m$th mixture component. Consequently, $\alpha_m$ also represents the unconditional probability of the observation $y_t$ being generated from the $m$th mixture component (see Kalliovirta et al. 2016, Section 3.3 for more details).
 
-As noted, the mixing weights $\alpha_{m,t}$ are the conditional probabilities for the random vector $y_t$ being generated from the $m$th mixture component. According the definition of the mixing weights, regimes with higher likelihood of the past $p$ observations are more likeli to generate the new observations but the likelihoods are also scaled with the mixing weight parameters $\alpha_m$. 
+As noted, the mixing weights $\alpha_{m,t}$ are the conditional probabilities for the random vector $y_t$ being generated from the $m$th mixture component. According the definition of the mixing weights, regimes with higher likelihood of the past $p$ observations are more likely to generate the new observations but the likelihoods are also scaled with the mixing weight parameters $\alpha_m$. 
 
 ### Properties of the maximum likelihood estimator
 Under general conditions (see Kalliovirta et al. 2016, Assumption 1), the maximum likelihood estimator for the parameters of the GMVAR model is strongly consistent.
 
 Under general conditions (namely, Assumptions 1 and 2 in Kalliovirta et al. 2016), the maximum likelihood estimator has the conventional limiting distribution (normal).  
 
+## Parameter vectors and unconstrained models
+In this section, we cover the notation for parameter vectors (the same as in Kalliovirta et al. 2016 for unconstrained models) and explain how to impose linear constraints in `gmvarkit`. Knowledge of the form of the parameter vector is required for creating GMVAR models without estimation with prespecified parameter values or for setting up initial population for the genetic algorithm, but it is not required for estimation and basic analysis of the models. The form of the parameter vector depends on whether an unconstrained or constrained model is considered. 
 
-## General notations and unconstrained models
-In this section, we cover the notation for parameter vectors (the same as in Kalliovirta et al. 2016 for unconstrained models) and explain how to impose linear constraints in `gmvarkit`.
-
-### General notations
-Specifying the order of a GMVAR model requires specifying the autoregressive order _p_ and the number of mixture components _M_. The number of time series in the system is denoted by _d_, and it's assumed that _d_ is larger than one.^[For univariate analysis one may use the package `uGMAR`.] The form of the parameter vector depends on whether an unconstrained or constrained model is considered. 
+### Order of the model
+Specifying the order of a GMVAR model requires specifying the autoregressive order _p_ and the number of mixture components _M_. The number of time series in the system is denoted by _d_, and it's assumed that _d_ is larger than one.^[For univariate analysis one may use the package `uGMAR`.]
 
 ### Parameter vector of unconstrained model
 The parameter vector for unconstrained model is of size _((M(pd^2+d(d+1)/2+1)-1)x1)_ and has form
@@ -124,10 +126,10 @@ Above $\phi_{m,0}$ denotes the intercept parameter of _m_:th mixture component, 
 
 The parameter vector above has "intercept" parametrization, referring to the intercept terms $\phi_{m,0}$. However, it's also possible to use "mean" parametrization, where the intercept terms are simply replaced by the regimewise means $\mu_m=(I_d-\sum_{i=1}^pA_{m,i})^{-1}\phi_{m,0}$.
 
-## Models with linear constraints
+## Models imposing linear constraints
 
-### General linear constraints and parameter vector
-Imposing linear constraints on the autoregressive parameters of GMVAR model is straightforward in `gmvarkit`. The constraints are expressed in a rather general form allowing arbitrary linear constraints, but one needs to take the time to construct the constraint matrix carefully for each particular case. 
+### Imposing linear constraints and parameter vector
+Imposing linear constraints on the autoregressive parameters of GMVAR model is straightforward in `gmvarkit`. The constraints are expressed in a rather general form which allows to impose a wide class of constraints but one needs to take the time to construct the constraint matrix carefully for each particular case. 
 
 We consider constraints of form 
 $$(\boldsymbol{\phi_1},...,\boldsymbol{\phi_M}) = \boldsymbol{C}\boldsymbol{\psi},\enspace \text{where}\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\enspace$$
@@ -140,7 +142,6 @@ where $\boldsymbol{\psi}$ is the $(qx1)$ parameter vector containing constrained
 
 ### Examples of linear constraints
 Consider the following two common uses for linear constraints: restricting the autoregressive parameters to be the same for all regimes and constraining some parameters to zero. Of course also some other constraints may be useful, but we chose to show illustrative examples of these two as they occur in the cited article by Kalliovirta et al. (2016). 
-
 
 #### Restricting AR parameters to be the same for all regimes
 To restrict the AR parameters to be the same for all regimes, we want $\boldsymbol{\phi_m}$ to be the same for all _m=1,...,M_. The parameter vector $\boldsymbol{\psi}$ $(qx1)$ then corresponds to any $\boldsymbol{\phi_m}=\boldsymbol{\phi}$, and therefore $q=pd^2$. For the constraint matrix we choose 
@@ -174,43 +175,149 @@ $$\boldsymbol{\tilde{c}}=\left[{\begin{array}{cccc}
 \enspace (pd^2x4)$$
 satisfies $\boldsymbol{C}\boldsymbol{\psi}=(\boldsymbol{\phi},...,\boldsymbol{\phi}).$
 
-## Functions in gmvarkit
+## Some useful functions in gmvarkit
 
 ### Estimating a GMVAR model
-`gmvarkit` provides the function `fitGMVAR` for estimating a GMVAR model. The maximum likelihood estimation is performed in two phases: in the first phase `fitGMVAR` uses a genetic algorithm to find starting values for gradient based variable metric algorithm, which it then uses to finalize the estimation in the second phase. It's important to keep in mind that it's not guaranteed that the numerical estimation algorithms end up in the global maximum point rather than a local one. Because of multimodality and challenging surface of the log-likelihood function, it's actually expected that most of the estimation rounds won't find the global maximum point. For this reason one should always perform multiple estimation rounds. Parallel computing is used to obtain the results faster. The number of CPU cores used can be set with the argument `ncores`, and the number of estimation rounds can be controlled with the argument `ncalls`. 
+`gmvarkit` provides the function `fitGMVAR` for estimating a GMVAR model. The maximum likelihood estimation is performed in two phases: in the first phase `fitGMVAR` uses a genetic algorithm to find starting values for gradient based variable metric algorithm, which it then uses to finalize the estimation in the second phase. It's important to keep in mind that it's not guaranteed that the numerical estimation algorithms end up in the global maximum point rather than a local one. Because of high multimodality and challenging surface of the log-likelihood function, it's actually expected that most of the estimation rounds won't find the global maximum point. For this reason one should always perform multiple estimation rounds and parallel computing is used to obtain the results faster. The number of CPU cores used can be set with the argument `ncores`, and the number of estimation rounds can be chosen with the argument `ncalls`. 
 
-If the model estimates poorly, it is often because the number of mixture components _M_ is chosen too large. One reason for is that the genetic algorithm is (with the default settings) designed to find solutions with non-zero mixing weights for all regimes. One may also adjust the settings of the genetic algorithm employed, or set up an initial population with guesses for the estimates. This can by done by passing arguments in `fitGMVAR` to the function `GAfit` which implements the genetic algorithm. To check the available settings, read the documentation `?GAfit`. If the iteration limit is reached when estimating the model, the function `iterate_more` can be used to finish the estimation. 
+If the model estimates poorly, it is often because the number of mixture components _M_ is chosen too large. One reason for is that the genetic algorithm is (with the default settings) designed to find solutions with non-zero mixing weights for all regimes. One may also adjust the settings of the genetic algorithm or set up an initial population with approximate guesses for the estimates. This can by done by passing arguments in `fitGMVAR` to the function `GAfit` which implements the genetic algorithm. To check the available settings, read the documentation `?GAfit`. If the iteration limit is reached when estimating the model, the function `iterate_more` can be used to finish the estimation. 
 
+### Examining the estimates
 Parameters of the estimated model are printed in an illustrative and easy to read form. In order to easily compare approximate standard errors to certain estimates, one can print the approximate standard errors of the estimates in the same form with the function `print_std_errors`. Numerical approximation of the gradient and Hessian matrix of the log-likelihood at the estimates can be obtained conveniently with the functions `get_gradient` or `get_foc` and `get_hessian`, and eigenvalues of the Hessian can be obtained with the function `get_soc`.
 
-Profile log-likelihood functions of the parameters around the estimates can be plotted with the function `profile_logliks`.
+Graphs of the profile log-likelihood functions of the parameters around the estimates can be plotted with the function `profile_logliks`.
 
 The estimated objects have their own print, plot, and summary methods.
 
 The function `alt_gmvar` can be used to build GMVAR model based on an arbitrary estimation round. This can be used to consider estimates pointed by local maximums instead of the ML estimate. 
 
-
 ### Model diagnostics
-`gmvarkit` considers model diagnostics based on multivariate extension of quantile residuals (see Kalliovirta and Saikkonen 2010), whose are under the correct model specification asymptotically multivariate standard normal distributed. The quantile residual tests introduced by Kalliovirta and Saikkonen (2010) can be performed with the function `quantile_residual_tests` by providing the estimated model (that is class `gmvar` object) as an argument.
+`gmvarkit` considers model diagnostics based on multivariate extension of quantile residuals (see Kalliovirta and Saikkonen 2010) which are under the correct model specification asymptotically multivariate standard normal distributed. The quantile residual tests introduced by Kalliovirta and Saikkonen (2010) can be performed with the function `quantile_residual_tests` by providing the estimated model (that is class `gmvar` object) as an argument.
 
 For graphical diagnostics one may use the function `diagostic_plot`, which enables one to plot the quantile residual time series, auto- and cross-correlation functions of quantile residuals or their squares, or quantile residual histograms and normal QQ-plots.  
-
 
 ### Constructing a GMVAR model without estimation
 One may wish to construct an arbitrary GMVAR model without any estimation process, for example in order to simulate from a particular process of interest. An arbitrary model can be created with the function `GMVAR`. If one wants to add or update data to the model afterwards, it's advisable to use the function `add_data`. 
 
-
-### Simulating from GMVAR process
-The function `simulateGMVAR` is the one for the job. As the main argument it uses a `gmvar` object created with `fitGMVAR` or `GMVAR`. 
-
+### Simulating from a GMVAR process
+The function `simulateGMVAR` is the one for the job. As the main argument it uses a class `gmvar` object created with `fitGMVAR` or `GMVAR`. 
 
 ### Forecasting GMVAR process
-The package `gmvarkit` contains predict method `predict.gmvar` for forecasting GMVAR processes. For one step predictions using the exact formula for conditional mean is supported, but the forecasts further than that are based on independent simulations. The predictions are either sample means or medians and the confidence intervals are based on sample quantiles. The objects generated by `predict.gmvar` have their own plot method. We also encourage directly using the function `simulateGMVAR` for forecasting (see the forecasting example in the documentation `?simulateGMVAR`).
+The package `gmvarkit` contains predict method `predict.gmvar` for forecasting GMVAR processes. For one step predictions using the exact formula for conditional mean is supported, but forecasts further than that are based on independent simulations. The predictions are either sample means or medians and the confidence intervals are based on sample quantiles. The objects generated by `predict.gmvar` have their own plot method. 
 
 ### Univariate analysis
 Use the package `uGMAR` for analysing univariate time series.
 
+# Structural GMVAR model
+
+## Defition of the SGMVAR model
+Consider the GMVAR model defined above under the headline "Definition of the GMVAR model". We focus of the so-called "B-model" setup and write the structural GMVAR model as
+\begin{equation}\label{eq:sgmvar}
+y_t = \sum_{m=1}^Ms_{t,m}\left(\phi_{m,0} + \sum_{i=i}^{p}A_{m,i}y_{i-1} \right) + B_te_t
+\end{equation}
+and
+\begin{equation}\label{eq:sgmvarerr}
+u_t\equiv B_te_t= 
+\left\lbrace\begin{matrix}
+u_{1,t} \sim N(0, \Omega_1) & \text{if} & s_{t,1} = 1 & (\text{with probability } \alpha_{1,t}) \\
+u_{2,t} \sim N(0, \Omega_2) & \text{if} & s_{t,2} = 1 & (\text{with probability } \alpha_{2,t}) \\
+\vdots & & & \\
+u_{M,t} \sim N(0, \Omega_M) & \text{if} & s_{t,M} = 1 & (\text{with probability } \alpha_{M,t}) \\
+\end{matrix}\right.
+\end{equation}
+where the probabilities are expressed conditionally on $\mathcal{F}_{t-1}=\sigma\lbrace y_{t-j}, j>0\rbrace$ and $e_t$ is an orthogonal structural error. Unlike in conventional SVAR analysis, the $(d\times d)$ "B-matrix" $B_t$, which governs the contemporaneous relations of the shocks, is time-varying. This enables to amplify a constant sized structural shock according to the conditional variance of the reduced form error which varies according to the mixing weights.
+
+We have $\Omega_{u,t}\equiv\text{Cov}(u_t|\mathcal{F}_{t-1})=\sum_{m=1}^M\alpha_{m,t}\Omega_m$, while the (conditional) covariance matrix of the structural errors $e_t=B_t^{-1}u_t$ (which have a mixture normal distribution and are not IID) is obtained as 
+\begin{equation}
+\text{Cov}(e_t|\mathcal{F}_{t-1})=\sum_{m=1}^M\alpha_{m,t}B_t^{-1}\Omega_mB_t'^{-1}.
+\end{equation}
+The B-matrix $B_t$ should thus be chosen so that the structural shocks are orthogonal regardless of which regime they come from.
+
+Following Lanne & Lütkepohl (2010) and Lanne et al. (2010), we decompose the error term covariance matrices as
+\begin{equation}\label{eq:decomp}
+\Omega_1 = WW' \quad \text{and} \quad \Omega_m=W\Lambda_mW', \quad m=2,...,M,
+\end{equation}
+where the diagonal of $\Lambda_m=\text{diag}(\lambda_{m1},...,\lambda_{md})$, $\lambda_{mi}>0$ ($i=1,...,d$), contains the eigenvalues of the matrix $\Omega_m\Omega_1^{-1}$ and columns of the nonsingular $W$ are the related eigenvectors. When $M=2$, the above decomposition always exists (e.g. Lanne & Lütkepohl, 2010, Proposition 1), but for $M\geq 3$ its existence requires that the matrices $\Omega_m\Omega_1^{-1}$ share the common eigenvectors in $W$. Whether imposing the above structure on the covariance matrices is appropriate with $M\geq 3$, can be evaluated by estimating the restricted and unrestricted SGMVAR models and conducting a likelihood ratio test, comparing values of information criteria, or examining quantile residual diagnostics, for example. These three methods are accomodated in `gmvarkit`: values of the information criteria are calculated for all estimated models and available, for instance, in the summary print, likelihood ratio test is available as the function `LR_test` and quantile residual diagnostics can be eximined with the functions `diagnostic_plot` and `quantile_residual_tests`.
+
+Lanne & Lütkepohl (2010) show that for a given ordering of the eigenvalues, W is unique apart from changing all signs in a column, as long as for all $i\neq j\in \lbrace 1,...,d \rbrace$ there exists an $m\in \lbrace 2,...,M \rbrace$ such that $\lambda_{mi} \neq \lambda_{mj}$. A locally unique B-matrix that amplifies a constant sized structural shock according to the conditional variance of the reduced form error is therefore obtained as
+\begin{equation}\label{eq:bt}
+B_t=W(\alpha_{1,t}I_d + \sum_{m=2}^M\alpha_{m,t}\Lambda_m)^{1/2}
+\end{equation}
+which simultaneously diagonalizes $\Omega_1,...,\Omega_M$, and $\Omega_{u,t}$ for each $t$ so that $\text{Cov}(e_t|\mathcal{F}_{t-1})=I_d$. In `gmvarkit`, the B-matrix always has the above structure. 
+
+## Identification of the structural shocks
+Even if all pairs of $\lambda_{mi}$ are distinct for some $m$, unique identification of $B_t$ requires deciding upon the ordering of $\lambda_{mi}$ in the diagonals of $\Lambda_m$ which fixes also the ordering of the columns of $W$. With an arbitrary ordering of the eigenvalues and eigenvectors, it is not guaranteed that the structural shocks have economic interpretations. However, after the statistical identification, overidentifying restrictions that lead economically interpretable structural shocks can be tested and thus validated statistically. Furthermore, it turns out that globally unique identification of the structural shocks can often be achieved with less restrictive constraints than in conventional SVAR models. The following proposition gives sufficient and necessary conditions for global identification of the shocks when all pairs of $\lambda_{mi}$ are distinct for some $m$.
+
+#### Proposition 1
+Suppose $\Omega_1=WW'$ and $\Omega_m=W\Lambda_mW', \ \ m=2,...,M,$ where $\Lambda_m=\text{diag}(\lambda_{m1},...,\lambda_{md})$, $\lambda_{mi}>0$ ($i=1,...,d$), contains the eigenvalues of $\Omega_m\Omega_1^{-1}$ in the diagonal and the columns of the nonsingular $W$ are the related eigenvectors. Then, if (1) for all $i\neq j$ there exists an $m\in \lbrace 2,...,M \rbrace$ such that $\lambda_{mi} \neq \lambda_{mj}$, (2) there is one (strict) sign constraint in each column of $W$, and (3) the columns of $W$ are constrained in a way that their ordering cannot be changed, the above decomposition of $\Omega_1,...,\Omega_M$ is globally unique, provided that it exists.
+
+\noindent Notice that normalizing the diagonal of the B-matrix to be positive or negative is enough to fulfil condition (2) of Proposition 1. This kind of normalization is merely a matter of deciding upon whether positive or negative shocks are considered and therefore not restricting.
+
+Because imposing zero or sign constraints on $W$ equals to placing them on $B_t$, they may be justified economically. For example, if $d=2$ and $\lambda_{m1}\neq\lambda_{m2}$ for some $m$, structural shocks can be uniquely identified by placing one (strict) negative and one (strict) positive sign constraint in the same row of $B_t$ because reordering of the columns would violate the sign constraints. If the diagonal of $B_t$ is normalized to be positive, the negative sign constraint becomes testable. Given that condition (1) holds, for $d=3$ having one positive sign, one negative sign, and one zero constraint the same row of $B_t$, in addition to a single sign constraint in the column that has the zero constraint is enough for global identification of all the shocks. Moreover, because the zero constraint in the $d=3$ example is overidentifying, it can be tested.
+
+If $\lambda_{mi}=\lambda_{mj}$ for some $i\neq j$ and all $m\in \lbrace 2,...,M \rbrace$
+but they are placed on the first (or last) positions of $\Lambda_m$, the rest of the shocks with distinct $\lambda_{mi}$ for some $m$ are still globally identified as long as the conditions (2) and (3) of Proposition 1 are satisfied. Identification of the shocks with identical eigenvalues in all $m$ requires stronger conditions, however. Whether some of the $\lambda_{mi}$ are equal can be tested with Wald test which is available in `gmvarkit` as the function  `Wald_test`. The following proposition provides sufficient criteria for global identification of all the shocks when at most two eigenvalues are identical to each other in all $m$ but there are possibly multiple pairs of such eigenvalues.
+
+#### Proposition 2
+Consider the matrix decomposition of Proposition 1 and further suppose that $\lambda_{mi}=\lambda_{mj}$ for some $i\neq j$ and all $m$, but for all $l\neq k$ such that $l$ is not in $\lbrace i,j \rbrace$ or $k$ is not $\lbrace i,j \rbrace$, $\lambda_{ml}\neq\lambda_{mk}$ for some $m$. Then, the decomposition of $\Omega_1,...,\Omega_M$ is globally unique if in addition to conditions (2) and (3) of Proposition 1, the following condition is satisfied:
+(3) each of the columns $i,j$ of $W$ (or equally $B_t$) such that $\lambda_{mi}=\lambda_{mj}$ for all $m$ have at least one zero constraint where the other one does not and also have at least one (strict) sign constraint where the other one has a zero constraint.
+
+The result holds provided that the decomposition exists.
+
+To exemplify, if $d=4$, $\lambda_{m1}=\lambda_{m2}$ for all $m$, $\lambda_{m2}\neq\lambda_{m3}$ for some $m$, $\lambda_{m2}\neq\lambda_{m4}$ for some $m$, and $\lambda_{m3}\neq\lambda_{m4}$ for some $m$, the following constraints lead to global identification of all the shocks:
+\begin{equation}\label{eq:exampleconstraints}
+B_t=\begin{bmatrix}
+* & * & * & *\\
+* & * & * & *\\
++ & 0 & * & -\\
+0 & + & - & +\\
+\end{bmatrix}
+\ \text{or} \
+\begin{bmatrix}
++ & * & * & *\\
+* & + & * & *\\
+0 & - & + & *\\
+- & 0 & 0 & +\\
+\end{bmatrix}
+\ \text{or} \
+\begin{bmatrix}
++ & 0 & * & +\\
+* & * & * & *\\
+0 & - & + & -\\
+* & * & * & *\\
+\end{bmatrix}
+\end{equation}
+and so on, where $"*"$ signifies that the element is not constrained, $"+"$ denotes strict positive and $"-"$ a strict negative sign constraint, and $"0"$ means that the element is constrained to zero. As is demonstrated above, the structural shocks can often be identified with less restrictive constraints than in a conventional SVAR model, even when some of the eigenvalues are identical for all covariance matrices. 
+
+The conditions of Proposition 2 are not in general necessary. If $d=2$ and $\lambda_{m1}=\lambda_{m2}$ for all $m$, for instance, identification (of all regimes) with Cholesky decomposition leads to unique solution with less restrictive constraints than the ones required in Proposition 2. More generally, if all the eigenvalues are the same for each covariance matrix, then $\Omega_m=\lambda_{m1}\Omega_1$ and the necessary identification condition is the same as for the conventional SVAR model. Proofs for the above propositions are given in Virolainen (2020).
+
+## Estimation of the structural GMVAR model
+The SGMVAR model is estimated similarly to the reduced form version, expect that the model is parametrized with $W$ and $\lambda_{mi}$, $m=2,...,M$, $i=1,...,d$ instead of the covariance matrices $\Omega_{m}$, $m=1,...,M$. The estimation is can be done with the function `fitGMVAR` but now the argument `structural_pars` needs to be supplied with a list providing the constraints on $W$ (which equally imposes the constraints on the B-matrix) and optionally linear constraints on the $\lambda_{mi}$ parameters. 
+
+The list `structural_pars` should contain at least the element `W` which is a $(dxd)$ matrix matrix with its entries imposing constraints on W: NA indicating that the element is unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict negative sign constraint, and zero indicating that the element is constrained to zero. The optional element named `C_lambda` which is a $(d(M-1) \times r)$ constraint matrix that satisfies ($\lambda_{2},...,\lambda_{M}) =C_{\lambda} \gamma$ where $\lambda_{m}=(\lambda_{m1},...,\lambda_{md})$ and $\gamma$ is the new $(r x 1)$ parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of `C_lambda` must be either __positive__ or __zero__. Ignore (or set to `NULL`) if the eigenvalues $\lambda_{mi}$ should not be constrained. Note that other constraints than constraining some of the $\lambda_{mi}$ to be identical are not recommended but is such constraints are imposed, the argument `lambda_scale` in the genetic algorithm (see `?GAfit`) should be adjusted accordingly.
+
+## Impulse response analysis
+Following Koop et al. (1996) and Kilian & Lütkepohl (2017), we consider the generalized impulse response function (GIRF) defined as
+\begin{equation}\label{eq:girf}
+\text{GIRF}(n,\delta_j,\mathcal{F}_{t-1}) = \text{E}[y_{t+n}|\delta_j,\mathcal{F}_{t-1}] - \text{E}[y_{t+n}|\mathcal{F}_{t-1}],
+\end{equation}
+where $n$ is the chosen horizon, $\mathcal{F}_{t-1}=\sigma\lbrace y_{t-j},j>0\rbrace$ as before, the first term in the RHS is the expected realization of the process at time $t+n$ conditionally on a structural shock of magnitude $\delta_j \in\mathbb{R}$ in the $j$th variable at time $t$ and the previous observations, and the second term in the RHS is the expected realization of the process conditionally on the previous observations only. GIRF thus expresses the expected difference in the future outcomes when the specific structural shock hits the system at time $t$ as opposed to all shocks being random.
+
+Due to the $p$-step Markov property of the SGMVAR model, conditioning on (the $\sigma$-algebra generated by) the $p$ previous observations $\boldsymbol{y}_{t-1}\equiv(y_{t-1},...,y_{t-p})$ is effectively the same as conditioning on $\mathcal{F}_{t-1}$ at the time $t$ and later. The history $\boldsymbol{y}_{t-1}$ can be either fixed or random, but with random history the GIRF becomes a random vector, however. Using fixed $\boldsymbol{y}_{t-1}$ makes sense when one is interested in the effects of the shock in a particular point of time, whereas more general results are obtained by assuming that $\boldsymbol{y}_{t-1}$ follows the stationary distribution of the process. If one is, on the other hand, concerned about a specific regime, $\boldsymbol{y}_{t-1}$ can be assumed to follow the stationary distribution of the corresponding component model. 
+
+In practice, the GIRF and its distributional properties can be approximated with a Monte Carlo algorithm that generates independent realizations of the process and then takes the sample mean for point estimate. If $\boldsymbol{y}_{t-1}$ is random and follows the distribution $G$, the GIRF should be estimated for different values of $\boldsymbol{y}_{t-1}$ generated from $G$, and then the sample mean and sample quantiles can be taken to obtain the point estimate and confidence intervals. The algorithm implemented in `gmvarkit` is presented in Virolainen (2020).
+
+Because the SGMVAR model allows to associate specific features or economic interpretations for different regimes, it might be interesting to also examine the effects of a structural shock to the mixing weights $\alpha_{m,t}$, $m=1,...,M$. We then consider the related GIRFs $E[\alpha_{m,t+n}|\delta_j,\boldsymbol{y}_{t-1}] - E[\alpha_{m,t+n}|\boldsymbol{y}_{t-1}]$ for which point estimates and confidence intervals can be constructed similarly to (\ref{eq:girf}).
+
+In `gmvarkit`, the GIRF can be estimated with the function `GIRF` which should be supplied with the estimated SGMVAR model or a SGMVAR model build with hand specified parameter values using the function `GMVAR`. The size of the structural shock can be set with the argument `shock_size`. If not specified, the size of one standard deviation is used, calculated as the weighted average of the component process error term standard deviations with weights given by the mixing weight parameters. Among other arguments, the function may also be supplied with the argument `init_regimes` which specifies from which regimes' stationary distributions the initial values are generated from. If more than one regime is specified, a mixture distribution with weights given by the mixing weight parameters is used. Alternatively, one may specify fixed initial values with the argument `init_values`. Note that the confidence intervals (whose confidence level can be specified with the argument `ci`) reflect uncertainty about the initial value only and not about the parameter estimates. 
+
+Because estimating the GIRF and confidence intervals for it is computationally demanding, parallel computing is taken use of to shorten the estimation time. The number of CPU cores used can be set with the argument `ncores`. Finally, observe that the objects returned by the GIRF function have their own plot and print methods.
 
 ## References
+* Lanne, M. and Lütkepohl, H. (2010). Structural vector autoregressions with nonnormal residuals. _Journal of Business & Economic Statistics_, 28(1):159–168.
+* Lanne, M., Lütkepohl, H., and Maciejowsla, K. (2010). Structural vector autoregressions with markov switching. _Journal of Economic Dynamics and Control_, 34(2):121–131.
 * Kalliovirta L., Meitz M. and Saikkonen P. (2016) Gaussian mixture vector autoregression. _Journal of Econometrics_, __192__, 485-498.
 * Kalliovirta L. and Saikkonen P. (2010)  Reliable Residuals for Multivariate Nonlinear Time Series Models. _Unpublished Revision of HECER Discussion Paper No. 247_.
+* Kilian, L. and Lütkepohl, H. (2017). Structural Vector Autoregressive Analysis. Cambridge University Press, Cambridge, 1st edition.
+* Koop, G., Pesaran, M., and Potter, S. (1996). Impulse response analysis in nonlinear multivariate models. _Journal of Econometrics_, 74(1):119–147.
+* Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working paper, available as arXiv:2007.04713.

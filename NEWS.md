@@ -18,7 +18,7 @@
 
 # gmvarkit 1.1.2
 
-* New functions: 'profile_logliks' (plot profile log-likelihood functions), 'get_foc' (gradient at the estimates, remember also 'get_soc')
+* New exported functions: 'profile_logliks' (plot profile log-likelihood functions), 'get_foc' (gradient at the estimates, recall also 'get_soc')
 * Now standard errors are printed correctly for models imposing all kinds of constraints (in earlier versions standard errors for such constrained AR parameters that involved sums or multiplication were incorrect).
 * Minor update on the genetic algorithm.
 * Minor update on the print and summary-print methods. 
@@ -32,3 +32,17 @@
 * The default population size in the genetic algorithm is now 50*ceiling(sqrt(npars)), was 10*npars.
 * In the function quantile_residual_tests the default argument 'nsimu' is now 1 so that the tests are based on the given data only (and not on simulation).
 * Corrected an error-causing bug in the predict method when the argument 'nt' was not specified.
+
+# gmvarkit 1.2.0
+
+* A structural GMVAR model is introduced! The SGMVAR model can be estimated with the function 'fitGMVAR' or constructed by hand with the function 'GMVAR', while also other existing functions such as 'profile_logliks', 'quantile_residual_tests', 'diagnostic_plot', etc. work with the SGMVAR model as well. See the cited paper by Virolainen (2020) or the vignette for the model definition and identification conditions.
+* New exported function: 'GIRF' for estimating generalized impulse function for the variables in a SGMVAR model.
+* New exported function: 'Wald_test' for conducting a Wald test testing validity of parameter constraints.
+* New exported function: 'LR_test' for conducting a likelihood ratio test testing validity of parameter constraints.
+* New exported function: 'gmvar_to_sgmvar' for building a structural GMVAR model based on a two-regime reduced form GMVAR model.
+* New exported function: 'reorderd_W_column' for reordering the columns of W matrix of a structural GMVAR model.
+* New exported function: 'swap_W_signs' for swapping all signs the pointed columns of W matrix (and also B-matrix) of a structural GMVAR model.
+* Bug fix: the prediction intervals for mixing weights were incorrect when calculating upper or lower prediction intervals with only one level of significance.
+* Minor computation speed improvements.
+* Non-backward-compatible change: the functions 'get_boldA_eigens' and 'get_omega_eigens' now return matrices and not lists.
+* Included the structural GMVAR model in a vignette. 

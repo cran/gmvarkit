@@ -24,7 +24,7 @@ quantile_residual_tests(
 
 \item{...}{currently not used.}
 
-\item{digits}{number of decimals to print}
+\item{digits}{the number of decimals to print}
 
 \item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
 
@@ -69,14 +69,24 @@ colnames(data) <- colnames(eurusd)
 
 # GMVAR(1,2) model with default settings
 fit12 <- fitGMVAR(data, p=1, M=2)
-qrtests12 <- quantile_residual_tests(fit12, nsimu=1)
+qrtests12 <- quantile_residual_tests(fit12)
 qrtests12
 plot(qrtests12)
+
+# Structural GMVAR(1,2) model identified with sign
+# constraints. The sign constraints (which fully identify
+# the shocks) are in line with the reduced form model,
+# so the test results are the same.
+W_122 <- matrix(c(1, NA, -1, 1), nrow=2)
+fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+  ncalls=10, seeds=1:10)
+qrtests12s <- quantile_residual_tests(fit12s)
+qrtests12s
 
 # GMVAR(2,2) model with mean parametrization
 fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
   ncalls=1, seeds=20)
-qrtests22 <- quantile_residual_tests(fit22, nsimu=1)
+qrtests22 <- quantile_residual_tests(fit22)
 qrtests22
 
 # GMVAR(2,2) model with autoregressive parameters restricted
@@ -94,9 +104,12 @@ qrtests22c
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{
-\code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residuals}},
+\code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residuals}}, \code{\link{GIRF}},
   \code{\link{diagnostic_plot}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
+  \code{\link{LR_test}}, \code{\link{Wald_test}}
 }

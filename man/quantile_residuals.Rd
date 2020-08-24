@@ -2,7 +2,7 @@
 % Please edit documentation in R/quantileResiduals.R
 \name{quantile_residuals}
 \alias{quantile_residuals}
-\title{Calculate multivariate quantile residuals of GMVAR model}
+\title{Calculate multivariate quantile residuals of a GMVAR model}
 \usage{
 quantile_residuals(gmvar)
 }
@@ -18,7 +18,7 @@ Returns \eqn{((n_obs-p) x d)} matrix containing the multivariate quantile residu
 }
 \description{
 \code{quantile_residuals} calculates multivariate quantile residuals
- (described by \emph{Kalliovirta and Saikkonen 2010}) for GMVAR model.
+ (described by \emph{Kalliovirta and Saikkonen 2010}) for a GMVAR model.
 }
 \examples{
 # These examples use the data 'eurusd' which comes with the
@@ -40,6 +40,14 @@ params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
   9.838, 0.740)
 mod222 <- GMVAR(data, p=2, M=2, params=params222, parametrization="mean")
 quantile_residuals(mod222)
+
+# Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+params222s <- c(1.03, 2.36, 1.79, 3, 1.25, 0.06, 0.04, 1.34, -0.29,
+ -0.08, -0.05, -0.36, 1.2, 0.05, 0.05, 1.3, -0.3, -0.1, -0.05, -0.4,
+  0.89, 0.72, -0.37, 2.16, 7.16, 1.3, 0.37)
+W_222 <- matrix(c(1, NA, -1, 1), nrow=2, byrow=FALSE)
+mod222s <- GMVAR(data, p=2, M=2, params=params222s, structural_pars=list(W=W_222))
+quantile_residuals(mod222s)
 
 # GMVAR(2,2), d=2 model with AR-parameters restricted to be
 # the same for both regimes:
@@ -68,6 +76,8 @@ quantile_residuals(mod222c)
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{

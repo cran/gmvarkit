@@ -8,7 +8,7 @@
 \alias{summary.gmvar}
 \alias{plot.gmvar}
 \alias{print.gmvar}
-\title{Create a class 'gmvar' object defining a GMVAR model}
+\title{Create a class 'gmvar' object defining a reduced form or structural GMVAR model}
 \usage{
 GMVAR(
   data,
@@ -19,6 +19,7 @@ GMVAR(
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
+  structural_pars = NULL,
   calc_cond_moments,
   calc_std_errors = FALSE
 )
@@ -49,7 +50,7 @@ used to define GMVAR models without data and can be ignored if \code{data} is pr
   \item{\strong{For unconstrained models:}}{
     Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
     \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
-    ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where:
+    ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where
     \itemize{
       \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
       \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
@@ -59,17 +60,37 @@ used to define GMVAR models without data and can be ignored if \code{data} is pr
   \item{\strong{For constrained models:}}{
     Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have form
     \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi}}
-    \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where:
+    \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
     \itemize{
       \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
-      \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}. Here \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
+      \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
       constraint matrix.
     }
   }
+  \item{\strong{For structural GMVAR model:}}{
+    Should have the form
+    \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+    vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
+    \itemize{
+      \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+    }
+    \describe{
+      \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+      \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+      \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+      \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
+       the sign constraints.}
+      \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
+       with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+      \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
+       constraint matrix.}
+    }
+  }
 }
-Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}:th coefficient matrix of the \eqn{m}:th
+Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}th coefficient matrix of the \eqn{m}th
 mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
-\eqn{\alpha_{m}} is the mixing weight parameter.
+\eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the
+error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
 If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
 \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
 of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
@@ -84,11 +105,26 @@ intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
 (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M}) = }\strong{\eqn{C \psi}},
-where \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p}) (pd^2 x 1), m=1,...,M}
-contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains the constrained parameters.
+where \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p}) (pd^2 x 1), m=1,...,M},
+contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains the related parameters.
 For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
+
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
+the following elements:
+\itemize{
+  \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
+    unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
+    negative sign constraint, and zero indicating that the element is constrained to zero.
+  \item \code{C_lambda} - a \eqn{(d(M-1) x r)} constraint matrix that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \strong{\eqn{\gamma}} is the new \eqn{(r x 1)}
+    parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
+    must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
+    should not be constrained.
+}
+See Virolainen (2020) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
+a time-varying diagonal matrix with positive diagonal entries).}
 
 \item{calc_cond_moments}{should conditional means and covariance matrices should be calculated?
 Default is \code{TRUE} if the model contains data and \code{FALSE} otherwise.}
@@ -107,14 +143,15 @@ Default is \code{TRUE} if the model contains data and \code{FALSE} otherwise.}
 will include log-likelihood and information criteria values.}
 }
 \value{
-Returns an object of class \code{'gmvar'} defining the specified GMVAR model. Can be used
-  to work with other functions provided in \code{gmvarkit}.
+Returns an object of class \code{'gmvar'} defining the specified reduced form or structural GMVAR model.
+  Can be used to work with other functions provided in \code{gmvarkit}.
 
   Remark that the first autocovariance/correlation matrix in \code{$uncond_moments} is for the lag zero,
   the second one for the lag one, etc.
 }
 \description{
-\code{GMVAR} creates a class \code{'gmvar'} object that defines a GMVAR model
+\code{GMVAR} creates a class \code{'gmvar'} object that defines
+ a reduced form or structural GMVAR model
 }
 \details{
 If data is provided, then also multivariate quantile residuals (\emph{Kalliovirta and Saikkonen 2010})
@@ -133,10 +170,10 @@ If data is provided, then also multivariate quantile residuals (\emph{Kalliovirt
 \item \code{print}: print method
 }}
 
-\section{S3 methods}{
+\section{About S3 methods}{
 
   Only the \code{print} method is available if data is not provided.
-  If data is provided, then \code{summary}, \code{predict}, and \code{plot} methods are also available.
+  If data is provided, then in addition to the ones listed above, the \code{predict} method is also available.
 }
 
 \examples{
@@ -163,6 +200,15 @@ params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
   9.838, 0.740)
 mod222 <- GMVAR(data, p=2, M=2, params=params222, parametrization="mean")
 mod222
+
+# Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+params222s <- c(-11.964, 155.024, 11.636, 124.988, 1.314, 0.145, 0.094, 1.292,
+ -0.389, -0.07, -0.109, -0.281, 1.248, 0.077, -0.04, 1.266, -0.272, -0.074,
+  0.034, -0.313, 0.903, 0.718, -0.324, 2.079, 7.00, 1.44, 0.742)
+W_222 <- matrix(c(1, NA, -1, 1), nrow=2, byrow=FALSE)
+mod222s <- GMVAR(data, p=2, M=2, params=params222s, parametrization="mean",
+ structural_pars=list(W=W_222))
+mod222s
 
 # GMVAR(2,2), d=2 model with AR-parameters restricted to be
 # the same for both regimes:
@@ -191,8 +237,11 @@ mod222c2
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
+   \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2007.04713.
  }
 }
 \seealso{
-\code{\link{fitGMVAR}}, \code{\link{add_data}}, \code{\link{swap_parametrization}}
+\code{\link{fitGMVAR}}, \code{\link{add_data}}, \code{\link{swap_parametrization}}, \code{\link{GIRF}},
+  \code{\link{gmvar_to_sgmvar}}, \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}
 }
