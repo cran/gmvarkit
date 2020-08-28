@@ -1,6 +1,6 @@
-1757b2342a62f3ee4fec716951d7f580 *DESCRIPTION
+1997fd6e5f7aff1f71c76b41fe2b8b10 *DESCRIPTION
 79f588dc7705735cd77b3c91a7e9d059 *NAMESPACE
-ad53d0b5a15bbf70cfcc56b84420b06c *NEWS.md
+9e67442e04383bf1e5ca8782d910a41d *NEWS.md
 cd8dc04f952f33397f0c20a8ae399b19 *R/GIRF.R
 1c2f1e9b0e5cd603c10c507b449495a0 *R/GMVARconstruction.R
 2a2888bc3c9f6606a5c109f5e36dbc73 *R/MAINest.R
@@ -30,7 +30,7 @@ d1e2b64c5487c1d637c0aa7ba5630a72 *README.md
 0dec756ef8fb7eb8675753472c6895b4 *data/eurusd.rda
 46750e778a5cdb4d65c347f8e43df623 *inst/doc/intro-to-gmvarkit.R
 611cb76ffc6d95dbae5356f4f6807440 *inst/doc/intro-to-gmvarkit.Rmd
-570ddf5c94d40ed97905c87c447b5404 *inst/doc/intro-to-gmvarkit.html
+922800b80eac348d8858fff9a5473307 *inst/doc/intro-to-gmvarkit.html
 6994b0cd5b35bd8f6021e5d264bd230a *man/GAfit.Rd
 f2a0d2aff3426ca2dcd89555a29fc211 *man/GIRF.Rd
 df3561255489c821728bfd0b0d168ec3 *man/GMVAR.Rd
@@ -136,5 +136,5 @@ e19a9317538cc1e756636b4201e2bde1 *tests/testthat/test_quantileResidualTests.R
 9a8d1b4a9432808286596d2a317a5b9b *tests/testthat/test_simulateGMVAR.R
 8d4fb521a67338d4f7178cebf2ac0d86 *tests/testthat/test_standardErrors.R
 d398037f20a924e26b29b1137fcc88f0 *tests/testthat/test_uncondMoments.R
-fb90627c172e56a9524ca42fd8bad065 *tests/testthat/test_waldAndLR.R
+38b266b3cf3a563cb9c3cf6316fad423 *tests/testthat/test_waldAndLR.R
 611cb76ffc6d95dbae5356f4f6807440 *vignettes/intro-to-gmvarkit.Rmd
