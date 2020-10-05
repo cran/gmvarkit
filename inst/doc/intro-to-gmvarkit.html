@@ -12,7 +12,7 @@
 
 <meta name="author" content="Savi Virolainen" />
 
-<meta name="date" content="2020-08-25" />
+<meta name="date" content="2020-10-05" />
 
 <title>Introduction to gmvarkit</title>
 
@@ -231,7 +231,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Introduction to gmvarkit</h1>
 <h4 class="author">Savi Virolainen</h4>
-<h4 class="date">2020-08-25</h4>
+<h4 class="date">2020-10-05</h4>
 
 
 
@@ -369,7 +369,7 @@ f(\boldsymbol{y};\boldsymbol{\theta})=\sum_{m=1}^M\alpha_m n_{dp}(\boldsymbol{y}
 <h3>Examining the estimates</h3>
 <p>Parameters of the estimated model are printed in an illustrative and easy to read form. In order to easily compare approximate standard errors to certain estimates, one can print the approximate standard errors of the estimates in the same form with the function <code>print_std_errors</code>. Numerical approximation of the gradient and Hessian matrix of the log-likelihood at the estimates can be obtained conveniently with the functions <code>get_gradient</code> or <code>get_foc</code> and <code>get_hessian</code>, and eigenvalues of the Hessian can be obtained with the function <code>get_soc</code>.</p>
 <p>Graphs of the profile log-likelihood functions of the parameters around the estimates can be plotted with the function <code>profile_logliks</code>.</p>
-<p>The estimated objects have their own print, plot, and summary methods.</p>
+<p>The estimated objects have their own print, plot, and summary methods. In-sample conditional moments can be examined with the function <code>cond_moment_plot</code>.</p>
 <p>The function <code>alt_gmvar</code> can be used to build GMVAR model based on an arbitrary estimation round. This can be used to consider estimates pointed by local maximums instead of the ML estimate.</p>
 </div>
 <div id="model-diagnostics" class="section level3">

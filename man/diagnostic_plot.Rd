@@ -4,13 +4,19 @@
 \alias{diagnostic_plot}
 \title{Quantile residual diagnostic plot for a GMVAR model}
 \usage{
-diagnostic_plot(gmvar, type = c("series", "ac", "ch", "norm"), maxlag = 10)
+diagnostic_plot(
+  gmvar,
+  type = c("all", "series", "ac", "ch", "norm"),
+  maxlag = 10,
+  wait_time = 4
+)
 }
 \arguments{
 \item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
 
 \item{type}{which type of diagnostic plot should be plotted?
 \itemize{
+  \item{\code{"all"} all below sequentially.}
   \item{\code{"series"} the quantile residual time series.}
   \item{\code{"ac"} the quantile residual autocorrelation and cross-correlation functions.}
   \item{\code{"ch"} the squared quantile residual autocorrelation and cross-correlation functions.}
@@ -19,6 +25,8 @@ diagnostic_plot(gmvar, type = c("series", "ac", "ch", "norm"), maxlag = 10)
 }}
 
 \item{maxlag}{the maximum lag considered in types \code{"ac"} and \code{"ch"}.}
+
+\item{wait_time}{if \code{type == all} how many seconds to wait before showing next figure?}
 }
 \description{
 \code{diagnostic_plot} plots a multivariate quantile residual diagnostic plot
@@ -59,7 +67,7 @@ params222c <- c(1.031, 2.356, 1.786, 3.000, 1.250, 0.060, 0.036,
  1.335, -0.290, -0.083, -0.047, -0.356, 0.934, -0.152, 5.201, 5.883,
  3.560, 9.799, 0.368)
 mod222c <- GMVAR(data, p=2, M=2, params=params222c, constraints=C_mat)
-diagnostic_plot(mod222c)
+diagnostic_plot(mod222c, wait_time=0.1)
 diagnostic_plot(mod222c, type="ac", maxlag=12)
 }
 \references{
@@ -74,5 +82,6 @@ diagnostic_plot(mod222c, type="ac", maxlag=12)
 }
 \seealso{
 \code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
- \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
+ \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}, \code{\link[stats]{acf}},
+  \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
 }

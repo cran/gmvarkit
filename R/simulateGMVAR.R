@@ -185,7 +185,7 @@ simulateGMVAR <- function(gmvar, nsimu, init_values=NULL, ntimes=1, drop=TRUE, s
 
   # Set/generate initial values
   if(is.null(init_values)) {
-    m <- sample(x=init_regimes, size=1, replace=TRUE, prob=reg_probs) # From which mixture component the initial values are drawn from?
+    m <- ifelse(length(init_regimes) == 1 && init_regimes != 1, init_regimes, sample(x=init_regimes, size=1, replace=TRUE, prob=reg_probs)) # From which mixture component the initial values are drawn from?
     mu <- rep(all_mu[, m], p)
     L <- t(chol(Sigmas[, , m]))
     init_values <- matrix(mu + L%*%rnorm(d*p), nrow=p, ncol=d, byrow=TRUE)
@@ -303,7 +303,7 @@ simulateGMVAR <- function(gmvar, nsimu, init_values=NULL, ntimes=1, drop=TRUE, s
           }
           e_t <- solve(B_t, u_t) # Structural shock
           e_t[girf_pars$variable] <- girf_pars$shock_size # Impose the size of a shock
-          u_t <- B_t%*%e_t # The reduced form shock corresponding to the specific sized structural shock in the j:th variaböe
+          u_t <- B_t%*%e_t # The reduced form shock corresponding to the specific sized structural shock in the j:th variable
         }
 
         sample2[i1, , j1] <- mu_mt2 + u_t

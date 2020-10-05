@@ -9,6 +9,7 @@
 #' @inheritParams simulateGMVAR
 #' @param type which type of diagnostic plot should be plotted?
 #'   \itemize{
+#'     \item{\code{"all"} all below sequentially.}
 #'     \item{\code{"series"} the quantile residual time series.}
 #'     \item{\code{"ac"} the quantile residual autocorrelation and cross-correlation functions.}
 #'     \item{\code{"ch"} the squared quantile residual autocorrelation and cross-correlation functions.}
@@ -16,11 +17,13 @@
 #'       density (dashed line) and standard normal QQ-plots.}
 #'   }
 #' @param maxlag the maximum lag considered in types \code{"ac"} and \code{"ch"}.
+#' @param wait_time if \code{type == all} how many seconds to wait before showing next figure?
 #' @details Auto- and cross-correlations (types \code{"ac"} and \code{"ch"}) are calculated with the function
 #'  \code{acf} from the package \code{stats} and the plot method for class \code{'acf'} objects is employed.
 #' @inherit quantile_residual_tests references
 #' @seealso \code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
-#'  \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link[stats]{acf}}, \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
+#'  \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}, \code{\link[stats]{acf}},
+#'   \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
 #' @examples
 #' # These examples use the data 'eurusd' which comes with the
 #' # package, but in a scaled form.
@@ -51,25 +54,64 @@
 #'  1.335, -0.290, -0.083, -0.047, -0.356, 0.934, -0.152, 5.201, 5.883,
 #'  3.560, 9.799, 0.368)
 #' mod222c <- GMVAR(data, p=2, M=2, params=params222c, constraints=C_mat)
-#' diagnostic_plot(mod222c)
+#' diagnostic_plot(mod222c, wait_time=0.1)
 #' diagnostic_plot(mod222c, type="ac", maxlag=12)
 #' @export
 
-diagnostic_plot <- function(gmvar, type=c("series", "ac", "ch", "norm"), maxlag=10) {
+diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), maxlag=10, wait_time=4) {
   check_gmvar(gmvar)
   check_null_data(gmvar)
+  stopifnot(wait_time >= 0)
   type <- match.arg(type)
   qres <- gmvar$quantile_residuals
-  colnames(qres) <- colnames(as.ts(gmvar$data))
-  if(type == "series") {
-    plot.ts(qres, plot.type="multiple", main="Quantile residual time series", xlab=NULL)
-  } else if(type == "ac") {
+  d <- gmvar$model$d
+  names_ts <- colnames(as.ts(gmvar$data))
+  colnames(qres) <- names_ts
+  old_par <- par(no.readonly=TRUE)
+  on.exit(par(old_par))
+  waitifall <- function() {
+    if(type == "all") Sys.sleep(wait_time)
+  }
+  if(type == "all") message("In total four quantile residual figures are plotted:
+                            1) time series
+                            2) autocorrelation function of qresiduals
+                            3) autocorrelation function of squared qresiduals
+                            4) histograms and normal QQ-plots")
+
+  if(type == "series" || type == "all") {
+    par(mfrow=c(d, 1), las=1)
+    for(d1 in 1:d) {
+      xaxt <- "n"
+      if(d1 == 1) {
+        par(mar=c(0.5, 2.5, 2.1, 1))
+      } else if(d1 == d) {
+        xaxt <- "s"
+        par(mar=c(2.5, 2.5, 0.1, 1))
+      } else {
+        par(mar=c(0.5, 2.5, 0.1, 1))
+      }
+      yaxt1 <- round(min(qres[,d1]))
+      yaxt2 <- round(max(qres[,d1]))
+      main <- ifelse(all.equal(d1, 1), "Quantile residual time series", "")
+      plot(qres[,d1], yaxt="n", xaxt=xaxt, type="l", col=grDevices::rgb(0, 0, 0, 1), ylab="", xlab="", main=main)
+      axis(2, at=yaxt1:yaxt2, labels=yaxt1:yaxt2)
+      abline(h=0, col=grDevices::rgb(1, 0, 0, 0.3), lwd=2)
+      legend("topleft", legend=names_ts[d1], bty="n", col="black", text.font=2, cex=0.65, x.intersp=0.5, y.intersp=1)
+    }
+
+  }
+  if(type == "ac" || type == "all") {
+    waitifall()
+    par(mar=c(2.3, 2.5, 3.5, 2.5))
     acf(qres, lag.max=maxlag, plot=TRUE)
-  } else if(type == "ch") {
+  }
+  if(type == "ch" || type == "all") {
+    waitifall()
+    par(mar=c(2.3, 2.5, 3.5, 2.5))
     acf(qres^2, lag.max=maxlag, plot=TRUE)
-  } else if(type == "norm") {
-    old_par <- par(no.readonly=TRUE)
-    on.exit(par(old_par))
+  }
+  if(type == "norm" || type == "all") {
+    waitifall()
     d <- gmvar$model$d
     par(mfrow=c(2, d), mar=c(2.5, 2.5, 2.1, 1.1))
     for(i1 in 1:d) {
@@ -134,7 +176,7 @@ diagnostic_plot <- function(gmvar, type=c("series", "ac", "ch", "norm"), maxlag=
 #' @return  Only plots to a graphical device and doesn't return anything.
 #' @inherit loglikelihood references
 #' @seealso  \code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}},
-#'   \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}}
+#'   \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}
 #' @examples
 #' \donttest{
 #' # These examples use the data 'eurusd' which comes with the

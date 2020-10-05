@@ -50,3 +50,14 @@
 # gmvarkit 1.2.1
 
 * Fixed CRAN issues concerning certain unit tests (not visible to users).
+
+# gmvarkit 1.2.2
+
+* The plot method of class gmvar objects now also plots marginal stationary densities along with kernel density estimates of the individual time series.
+* New exported function: 'cond_moment_plot' for plotting in-sample conditional means and variances
+* Changed 'diagnostic_plot' to automatically show all four figures by default and improved the quantile residual time series plot. 
+* Added the argument 'which_largest' to the function 'alt_gmvar'
+* In GIRF the default shock size is now one, which is then amplified by the B-matrix according to the conditional standard deviation of the model.
+* Fixed a bug that caused error when trying to estimate a structural model with more than two regimes and no zero restrictions.
+* Fixed a bug that caused error when estimating GIRF with only one initial regime that is not the first regime.
+* Fixed a bug that caused error when printing standard errors of a SGMVAR model with constraints on the lambda parameters.
