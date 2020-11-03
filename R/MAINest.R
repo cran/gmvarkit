@@ -25,6 +25,13 @@
 #'  use the found estimates as starting values for the genetic algorithm and and employ another round of estimation
 #'  (see \code{?GAfit} how to set up an initial population with the dot parameters).
 #'
+#'  \strong{If the estimation algorithm fails to create an initial population for the genetic algorithm},
+#'  it usually helps to scale the individual series so that the AR coefficients (of a VAR model) will be
+#'  relative small, preferably less than one. Even if one is able to create an initial population, it should
+#'  be preferred to scale the series so that most of the AR coefficients will not be very large, as the
+#'  estimation algorithm works better with small AR coefficients. If needed, another package can be used
+#'  to fit linear VARs to the series to see which scaling of the series results in relatively small AR coefficients.
+#'
 #'  The code of the genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)} but it
 #'  includes some extra features that were found useful for this particular estimation problem. For instance,
 #'  the genetic algorithm uses a slightly modified version of the individually adaptive crossover and mutation
@@ -142,12 +149,10 @@
 #' profile_logliks(fit12)
 #'
 #' # Structural GMVAR(1,2) model identified with sign
-#' # constraints. The sign constraints (which fully identify
-#' # the shocks) are in line with the reduced form model,
-#' # so the maximized loglikelihood is the same.
-#' W_122 <- matrix(c(1, NA, -1, 1), nrow=2)
+#' # constraints.
+#' W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
 #' fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
-#'   ncalls=10, seeds=1:10)
+#'   ncalls=16, seeds=1:16)
 #' fit12s
 #'
 #' # GMVAR(2,2) model with mean parametrization
@@ -338,9 +343,9 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
 #' # Structural GMVAR(1,2) model identified with sign
 #' # constraints. Only 10 iterations of the variable metric
 #' # algorithm
-#' W_122 <- matrix(c(1, -1, NA, 1), nrow=2)
+#' W_122 <- matrix(c(1, -1, 1, 1), nrow=2)
 #' fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
-#'   ncalls=10, maxit=10, seeds=1:10)
+#'   ncalls=16, maxit=10, seeds=1:16)
 #' fit12s
 #'
 #' # Iterate more:

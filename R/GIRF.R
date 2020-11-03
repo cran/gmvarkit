@@ -9,7 +9,8 @@
 #'   and elements in \eqn{1,...,d} specifying the variables for which the GIRF
 #'   should be estimated.
 #' @param shock_size a vector with the same length as \code{variables} specifying
-#'   the size of the structural shock for each variable. By default, the shock size is
+#'   the size of the structural shock for each variable. Alternatively, is a scalar
+#'   value that specifies a common shock size for all variables. By default, the shock size is
 #'   one, which is then amplified by the B-matrix according to the conditional standard deviation
 #'   of the model.
 #' @param N a positive integer specifying the horizon how far ahead should the generalized
@@ -29,6 +30,8 @@
 #' @param init_values a matrix or a multivariate class \code{'ts'} object with \eqn{d} columns
 #'   and at least \eqn{p} rows specifying an initial value for the GIRF. The last \eqn{p} rows
 #'   are taken to be the initial value assuming that the \strong{last} row is the most recent observation.
+#' @param which_cumulative a numeric vector with values in \eqn{1,...,d} (\code{d=ncol(data)}) specifying
+#'   which the variables for which the impulse responses should be cumulative. Default is none.
 #' @param ci a numeric vector with elements in \eqn{(0, 1)} specifying the confidence levels of the
 #'   confidence intervals.
 #' @param include_mixweights should the generalized impulse response be calculated for the mixing weights
@@ -64,7 +67,7 @@
 #'  params222s <- c(1.428, -0.808, 1.029, 5.84, 1.314, 0.145, 0.094, 1.292,
 #'    -0.389, -0.07, -0.109, -0.281, 1.248, 0.077, -0.04, 1.266, -0.272,
 #'    -0.074, 0.034, -0.313, 0.903, 0.718, -0.324, 2.079, 7, 1.44, 0.742)
-#'  W_222 <- matrix(c(1, NA, -1, 1), nrow=2, byrow=FALSE)
+#'  W_222 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
 #'  mod222s <- GMVAR(data, p=2, M=2, params=params222s, structural_pars=list(W=W_222))
 #'  mod222s
 #'  # Alternatively, use:
@@ -89,10 +92,11 @@
 #'  # estimation based on 1000 Monte Carlo simulations, and fixed initial values given
 #'  # by the last p observations of the data:
 #'  girf3 <- GIRF(mod222s, shock_size=c(1, 3), N=50, R1=1000, init_values=mod222s$data)
+#'  plot(girf3)
 #'  }
 #' @export
 
-GIRF <- function(gmvar, variables, shock_size, N=30, R1=250, R2=250, init_regimes=1:M, init_values=NULL,
+GIRF <- function(gmvar, variables, shock_size, N=30, R1=250, R2=250, init_regimes=1:M, init_values=NULL, which_cumulative,
                  ci=c(0.95, 0.80), include_mixweights=TRUE, ncores=min(2, parallel::detectCores()), seeds=NULL) {
   on.exit(closeAllConnections())
 
@@ -111,19 +115,25 @@ GIRF <- function(gmvar, variables, shock_size, N=30, R1=250, R2=250, init_regime
   stopifnot(!is.null(gmvar$model$structural_pars))
   stopifnot(length(ci) > 0 && all(ci > 0 & ci < 1))
 
+  if(missing(shock_size)) {
+    shock_size <- rep(1, times=length(variables))
+  } else {
+    stopifnot(length(shock_size) == length(variables) | length(shock_size) == 1)
+    if(length(shock_size) == 1) shock_size <- rep(shock_size, times=length(variables))
+  }
+  if(missing(which_cumulative)) {
+    which_cumulative <- numeric(0)
+  } else {
+    which_cumulative <- unique(which_cumulative)
+    stopifnot(all(which_cumulative %in% 1:d))
+  }
+
   # Function that estimates GIRF
   get_one_girf <- function(variable, shock_size, seed) {
     simulateGMVAR(gmvar, nsimu=N + 1, init_values=init_values, ntimes=R1, seed=seed, girf_pars=list(variable=variable,
                                                                                                     shock_size=shock_size,
                                                                                                     init_regimes=init_regimes,
                                                                                                     include_mixweights=include_mixweights))
-  }
-
-  # Calculate shock sizes if not specified
-  if(missing(shock_size)) {
-    shock_size <- rep(1, times=length(variables))
-  } else {
-    stopifnot(length(shock_size) == length(variables))
   }
 
 
@@ -159,6 +169,11 @@ GIRF <- function(gmvar, variables, shock_size, N=30, R1=250, R2=250, init_regime
 
   for(i1 in 1:length(variables)) {
     res_in_array <- array(unlist(GIRF_variables[[i1]]), dim=c(N + 1, d + ifelse(include_mixweights, M, 0), R2))
+    if(length(which_cumulative) > 0) {
+      for(i2 in which_cumulative) {
+        res_in_array[, i2, ] <- apply(res_in_array[, i2, , drop=FALSE], MARGIN=3, FUN=cumsum) # Replace GIRF with cumulative GIRF
+      }
+    }
     colnames(res_in_array) <- colnames(GIRF_variables[[1]][[1]])
     point_estimate <- apply(X=res_in_array, MARGIN=1:2, FUN=mean)
     lower <- (1 - ci)/2
@@ -180,6 +195,7 @@ GIRF <- function(gmvar, variables, shock_size, N=30, R1=250, R2=250, init_regime
                  R1=R1,
                  R2=R2,
                  ci=ci,
+                 which_cumulative=which_cumulative,
                  init_regimes=init_regimes,
                  init_values=init_values,
                  include_mixweights=include_mixweights),

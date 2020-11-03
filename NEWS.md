@@ -61,3 +61,10 @@
 * Fixed a bug that caused error when trying to estimate a structural model with more than two regimes and no zero restrictions.
 * Fixed a bug that caused error when estimating GIRF with only one initial regime that is not the first regime.
 * Fixed a bug that caused error when printing standard errors of a SGMVAR model with constraints on the lambda parameters.
+
+# gmvarkit 1.2.3
+
+* The function GIRF now enables to directly calculate cumulative impulse responses.
+* Updated some of the examples, readme, and vignette.
+* Fixed a bug that caused error in estimation of GIRF with very large shock size.
+* Fixed a bug that caused error in estimation of AR constrained models when initial population is used in the genetic algorithm.

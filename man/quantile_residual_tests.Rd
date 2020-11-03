@@ -34,7 +34,7 @@ quantile_residual_tests(
 
 \item{nsimu}{to how many simulations should the covariance matrix Omega used in the qr-tests be based on?
 If smaller than sample size, then the covariance matrix will be evaluated from the sample. Larger number
-of simulations might improve the tests size properties but increase the computation time.}
+of simulations might improve the tests size properties but it increases the computation time.}
 
 \item{print_res}{should the test results be printed while computing the tests?}
 }
@@ -77,7 +77,7 @@ plot(qrtests12)
 # constraints. The sign constraints (which fully identify
 # the shocks) are in line with the reduced form model,
 # so the test results are the same.
-W_122 <- matrix(c(1, NA, -1, 1), nrow=2)
+W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
 fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
   ncalls=10, seeds=1:10)
 qrtests12s <- quantile_residual_tests(fit12s)
