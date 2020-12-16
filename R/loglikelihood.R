@@ -4,6 +4,7 @@
 #'
 #' @description \code{loglikelihood_int} computes log-likelihood of a GMVAR model.
 #'
+#' @inheritParams in_paramspace_int
 #' @param data a matrix or class \code{'ts'} object with \code{d>1} columns. Each column is taken to represent
 #'  a single time series. \code{NA} values are not supported.
 #' @param p a positive integer specifying the autoregressive order of the model.
@@ -93,8 +94,7 @@
 #'   the terms \eqn{l_{t}: t=1,..,T} in the log-likelihood function (see \emph{KMS 2016, eq.(9)})? Or should
 #'   the regimewise conditional means, total conditional means, or total conditional covariance matrices
 #'   be returned? Default is the log-likelihood value (\code{"loglik"}).
-#' @details \code{loglikelihood_int} takes use of the function \code{dmvn} from the package \code{mvnfast}
-#'   to cut down computation time. Values extremely close to zero are handled with the package \code{Brobdingnag}.
+#' @details \code{loglikelihood_int} takes use of the function \code{dmvn} from the package \code{mvnfast}.
 #' @return
 #'  \describe{
 #'   \item{By default:}{log-likelihood value of the specified GMVAR model,}
@@ -124,7 +124,7 @@
 loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL,
                               structural_pars=NULL,
                               to_return=c("loglik", "mw", "mw_tplus1", "loglik_and_mw", "terms", "regime_cmeans", "total_cmeans", "total_ccovs"),
-                              check_params=TRUE, minval=NULL) {
+                              check_params=TRUE, minval=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
 
   # Compute required values
   epsilon <- round(log(.Machine$double.xmin) + 10) # Logarithm of the smallest value that can be handled normally
@@ -150,7 +150,8 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
 
   # Check that the parameter vector lies in the parameter space (excluding indentifiability)
   if(check_params) {
-    if(!in_paramspace_int(p=p, M=M, d=d, params=params, all_boldA=all_boldA, alphas=alphas, all_Omega=all_Omega, W_constraints=W_constraints)) {
+    if(!in_paramspace_int(p=p, M=M, d=d, params=params, all_boldA=all_boldA, alphas=alphas, all_Omega=all_Omega,
+                          W_constraints=W_constraints, stat_tol=stat_tol, posdef_tol=posdef_tol)) {
       return(minval)
     }
   }
@@ -185,35 +186,15 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
   # Calculated in logarithm because same values may be too close to zero for machine accuracy
   log_mvnvalues <- vapply(1:M, function(m) mvnfast::dmvn(X=Y, mu=rep(mu[,m], p), sigma=chol_Sigmas[, , m], log=TRUE, ncores=1, isChol=TRUE), numeric(T_obs + 1))
 
-
   ## Calculate the mixing weights alpha_{m,t} (KMS 2016, eq.(7))
   if(to_return != "mw_tplus1") {
     log_mvnvalues <- log_mvnvalues[1:T_obs, , drop=FALSE] # alpha_mt uses y_{t-1} so the last row is not needed
   }
+  alpha_mt_and_l_0 <- get_alpha_mt(M=M, log_mvnvalues=log_mvnvalues, alphas=alphas,
+                                   epsilon=epsilon, conditional=conditional, also_l_0=TRUE)
+  alpha_mt <- alpha_mt_and_l_0$alpha_mt
+  l_0 <- alpha_mt_and_l_0$l_0 # The first term in the exact log-likelihood function (=0 for conditional)
 
-  l_0 <- 0 # First term of the exact log-likelihood (Kalliovirta et al. 2016, eq.(9))
-  if(M == 1) {
-    alpha_mt <- as.matrix(rep(1, nrow(log_mvnvalues)))
-    if(conditional == FALSE) {
-      l_0 <- log_mvnvalues[1,]
-    }
-  } else if(any(log_mvnvalues < epsilon)) { # If some values are too close to zero use the package Brobdingnag
-    numerators <- lapply(1:M, function(m) alphas[m]*exp(Brobdingnag::as.brob(log_mvnvalues[,m]))) # lapply(1:M, function(m) alphas[m]*Brobdingnag::as.brob(exp(1))^log_mvnvalues[,m])
-    denominator <- Reduce('+', numerators)
-    alpha_mt <- vapply(1:M, function(m) as.numeric(numerators[[m]]/denominator), numeric(nrow(log_mvnvalues)))
-
-    if(conditional == FALSE) {
-      l_0 <- log(Reduce('+', lapply(1:M, function(m) numerators[[m]][1])))
-    }
-  } else {
-    mvnvalues <- exp(log_mvnvalues)
-    denominator <- as.vector(mvnvalues%*%alphas)
-    alpha_mt <- (mvnvalues/denominator)%*%diag(alphas)
-
-    if(conditional == FALSE) {
-      l_0 <- log(sum(alphas*mvnvalues[1,]))
-    }
-  }
   if(to_return == "mw" | to_return == "mw_tplus1") {
     return(alpha_mt)
   }
@@ -239,7 +220,9 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
   # Calculate the second term of the log-likelihood (KMS 2016 eq.(10))
   dat <- data[(p + 1):n_obs,] # Initial values are not used here
   mvn_vals <- vapply(1:M, function(m) mvnfast::dmvn(X=dat - mu_mt[, , m], mu=rep(0, times=d), sigma=all_Omega[, , m], log=FALSE, ncores=1, isChol=FALSE), numeric(T_obs))
-  l_t <- log(rowSums(alpha_mt*mvn_vals))
+  weighted_mvn <- rowSums(alpha_mt*mvn_vals)
+  weighted_mvn[weighted_mvn == 0] <- exp(epsilon)
+  l_t <- log(weighted_mvn)
 
   if(to_return == "terms") {
      return(l_t)
@@ -250,6 +233,68 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
   }
 }
 
+
+#' @title Get mixing weights alpha_mt (this function is for internal use)
+#'
+#' @description \code{get_alpha_mt} computes the mixing weights based on
+#'   the logarithm of the multivariate normal densities in the definition of
+#'   the mixing weights.
+#'
+#' @inheritParams loglikelihood_int
+#' @param log_mvnvalues \eqn{T x M} matrix containing the log multivariate normal densities.
+#' @param alphas \eqn{M x 1} vector containing the mixing weight pa
+#' @param epsilon the smallest number such that its exponent is wont classified as numerically zero
+#'   (around \code{-698} is used).
+#' @param also_l_0 return also l_0 (the first term in the exact log-likelihood function)?
+#' @details Note that we index the time series as \eqn{-p+1,...,0,1,...,T} as in Kalliovirta et al. (2016).
+#' @return Returns the mixing weights a matrix of the same dimension as \code{log_mvnvalues} so
+#'   that the t:th row is for the time point t and m:th column is for the regime m.
+#' @inherit loglikelihood_int references
+#' @seealso \code{\link{loglikelihood_int}}
+
+get_alpha_mt <- function(M, log_mvnvalues, alphas, epsilon, conditional, also_l_0=FALSE) {
+  if(M == 1) {
+    if(!is.matrix(log_mvnvalues)) log_mvnvalues <- as.matrix(log_mvnvalues) # Possibly many time points but only one regime
+    alpha_mt <- as.matrix(rep(1, nrow(log_mvnvalues)))
+  } else {
+    if(!is.matrix(log_mvnvalues)) log_mvnvalues <- t(as.matrix(log_mvnvalues)) # Only one time point but multiple regimes
+
+    small_logmvns <- log_mvnvalues < epsilon
+    if(any(small_logmvns)) {
+      # If too small or large non-log-density values are present (i.e., that would yield -Inf or Inf),
+      # we replace them with ones that are not too small or large but imply the same mixing weights
+      # up to negligible numerical tolerance.
+      which_change <- rowSums(small_logmvns) > 0 # Which rows contain too small  values
+      to_change <- log_mvnvalues[which_change, , drop=FALSE]
+      largest_vals <- do.call(pmax, split(to_change, f=rep(1:ncol(to_change), each=nrow(to_change)))) # The largest values of those rows
+      diff_to_largest <- to_change - largest_vals # Differences to the largest value of the row
+
+      # For each element in each row, check the (negative) distance from the largest value of the row. If the difference
+      # is smaller than epsilon, replace the with epsilon. The results are then the new log_mvn values.
+      diff_to_largest[diff_to_largest < epsilon] <- epsilon
+
+      # Replace the old log_mvnvalues with the new ones
+      log_mvnvalues[which_change,] <- diff_to_largest
+    }
+
+    mvnvalues <- exp(log_mvnvalues)
+    denominator <- as.vector(mvnvalues%*%alphas)
+    alpha_mt <- (mvnvalues/denominator)%*%diag(alphas)
+  }
+  if(!also_l_0) {
+    return(alpha_mt)
+  } else {
+    # First term of the exact log-likelihood (Kalliovirta et al. 2016, eq.(9))
+    l_0 <- 0
+    if(M == 1 && conditional == FALSE) {
+      l_0 <- log_mvnvalues[1,]
+    } else if(M > 1 && conditional == FALSE) {
+      l_0 <- log(sum(alphas*mvnvalues[1,]))
+    }
+    return(list(alpha_mt=alpha_mt,
+                l_0=l_0))
+  }
+}
 
 
 #' @title Compute log-likelihood of a GMVAR model using parameter vector
@@ -282,7 +327,7 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
 #' @export
 
 loglikelihood <- function(data, p, M, params, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL,
-                          structural_pars=NULL, minval=NA) {
+                          structural_pars=NULL, minval=NA, stat_tol=1e-3, posdef_tol=1e-8) {
   if(!all_pos_ints(c(p, M))) stop("Arguments p and M must be positive integers")
   parametrization <- match.arg(parametrization)
   data <- check_data(data, p)
@@ -292,7 +337,8 @@ loglikelihood <- function(data, p, M, params, conditional=TRUE, parametrization=
     stop("Parameter vector has wrong dimension")
   }
   loglikelihood_int(data, p, M, params, conditional=conditional, parametrization=parametrization,
-                    constraints=constraints, structural_pars=structural_pars, to_return="loglik", check_params=TRUE, minval=minval)
+                    constraints=constraints, structural_pars=structural_pars, to_return="loglik", check_params=TRUE,
+                    minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol)
 }
 
 
@@ -332,7 +378,8 @@ loglikelihood <- function(data, p, M, params, conditional=TRUE, parametrization=
 #' @export
 
 cond_moments <- function(data, p, M, params, parametrization=c("intercept", "mean"), constraints=NULL,
-                         structural_pars=NULL, to_return=c("regime_cmeans", "total_cmeans", "total_ccovs")) {
+                         structural_pars=NULL, to_return=c("regime_cmeans", "total_cmeans", "total_ccovs"),
+                         stat_tol=1e-3, posdef_tol=1e-8) {
   if(!all_pos_ints(c(p, M))) stop("Arguments p and M must be positive integers")
   parametrization <- match.arg(parametrization)
   to_return <- match.arg(to_return)
@@ -343,7 +390,8 @@ cond_moments <- function(data, p, M, params, parametrization=c("intercept", "mea
     stop("Parameter vector has wrong dimension")
   }
   loglikelihood_int(data, p, M, params, conditional=TRUE, parametrization=parametrization,
-                    constraints=constraints, structural_pars=structural_pars, to_return=to_return, check_params=TRUE, minval=NA)
+                    constraints=constraints, structural_pars=structural_pars, to_return=to_return, check_params=TRUE,
+                    minval=NA, stat_tol=stat_tol, posdef_tol=posdef_tol)
 }
 
 

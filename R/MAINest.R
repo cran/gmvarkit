@@ -13,7 +13,7 @@
 #' @param print_res should summaries of estimation results be printed?
 #' @param ... additional settings passed to the function \code{GAfit} employing the genetic algorithm.
 #' @details
-#'  Because of complexity and multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
+#'  Because of complexity and high multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
 #'  algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in
 #'  some local maximum or saddle point instead. Therefore, a (sometimes large) number of estimation rounds is required
 #'  for reliable results. Because of the nature of the model, the estimation may fail especially in the cases where the
@@ -31,6 +31,8 @@
 #'  be preferred to scale the series so that most of the AR coefficients will not be very large, as the
 #'  estimation algorithm works better with small AR coefficients. If needed, another package can be used
 #'  to fit linear VARs to the series to see which scaling of the series results in relatively small AR coefficients.
+#'  If initial population is still not found, you can try to adjust the parameters of the genetic algorithm
+#'  according to the characteristics of the time series (for the list of the available settings, see \code{?GAfit}).
 #'
 #'  The code of the genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)} but it
 #'  includes some extra features that were found useful for this particular estimation problem. For instance,
@@ -41,14 +43,15 @@
 #'  The gradient based variable metric algorithm used in the second phase is implemented with function \code{optim}
 #'  from the package \code{stats}.
 #'
-#'  Finally, note that the structural models are even more difficult to estimate than the reduced form models due to
-#'  the different parametrization of the covariance matrices. If necessary, an initial population may be constructed
-#'  for the genetic algorithm based on the estimation results of a reduced form model. It does not seem unambiguous,
-#'  however, how to do that so that the (structural) parameter constraints are satisfied. Also, be aware that if the
-#'  lambda parameters are constrained in any other way than by restricting some of them to be identical, the parameter
-#'  "lambda_scale" of the genetic algorithm (see \code{?GAfit}) needs to be carefully adjusted accordingly.
-#'  Be aware that if a structural model is considered and the lambda parameters are constrained in some other way
-#'  than constraining some of them to be identical, the settings of the genetic algorithm may have to be adjusted.
+#'  Note that the structural models are even more difficult to estimate than the reduced form models due to
+#'  the different parametrization of the covariance matrices, so larger number of estimation rounds should be considered.
+#'  Also, be aware that if the lambda parameters are constrained in any other way than by restricting some of them to be
+#'  identical, the parameter "lambda_scale" of the genetic algorithm (see \code{?GAfit}) needs to be carefully adjusted accordingly.
+#'
+#'  Finally, the function fails to calculate approximative standard errors and the parameter estimates are near the border
+#'  of the parameter space, it might help to use smaller numerical tolerance for the stationarity and positive
+#'  definiteness conditions. The numerical tolerance of an existing model can be changed with the function
+#'  \code{update_numtols}.
 #' @return Returns an object of class \code{'gmvar'} defining the estimated (reduced form or structural) GMVAR model.
 #'   Multivariate quantile residuals (Kalliovirta and Saikkonen 2010) are also computed and included in the returned object.
 #'   In addition, the returned object contains the estimates and log-likelihood values from all the estimation rounds performed.
@@ -112,7 +115,8 @@
 #' @seealso \code{\link{GMVAR}}, \code{\link{iterate_more}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
 #'   \code{\link{simulateGMVAR}}, \code{\link{quantile_residual_tests}}, \code{\link{print_std_errors}},
 #'   \code{\link{swap_parametrization}}, \code{\link{get_gradient}}, \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}},
-#'   \code{\link{gmvar_to_sgmvar}}, \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}, \code{\link{cond_moment_plot}}
+#'   \code{\link{gmvar_to_sgmvar}}, \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}, \code{\link{cond_moment_plot}},
+#'   \code{\link{update_numtols}}
 #' @references
 #'  \itemize{
 #'    \item Dorsey R. E. and Mayer W. J. 1995. Genetic algorithms for estimation problems with multiple optima,
@@ -157,7 +161,7 @@
 #'
 #' # GMVAR(2,2) model with mean parametrization
 #' fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
-#'                   ncalls=16, seeds=1:16)
+#'                   ncalls=20, seeds=1:20, ncores=4)
 #' fit22
 #'
 #' # Structural GMVAR(2,2) model with the lambda parameters restricted
@@ -191,7 +195,7 @@
 #' @export
 
 fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL, structural_pars=NULL,
-                     ncalls=round(10 + 9*log(M)), ncores=min(2, ncalls, parallel::detectCores()), maxit=300, seeds=NULL,
+                     ncalls=round(10 + 9*log(M)), ncores=min(2, ncalls, parallel::detectCores()), maxit=500, seeds=NULL,
                      print_res=TRUE, ...) {
 
   on.exit(closeAllConnections())
@@ -221,7 +225,7 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
   ### Optimization with the genetic algorithm ###
   cl <- parallel::makeCluster(ncores)
   parallel::clusterExport(cl, ls(environment(fitGMVAR)), envir = environment(fitGMVAR)) # assign all variables from package:gmvarkit
-  parallel::clusterEvalQ(cl, c(library(Brobdingnag), library(mvnfast), library(pbapply)))
+  parallel::clusterEvalQ(cl, c(library(mvnfast), library(pbapply)))
 
   cat("Optimizing with a genetic algorithm...\n")
   GAresults <- pbapply::pblapply(1:ncalls, function(i1) GAfit(data=data, p=p, M=M, conditional=conditional, parametrization=parametrization,
@@ -320,7 +324,8 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
 #'   around the function \code{optim} from the package \code{stats} and \code{GMVAR} from the package
 #'   \code{gmvarkit}.
 #' @return Returns an object of class \code{'gmvar'} defining the estimated GMVAR model.
-#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link[stats]{optim}}, \code{\link{profile_logliks}}
+#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link[stats]{optim}},
+#'  \code{\link{profile_logliks}}, \code{\link{update_numtols}}
 #' @inherit GMVAR references
 #' @examples
 #' \donttest{
@@ -374,7 +379,7 @@ fitGMVAR <- function(data, p, M, conditional=TRUE, parametrization=c("intercept"
 #' }
 #' @export
 
-iterate_more <- function(gmvar, maxit=100, calc_std_errors=TRUE) {
+iterate_more <- function(gmvar, maxit=100, calc_std_errors=TRUE, stat_tol=1e-3, posdef_tol=1e-8) {
   check_gmvar(gmvar)
   stopifnot(maxit %% 1 == 0 & maxit >= 1)
   minval <- get_minval(gmvar$data)
@@ -384,7 +389,8 @@ iterate_more <- function(gmvar, maxit=100, calc_std_errors=TRUE) {
                                conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
                                constraints=gmvar$model$constraints, structural_pars=gmvar$model$structural_pars,
                                check_params=TRUE, to_return="loglik",
-                               minval=minval), error=function(e) minval)
+                               minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol),
+             error=function(e) minval)
   }
   gr <- function(params) {
     calc_gradient(x=params, fn=fn)
@@ -396,7 +402,7 @@ iterate_more <- function(gmvar, maxit=100, calc_std_errors=TRUE) {
   GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, params=res$par,
         conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
         constraints=gmvar$model$constraints, structural_pars=gmvar$model$structural_pars,
-        calc_std_errors=calc_std_errors)
+        calc_std_errors=calc_std_errors, stat_tol=stat_tol, posdef_tol=posdef_tol)
 }
 
 

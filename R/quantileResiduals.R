@@ -147,15 +147,29 @@ quantile_residuals <- function(gmvar) {
                                                            mu=as.matrix(mu_mt[, 1:(j - 1), m]),
                                                            Omega=upleft_jjmat(all_Omega[, , m], j - 1)),
                                              numeric(T_obs))
-    if(any(log_mvnvalues < epsilon)) { # Use Brobdingnag
-      numerators <- lapply(1:M, function(m) alpha_mt[,m]*exp(Brobdingnag::as.brob(log_mvnvalues[,m])))
-      denominator <- Reduce('+', numerators)
-      beta_mtj[, , j] <- vapply(1:M, function(m) as.numeric(numerators[[m]]/denominator), numeric(T_obs))
-    } else {
-      numerators <- as.matrix(alpha_mt*exp(log_mvnvalues))
-      denominator <- rowSums(numerators)
-      beta_mtj[, , j] <- numerators/denominator
+
+    small_logmvns <- log_mvnvalues < epsilon
+    if(any(small_logmvns)) {
+      # If too small or large non-log-density values are present (i.e., that would yield -Inf or Inf),
+      # we replace them with ones that are not too small or large but imply the same mixing weights
+      # up to negligible numerical tolerance.
+      which_change <- rowSums(small_logmvns) > 0 # Which rows contain too small  values
+      to_change <- log_mvnvalues[which_change, , drop=FALSE]
+      largest_vals <- do.call(pmax, split(to_change, f=rep(1:ncol(to_change), each=nrow(to_change)))) # The largest values of those rows
+      diff_to_largest <- to_change - largest_vals # Differences to the largest value of the row
+
+      # For each element in each row, check the (negative) distance from the largest value of the row. If the difference
+      # is smaller than epsilon, replace the with epsilon. The results are then the new log_mvn values.
+      diff_to_largest[diff_to_largest < epsilon] <- epsilon
+
+      # Replace the old log_mvnvalues with the new ones
+      log_mvnvalues[which_change,] <- diff_to_largest
     }
+
+    numerators <- as.matrix(alpha_mt*exp(log_mvnvalues))
+    denominator <- rowSums(numerators)
+    beta_mtj[, , j] <- numerators/denominator
+
   }
 
   # Then calculate (y_{i_j,t} - mu_mtj)/sqrt(variance_mtj) for m=1,...,M, t=1,...,T, j=1,...,d
@@ -182,11 +196,12 @@ quantile_residuals <- function(gmvar) {
 #'   No argument checks!
 #' @inherit quantile_residuals return references
 
-quantile_residuals_int <- function(data, p, M, params, conditional, parametrization, constraints=NULL, structural_pars=NULL) {
+quantile_residuals_int <- function(data, p, M, params, conditional, parametrization, constraints=NULL,
+                                   structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
   lok_and_mw <- loglikelihood_int(data=data, p=p, M=M, params=params, conditional=conditional,
                                   parametrization=parametrization, constraints=constraints,
                                   structural_pars=structural_pars, to_return="loglik_and_mw",
-                                  check_params=TRUE, minval=NA)
+                                  check_params=TRUE, minval=NA, stat_tol=stat_tol, posdef_tol=posdef_tol)
   d <- ncol(data)
   npars <- n_params(p=p, M=M, d=d, constraints=constraints)
   mod <- structure(list(data=data,
@@ -207,7 +222,9 @@ quantile_residuals_int <- function(data, p, M, params, conditional, parametrizat
                         IC=NA,
                         all_estimates=NULL,
                         all_logliks=NULL,
-                        which_converged=NULL),
+                        which_converged=NULL,
+                        num_tols=list(stat_tol=stat_tol,
+                                      posdef_tol=posdef_tol)),
                    class="gmvar")
   quantile_residuals(mod)
 }
