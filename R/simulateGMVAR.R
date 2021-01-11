@@ -33,7 +33,7 @@
 #'   }
 #' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{diagnostic_plot}}, \code{\link{predict.gmvar}},
 #'  \code{\link{profile_logliks}}, \code{\link{quantile_residual_tests}}, \code{\link{GIRF}}
-#' @inherit in_paramspace_int references
+#' @inherit loglikelihood_int references
 #' @examples
 #'  \donttest{
 #'  # These examples use the data 'eurusd' which comes with the
@@ -115,6 +115,7 @@ simulateGMVAR <- function(gmvar, nsimu, init_values=NULL, ntimes=1, drop=TRUE, s
   M <- gmvar$model$M
   d <- gmvar$model$d
   constraints <- gmvar$model$constraints
+  same_means <- gmvar$model$same_means
   structural_pars <- gmvar$model$structural_pars
   if(!all_pos_ints(c(nsimu, ntimes))) stop("Arguments n and ntimes must be positive integers")
   if(!is.null(init_values)) {
@@ -125,13 +126,13 @@ simulateGMVAR <- function(gmvar, nsimu, init_values=NULL, ntimes=1, drop=TRUE, s
 
   # Collect parameter values
   params <- gmvar$params
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=gmvar$model$constraints,
+                                    same_means=gmvar$model$same_means, structural_pars=structural_pars)
+  structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   if(gmvar$model$parametrization == "mean") {
-    params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=constraints,
+    params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=NULL,
                                      structural_pars=structural_pars, change_to="intercept")
   }
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints,
-                                    structural_pars=structural_pars)
-  structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
 
   all_mu <- get_regime_means(gmvar)
   all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
@@ -158,20 +159,13 @@ simulateGMVAR <- function(gmvar, nsimu, init_values=NULL, ntimes=1, drop=TRUE, s
     }
   }
 
-  # Calculate the covariance matrices Sigma_{m,p} (Lütkepohl 2005, eq. (2.1.39))
-  I_dp2 <- diag(nrow=(d*p)^2)
-  ZER_lower <- matrix(0, nrow=d*(p-1), ncol=d*p)
-  ZER_right <- matrix(0, nrow=d, ncol=d*(p-1))
-  Sigmas <- array(NA, dim=c(d*p, d*p, M)) # Store the (dpxdp) covariance matrices
+  # Calculate the covariance matrices Sigma_{m,p} (Lutkepohl 2005, eq. (2.1.39) or the algorithm proposed by McElroy 2017)
+  Sigmas <- get_Sigmas(p=p, M=M, d=d, all_A=all_A, all_boldA=all_boldA, all_Omega=all_Omega) # Store the (dpxdp) covariance matrices
   inv_Sigmas <- array(NA, dim=c(d*p, d*p, M)) # Store inverses of the (dpxdp) covariance matrices
   det_Sigmas <- numeric(M) # Store determinants of the (dpxdp) covariance matrices
   for(m in 1:M) {
-    kronmat <- I_dp2 - kronecker(all_boldA[, , m], all_boldA[, , m])
-    sigma_epsm <- rbind(cbind(all_Omega[, , m], ZER_right), ZER_lower)
-    Sigma_m <- unvec(d=d*p, a=solve(kronmat, vec(sigma_epsm)))
-    Sigmas[, , m] <- Sigma_m
-    inv_Sigmas[, , m] <- solve(Sigma_m)
-    det_Sigmas[m] <- det(Sigma_m)
+    inv_Sigmas[, , m] <- solve(Sigmas[, , m])
+    det_Sigmas[m] <- det(Sigmas[, , m])
   }
 
   if(is.null(girf_pars)) {

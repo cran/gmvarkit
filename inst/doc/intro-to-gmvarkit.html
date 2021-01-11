@@ -12,7 +12,7 @@
 
 <meta name="author" content="Savi Virolainen" />
 
-<meta name="date" content="2020-12-16" />
+<meta name="date" content="2021-01-11" />
 
 <title>Introduction to gmvarkit</title>
 
@@ -32,6 +32,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
 
 
 
@@ -231,7 +241,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Introduction to gmvarkit</h1>
 <h4 class="author">Savi Virolainen</h4>
-<h4 class="date">2020-12-16</h4>
+<h4 class="date">2021-01-11</h4>
 
 
 
@@ -367,6 +377,11 @@ f(\boldsymbol{y};\boldsymbol{\theta})=\sum_{m=1}^M\alpha_m n_{dp}(\boldsymbol{y}
 </div>
 </div>
 </div>
+<div id="constraining-the-unconditional-means-of-some-regimes-to-be-the-same" class="section level2">
+<h2>Constraining the unconditional means of some regimes to be the same</h2>
+<p>In addition to constraining the autoregressive parameters, <code>gmvarkit</code> allows to constrain the unconditional means of some regimes to be the same. This feature is, however, only available for models that are parametrized with the unconditional means instead of intercepts (because some of the estimation is always done with mean-parametrization and one cannot generally swap the parametrization when constraints are imposed on means/intercepts). With the mean-parametrization employed (by setting <code>parametrization=&quot;mean&quot;</code>), one may define groups of regimes that have the same mean parameters using the argument <code>same_means</code>. For instance, with three regime model (M=3) the argument <code>same_means=list(c(1, 3), 2)</code> sets the unconditional means of the first and third regimes to be the same while allows the second regime to have different mean.</p>
+<p>One can also combine linear constraints on the AR parameters with constraining some of the means to be the same. This allows, for instance, to estimate a model in which only the covariance matrix varies in time. Validity of different constraints can be ecaluated, for example, with likelihood ratio and Wald tests using the functions <code>LR_test</code> and <code>Wald_test</code>.</p>
+</div>
 <div id="some-useful-functions-in-gmvarkit" class="section level2">
 <h2>Some useful functions in gmvarkit</h2>
 <div id="estimating-a-gmvar-model" class="section level3">
@@ -401,7 +416,7 @@ f(\boldsymbol{y};\boldsymbol{\theta})=\sum_{m=1}^M\alpha_m n_{dp}(\boldsymbol{y}
 </div>
 <div id="hypothesis-testing" class="section level3">
 <h3>Hypothesis testing</h3>
-<p>Test linear hypotheses using Wald test with the function  and using likelihood ratio test with the function .</p>
+<p>Test linear hypotheses using Wald test with the function <code>Wald_test</code> and using likelihood ratio test with the function <code>LR_test</code>.</p>
 </div>
 <div id="univariate-analysis" class="section level3">
 <h3>Univariate analysis</h3>

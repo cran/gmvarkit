@@ -44,7 +44,7 @@
 #'   very close to the boundary (this is used to ensure numerical stability in estimation of the model parameters).
 #' @section Warning:
 #'  No argument checks!
-#' @inherit loglikelihood_int references
+#' @inherit in_paramspace_int references
 
 is_stationary <- function(p, M, d, params, all_boldA=NULL, structural_pars=NULL, tolerance=1e-3) {
   if(is.null(all_boldA)) {
@@ -163,14 +163,15 @@ in_paramspace_int <- function(p, M, d, params, all_boldA, alphas, all_Omega, W_c
 #'   structural_pars=list(W=W_222))
 #' @export
 
-in_paramspace <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
+in_paramspace <- function(p, M, d, params, constraints=NULL, same_means=NULL, structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
   check_pMd(p=p, M=M, d=d)
-  check_constraints(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
-  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)) {
+  check_constraints(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
+  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)) {
     stop("The parameter vector has wrong length!")
   }
   W_constraints <- structural_pars$W
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars)
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, same_means=same_means,
+                                    structural_pars=structural_pars)
   structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
   in_paramspace_int(p=p, M=M, d=d, params=params, all_boldA=form_boldA(p=p, M=M, d=d, all_A=all_A),
@@ -224,14 +225,16 @@ in_paramspace <- function(p, M, d, params, constraints=NULL, structural_pars=NUL
 #' }
 #' @export
 
-check_parameters <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
-
+check_parameters <- function(p, M, d, params, parametrization=c("intercept", "mean"), constraints=NULL, same_means=NULL,
+                             structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
+  parametrization <- match.arg(parametrization)
+  check_same_means(parametrization=parametrization, same_means=same_means)
   check_pMd(p=p, M=M, d=d)
-  check_constraints(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
-  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)) {
+  check_constraints(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
+  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)) {
     stop("The parameter vector has wrong dimension!")
   }
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars)
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
   W_constraints <- structural_pars$W
   structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   alphas <- pick_alphas(p=p, M=M, d=d, params=params)
@@ -277,7 +280,7 @@ check_parameters <- function(p, M, d, params, constraints=NULL, structural_pars=
 #'   if something is wrong.
 #' @details If \code{is.null(constraints)}, then this function doesn't do anything.
 
-check_constraints <- function(p, M, d, constraints=NULL, structural_pars=NULL) {
+check_constraints <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pars=NULL) {
   if(!is.null(constraints)) {
     if(!is.matrix(constraints) | !is.numeric(constraints)) {
       stop("The argument constraints should be a numeric matrix (or NULL if no constraints should be employed)")
@@ -287,6 +290,22 @@ check_constraints <- function(p, M, d, constraints=NULL, structural_pars=NULL) {
       stop("The constraint matrix has more columns than rows! What are you doing??")
     } else if(qr(constraints)$rank != ncol(constraints)) {
       stop("The constraint matrix should have full column rank")
+    }
+  }
+  if(!is.null(same_means)) {
+    if(!is.list(same_means)) {
+      stop("The argument same_means should a list (or null if mean parameters are not constrained)")
+    } else if(length(same_means) == 0) {
+      stop("The argument same_means should not of length zero")
+    }
+    for(i1 in 1:length(same_means)) {
+      if(!is.numeric(same_means[[i1]]) || length(same_means[[i1]]) == 0) {
+        stop("The elements of same_means should be numeric vectors with strictly positive length")
+      }
+    }
+    tmp <- sort(unlist(same_means), decreasing=FALSE)
+    if(length(tmp) != M || !all(tmp == 1:M)) {
+      stop("The argument same_means should contains all regimes in some group exactly once")
     }
   }
   if(!is.null(structural_pars)) {
@@ -329,14 +348,20 @@ check_constraints <- function(p, M, d, constraints=NULL, structural_pars=NULL) {
 #'  No argument checks!
 #' @inherit in_paramspace references
 
-n_params <- function(p, M, d, constraints=NULL, structural_pars=NULL) {
+n_params <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pars=NULL) {
+  if(is.null(same_means)) {
+    less_pars <- 0 # Number of parameters less compared to models without same interecept constraints
+  } else {
+    g <- length(same_means) # Number groups with the same mean parameters
+    less_pars <- d*(M - g) # Number of parameters less compared to models without same interecept constraints
+  }
   if(is.null(structural_pars)) {
-    return(ifelse(is.null(constraints), M*(d^2*p + d + d*(d+1)/2 + 1) - 1, M*(d + d*(d + 1)/2 + 1) + ncol(constraints) - 1))
+    return(ifelse(is.null(constraints), M*(d^2*p + d + d*(d+1)/2 + 1) - 1, M*(d + d*(d + 1)/2 + 1) + ncol(constraints) - 1) - less_pars)
   } else {
     q <- ifelse(is.null(constraints), M*p*d^2, ncol(constraints))
     n_Wpars <- length(Wvec(structural_pars$W))
     r <- ifelse(is.null(structural_pars$C_lambda), d*(M - 1), ncol(structural_pars$C_lambda))
-    return(M*d + q + n_Wpars + r + M - 1)
+    return(M*d + q + n_Wpars + r + M - 1 - less_pars)
   }
 }
 
@@ -427,3 +452,16 @@ check_null_data <- function(gmvar) {
   }
 }
 
+#' @title Check whether the parametrization is correct for usage of same means restrictions
+#'
+#' @description \code{check_same_means} checks whether the parametrization is correct for
+#'  usage of same means restrictions
+#'
+#' @inheritParams loglikelihood_int
+#' @return Throws an error if parametrization type is not "mean" and means are constrained
+
+check_same_means <- function(parametrization, same_means) {
+  if(parametrization == "intercept" && !is.null(same_means)) {
+    stop("The same_means constraints are available for models with mean-parametrization only (parametrization='mean')")
+  }
+}

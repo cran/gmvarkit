@@ -11,8 +11,9 @@ fitGMVAR(
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
+  same_means = NULL,
   structural_pars = NULL,
-  ncalls = round(10 + 9 * log(M)),
+  ncalls = floor(10 + 30 * log(M)),
   ncores = min(2, ncalls, parallel::detectCores()),
   maxit = 500,
   seeds = NULL,
@@ -30,8 +31,8 @@ a single time series. \code{NA} values are not supported.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function}
 
-\item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
+\item{parametrization}{\code{"intercept"} or \code{"mean"} determining whether the model is parametrized with intercept
+parameters \eqn{\phi_{m,0}} or regime means \eqn{\mu_{m}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -41,6 +42,13 @@ contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains
 For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
+
+\item{same_means}{Restrict the mean parameters of some regimes to be the same? Provide a list of numeric vectors
+such that each numeric vector contains the regimes that should share the common mean parameters. For instance, if
+\code{M=3}, the argument \code{list(1, 2:3)} restricts the mean parameters of the second and third regime to be
+the same but the first regime has freely estimated (unconditional) mean. Ignore or set to \code{NULL} if mean parameters
+should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
+that is, when \code{parametrization="mean"}.}}
 
 \item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
 the following elements:
@@ -135,7 +143,13 @@ Returns an object of class \code{'gmvar'} defining the estimated (reduced form o
   estimation in the second phase. Parallel computing is utilized to perform multiple rounds of estimations in parallel.
 }
 \details{
-Because of complexity and high multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
+If you wish to estimate a structural model without overidentifying constraints that is identified statistically,
+ specify your W matrix is \code{structural_pars} to be such that it contains the same sign constraints in a single row
+ (e.g. a row of ones) and leave the other elements as \code{NA}. In this way, the genetic algorithm works the best.
+ The ordering and signs of the columns of the W matrix can be changed afterwards with the functions
+ \code{reorder_W_columns} and \code{swap_W_signs}.
+
+ Because of complexity and high multimodality of the log-likelihood function, it's \strong{not certain} that the estimation
  algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in
  some local maximum or saddle point instead. Therefore, a (sometimes large) number of estimation rounds is required
  for reliable results. Because of the nature of the model, the estimation may fail especially in the cases where the
@@ -204,8 +218,14 @@ profile_logliks(fit12)
 # constraints.
 W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
 fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
-  ncalls=16, seeds=1:16)
+  ncalls=16, seeds=1:16, ncores=4)
 fit12s
+
+# Structural GMVAR(2, 2) model identified statistically only
+W_222 <- matrix(c(1, NA, 1, NA), nrow=2)
+fit22s <- fitGMVAR(data, p=2, M=2, structural_pars=list(W=W_222),
+  ncalls=16, seeds=1:16, ncores=4)
+fit22s
 
 # GMVAR(2,2) model with mean parametrization
 fit22 <- fitGMVAR(data, p=2, M=2, parametrization="mean",
@@ -230,6 +250,12 @@ C_mat <- rbind(diag(2*2^2), diag(2*2^2))
 fit22c <- fitGMVAR(data, p=2, M=2, constraints=C_mat)
 fit22c
 
+# GMVAR(2,2) model with autoregressive parameters and the mean
+# parameters restricted to be the same for both regimes
+# (only the covariance matrix varies)
+fit22cm <- fitGMVAR(data, p=2, M=2, parametrization="mean",
+ constraints=C_mat, same_means=list(1:2), ncores=4, ncalls=16)
+
 # GMVAR(2,2) model with autoregressive parameters restricted
 # to be the same for both regimes and non-diagonl elements
 # the coefficient matrices constrained to zero. Estimation
@@ -248,8 +274,6 @@ fit22c2
         \strong{13}, 53-66.
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
-   \item Kalliovirta L. and Saikkonen P. 2010. Reliable Residuals for Multivariate Nonlinear
-         Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
    \item Patnaik L.M. and Srinivas M. 1994. Adaptive Probabilities of Crossover and Mutation in Genetic Algorithms.
          \emph{Transactions on Systems, Man and Cybernetics} \strong{24}, 656-667.
    \item Smith R.E., Dike B.A., Stegmann S.A. 1995. Fitness inheritance in genetic algorithms.

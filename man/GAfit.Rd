@@ -11,6 +11,7 @@ GAfit(
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
+  same_means = NULL,
   structural_pars = NULL,
   ngen = 200,
   popsize,
@@ -22,6 +23,8 @@ GAfit(
   W_scale,
   lambda_scale,
   ar_scale = 0.2,
+  upper_ar_scale = 1,
+  ar_scale2 = 1,
   regime_force_scale = 1,
   red_criteria = c(0.05, 0.01),
   pre_smart_mu_prob = 0,
@@ -40,8 +43,8 @@ a single time series. \code{NA} values are not supported.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function}
 
-\item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
+\item{parametrization}{\code{"intercept"} or \code{"mean"} determining whether the model is parametrized with intercept
+parameters \eqn{\phi_{m,0}} or regime means \eqn{\mu_{m}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -51,6 +54,13 @@ contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains
 For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
+
+\item{same_means}{Restrict the mean parameters of some regimes to be the same? Provide a list of numeric vectors
+such that each numeric vector contains the regimes that should share the common mean parameters. For instance, if
+\code{M=3}, the argument \code{list(1, 2:3)} restricts the mean parameters of the second and third regime to be
+the same but the first regime has freely estimated (unconditional) mean. Ignore or set to \code{NULL} if mean parameters
+should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
+that is, when \code{parametrization="mean"}.}}
 
 \item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
 the following elements:
@@ -182,7 +192,17 @@ is considered.}
 
 \item{ar_scale}{a positive real number adjusting how large AR parameter values are typically proposed in construction
 of the initial population: larger value implies larger coefficients (in absolute value). After construction of the
-initial population, a new scale is drawn from \eqn{(0,1)} uniform distribution in each iteration.}
+initial population, a new scale is drawn from \code{(0, 0.)} uniform distribution in each iteration.}
+
+\item{upper_ar_scale}{the upper bound for \code{ar_scale} parameter (see above) in the random mutations. Setting
+this too high might lead to failure in proposing new parameters that are well enough inside the parameter space,
+and especially with large \code{p} one might want to try smaller upper bound (e.g., 0.5).}
+
+\item{ar_scale2}{a positive real number adjusting how large AR parameter values are typically proposed in some
+random mutations (if AR constraints are employed, in all random mutations): larger value implies larger coefficients
+(in absolute value). \strong{Values smaller than 1 can be used if the AR coefficients are expected to be very small,
+but values larger than 1 are generally not recommended as it might lead to failure in creation of stationary parameter
+candidates.}}
 
 \item{regime_force_scale}{a non-negative real number specifying how much should natural selection favor individuals
 with less regimes that have almost all mixing weights (practically) at zero. Set to zero for no favoring or large

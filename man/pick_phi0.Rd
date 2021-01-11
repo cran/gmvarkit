@@ -67,6 +67,9 @@ Returns a \eqn{(dxM)} matrix containing \eqn{\phi_{m,0}} in the m:th column or
 \description{
 \code{pick_phi0} picks the intercept or mean parameters from the given parameter vector.
 }
+\details{
+Does not support constrained parameter vectors.
+}
 \section{Warning}{
 
  No argument checks!
@@ -75,9 +78,7 @@ Returns a \eqn{(dxM)} matrix containing \eqn{\phi_{m,0}} in the m:th column or
 \references{
 \itemize{
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
-           \emph{Journal of Econometrics}, \strong{192}, 485-498.
-   \item Lütkepohl H. 2005. New Introduction to Multiple Time Series Analysis,
-           \emph{Springer}.
+         \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
  }

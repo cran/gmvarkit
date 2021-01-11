@@ -12,6 +12,7 @@ loglikelihood_int(
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
+  same_means = NULL,
   structural_pars = NULL,
   to_return = c("loglik", "mw", "mw_tplus1", "loglik_and_mw", "terms", "regime_cmeans",
     "total_cmeans", "total_ccovs"),
@@ -32,7 +33,7 @@ a single time series. \code{NA} values are not supported.}
 \item{params}{a real valued vector specifying the parameter values.
 \describe{
   \item{\strong{For unconstrained models:}}{
-    Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
+    Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have the form
     \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
     ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where
     \itemize{
@@ -42,13 +43,26 @@ a single time series. \code{NA} values are not supported.}
     }
   }
   \item{\strong{For constrained models:}}{
-    Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have form
-    \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi}}
-    \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
+    Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have the form
+    \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi},}
+    \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
     \itemize{
       \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
       \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
       constraint matrix.
+    }
+  }
+  \item{\strong{For same_means models:}}{
+    Should have the form
+    \strong{\eqn{\theta}}\eqn{ = (}\strong{\eqn{\mu},}\strong{\eqn{\psi},}
+    \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
+    \itemize{
+      \item \strong{\eqn{\mu}}\eqn{= (\mu_{1},...,\mu_{g})} where
+        \eqn{\mu_{i}} is the mean parameter for group \eqn{i} and
+        \eqn{g} is the number of groups.
+      \item If AR constraints are employed, \strong{\eqn{\psi}} is as for constrained
+        models, and if AR constraints are not employed, \strong{\eqn{\psi}}\eqn{ = }
+        (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M})}.
     }
   }
   \item{\strong{For structural GMVAR model:}}{
@@ -62,6 +76,8 @@ a single time series. \code{NA} values are not supported.}
       \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
       \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
       \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+      \item{\strong{If same_means: }}{Replace \eqn{(\phi_{1,0},...,\phi_{M,0})} with \eqn{(\mu_{1},...,\mu_{g})},
+        as above.}
       \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
        the sign constraints.}
       \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
@@ -83,8 +99,8 @@ The notation is in line with the cited article by \emph{Kalliovirta, Meitz and S
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
 should be used.}
 
-\item{parametrization}{\code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.}
+\item{parametrization}{\code{"intercept"} or \code{"mean"} determining whether the model is parametrized with intercept
+parameters \eqn{\phi_{m,0}} or regime means \eqn{\mu_{m}}, m=1,...,M.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -94,6 +110,13 @@ contains the coefficient matrices and \strong{\eqn{\psi}} \eqn{(q x 1)} contains
 For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.}
+
+\item{same_means}{Restrict the mean parameters of some regimes to be the same? Provide a list of numeric vectors
+such that each numeric vector contains the regimes that should share the common mean parameters. For instance, if
+\code{M=3}, the argument \code{list(1, 2:3)} restricts the mean parameters of the second and third regime to be
+the same but the first regime has freely estimated (unconditional) mean. Ignore or set to \code{NULL} if mean parameters
+should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
+that is, when \code{parametrization="mean"}.}}
 
 \item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
 the following elements:
@@ -157,10 +180,12 @@ evaluation of the log-likelihood might fail and cause error.}
 \references{
 \itemize{
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
-           \emph{Journal of Econometrics}, \strong{192}, 485-498.
+         \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Lütkepohl H. 2005. New Introduction to Multiple Time Series Analysis,
-           \emph{Springer}.
+         \emph{Springer}.
+   \item McElroy T. 2017. Computation of vector ARMA autocovariances.
+         \emph{Statistics and Probability Letters}, \strong{124}, 92-96.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
-     paper, available as arXiv:2007.04713.
+         paper, available as arXiv:2007.04713.
  }
 }

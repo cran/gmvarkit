@@ -40,8 +40,8 @@ pick_Ami <- function(p, M, d, params, m, i, structural_pars=NULL, unvec=TRUE) {
 #' @inheritParams pick_Ami
 #' @return Returns a 3D array containing the coefficient matrices of the given component.
 #'  A coefficient matrix \eqn{A_{m,i}} can be obtained by choosing \code{[, , i]}.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_Ami details
+#' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
 
 pick_Am <- function(p, M, d, params, m, structural_pars=NULL) {
@@ -67,8 +67,8 @@ pick_Am <- function(p, M, d, params, m, structural_pars=NULL) {
 #' @inheritParams is_stationary
 #' @return Returns a 4D array containing the coefficient matrices of the all components. Coefficient matrix
 #'  \eqn{A_{m,i}} can be obtained by choosing \code{[, , i, m]}.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_Ami details
+#' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
 
 pick_allA <- function(p, M, d, params, structural_pars=NULL) {
@@ -92,8 +92,8 @@ pick_allA <- function(p, M, d, params, structural_pars=NULL) {
 #' @inheritParams is_stationary
 #' @return Returns a \eqn{(dxM)} matrix containing \eqn{\phi_{m,0}} in the m:th column or
 #'   \eqn{\mu_{m}} if the parameter vector is mean-parametrized, \eqn{, m=1,..,M}.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_Ami details
+#' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
 
 pick_phi0 <- function(p, M, d, params, structural_pars=NULL) {
@@ -116,8 +116,8 @@ pick_phi0 <- function(p, M, d, params, structural_pars=NULL) {
 #' @inheritParams is_stationary
 #' @return Returns a \eqn{((pd^2+d)xM)} matrix containing \eqn{(\phi_{m,0}, vec(A_{m,1}),...,vec(A_{m,p}))} in the m:th column,
 #'  or \eqn{(\mu_{m}, vec(A_{m,1}),...,vec(A_{m,p}))} if the parameter vector is mean-parametrized, m=1,..,M.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_Ami details
+#' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
 
 pick_all_phi0_A <- function(p, M, d, params, structural_pars=NULL) {
@@ -143,8 +143,8 @@ pick_all_phi0_A <- function(p, M, d, params, structural_pars=NULL) {
 #' @inheritParams is_stationary
 #' @return Returns a 3D array containing the covariance matrices of the given model. Coefficient matrix
 #'  \eqn{\Omega_{m}} can be obtained by choosing \code{[, , m]}.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_Ami details
+#' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
 
 pick_Omegas <- function(p, M, d, params, structural_pars=NULL) {
@@ -175,8 +175,7 @@ pick_Omegas <- function(p, M, d, params, structural_pars=NULL) {
 #' @inheritParams is_stationary
 #' @return Returns a length M vector containing the mixing weight parameters \eqn{alpha_{m}, m=1,...,M},
 #'   including non-parametrized \eqn{alpha_{M}}.
-#' @section Warning:
-#'  No argument checks!
+#' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
 
 
@@ -198,8 +197,7 @@ pick_alphas <- function(p, M, d, params) {
 #' @details Constrained parameter vectors are not supported. Not even constraints in \eqn{W}!
 #' @return Returns a \eqn{(d x d)} matrix \eqn{W} from a parameter vector of a SGMVAR model.
 #'   Returns \code{NULL} for reduced form models.
-#' @section Warning:
-#'  No argument checks!
+#' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
 
 pick_W <- function(p, M, d, params, structural_pars=NULL) {
@@ -213,12 +211,11 @@ pick_W <- function(p, M, d, params, structural_pars=NULL) {
 #' @description \code{pick_lambdas} picks the structural parameters eigenvalue 'lambdas from a parameter vector
 #'
 #' @inheritParams is_stationary
-#' @details Constrained parameter vectors are not supported. Not even constraints in \eqn{W}!
 #' @return Returns a length \eqn{(d*(M - 1))} vector \eqn{(\lambda_{2},...,\lambda_{M})}
 #'  (see the argument \code{params}) from a parameter vector of a SGMVAR model.
 #'   Returns \code{numeric(0)} for reduced form models or when \eqn{M=1}.
-#' @section Warning:
-#'  No argument checks!
+#' @inherit pick_W details
+#' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
 
 
@@ -233,7 +230,7 @@ pick_lambdas <- function(p, M, d, params, structural_pars=NULL) {
 #' @description \code{pick_regime} picks the regime-parameters from the given parameter vector.
 #'
 #' @inheritParams pick_Am
-#' @details Models with AR or lambda parameter constraints are currently not supported.
+#' @details Models with AR, mean, or lambda parameter constraints are currently not supported.
 #' @return
 #'   \describe{
 #'     \item{For reduced form models:}{returns length \eqn{pd^2+d+d(d+1)/2} vector containing
@@ -241,9 +238,7 @@ pick_lambdas <- function(p, M, d, params, structural_pars=NULL) {
 #'       \strong{\eqn{\phi_{m}}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,1})} and \eqn{\sigma_{m} = vech(\Omega_{m})}.}
 #'     \item{For structural models:}{returns the length \eqn{pd^2 + d} vector \eqn{(\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{)}.}
 #'   }
-#
-#' @section Warning:
-#'  No argument checks!
+#' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
 
 pick_regime <- function(p, M, d, params, m, structural_pars=NULL) {
@@ -283,7 +278,9 @@ get_boldA_eigens <- function(gmvar) {
   p <- gmvar$model$p
   M <- gmvar$model$M
   d <- gmvar$model$d
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$params, constraints=gmvar$model$constraints,
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$params,
+                                    constraints=gmvar$model$constraints,
+                                    same_means=gmvar$model$same_means,
                                     structural_pars=gmvar$model$structural_pars)
   structural_pars <- get_unconstrained_structural_pars(structural_pars=gmvar$model$structural_pars)
   all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
@@ -317,7 +314,9 @@ get_omega_eigens <- function(gmvar) {
   p <- gmvar$model$p
   M <- gmvar$model$M
   d <- gmvar$model$d
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$params, constraints=gmvar$model$constraints,
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$params,
+                                    constraints=gmvar$model$constraints,
+                                    same_means=gmvar$model$same_means,
                                     structural_pars=gmvar$model$structural_pars)
   structural_pars <- get_unconstrained_structural_pars(structural_pars=gmvar$model$structural_pars)
   all_Omega <- pick_Omegas(p=p, M=M, d=d, params=params, structural_pars=structural_pars)

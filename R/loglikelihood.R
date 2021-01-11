@@ -12,7 +12,7 @@
 #' @param params a real valued vector specifying the parameter values.
 #'   \describe{
 #'     \item{\strong{For unconstrained models:}}{
-#'       Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have form
+#'       Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have the form
 #'       \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
 #'       ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where
 #'       \itemize{
@@ -22,13 +22,26 @@
 #'       }
 #'     }
 #'     \item{\strong{For constrained models:}}{
-#'       Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have form
-#'       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi}}
-#'       \eqn{,\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
+#'       Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have the form
+#'       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi},}
+#'       \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
 #'       \itemize{
 #'         \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
 #'         \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
 #'         constraint matrix.
+#'       }
+#'     }
+#'     \item{\strong{For same_means models:}}{
+#'       Should have the form
+#'       \strong{\eqn{\theta}}\eqn{ = (}\strong{\eqn{\mu},}\strong{\eqn{\psi},}
+#'       \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
+#'       \itemize{
+#'         \item \strong{\eqn{\mu}}\eqn{= (\mu_{1},...,\mu_{g})} where
+#'           \eqn{\mu_{i}} is the mean parameter for group \eqn{i} and
+#'           \eqn{g} is the number of groups.
+#'         \item If AR constraints are employed, \strong{\eqn{\psi}} is as for constrained
+#'           models, and if AR constraints are not employed, \strong{\eqn{\psi}}\eqn{ = }
+#'           (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M})}.
 #'       }
 #'     }
 #'     \item{\strong{For structural GMVAR model:}}{
@@ -42,6 +55,8 @@
 #'         \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
 #'         \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
 #'         \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+#'         \item{\strong{If same_means: }}{Replace \eqn{(\phi_{1,0},...,\phi_{M,0})} with \eqn{(\mu_{1},...,\mu_{g})},
+#'           as above.}
 #'         \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
 #'          the sign constraints.}
 #'         \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
@@ -61,8 +76,8 @@
 #'   The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.
 #' @param conditional a logical argument specifying whether the conditional or exact log-likelihood function
 #'  should be used.
-#' @param parametrization \code{"mean"} or \code{"intercept"} determining whether the model is parametrized with regime means \eqn{\mu_{m}} or
-#'   intercept parameters \eqn{\phi_{m,0}}, m=1,...,M.
+#' @param parametrization \code{"intercept"} or \code{"mean"} determining whether the model is parametrized with intercept
+#'   parameters \eqn{\phi_{m,0}} or regime means \eqn{\mu_{m}}, m=1,...,M.
 #' @param constraints a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 #'   to the autoregressive parameters. We consider constraints of form
 #'   (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M}) = }\strong{\eqn{C \psi}},
@@ -71,6 +86,12 @@
 #'   For example, to restrict the AR-parameters to be the same for all regimes, set \strong{\eqn{C}}=
 #'   [\code{I:...:I}]\strong{'} \eqn{(Mpd^2 x pd^2)} where \code{I = diag(p*d^2)}.
 #'   Ignore (or set to \code{NULL}) if linear constraints should \strong{not} be employed.
+#' @param same_means Restrict the mean parameters of some regimes to be the same? Provide a list of numeric vectors
+#'   such that each numeric vector contains the regimes that should share the common mean parameters. For instance, if
+#'   \code{M=3}, the argument \code{list(1, 2:3)} restricts the mean parameters of the second and third regime to be
+#'   the same but the first regime has freely estimated (unconditional) mean. Ignore or set to \code{NULL} if mean parameters
+#'   should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
+#'   that is, when \code{parametrization="mean"}.}
 #' @param structural_pars If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
 #'   the following elements:
 #'   \itemize{
@@ -114,15 +135,17 @@
 #' @references
 #'  \itemize{
 #'    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
-#'            \emph{Journal of Econometrics}, \strong{192}, 485-498.
+#'          \emph{Journal of Econometrics}, \strong{192}, 485-498.
 #'    \item Lütkepohl H. 2005. New Introduction to Multiple Time Series Analysis,
-#'            \emph{Springer}.
+#'          \emph{Springer}.
+#'    \item McElroy T. 2017. Computation of vector ARMA autocovariances.
+#'          \emph{Statistics and Probability Letters}, \strong{124}, 92-96.
 #'    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
-#'      paper, available as arXiv:2007.04713.
+#'          paper, available as arXiv:2007.04713.
 #'  }
 
 loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL,
-                              structural_pars=NULL,
+                              same_means=NULL, structural_pars=NULL,
                               to_return=c("loglik", "mw", "mw_tplus1", "loglik_and_mw", "terms", "regime_cmeans", "total_cmeans", "total_ccovs"),
                               check_params=TRUE, minval=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
 
@@ -135,7 +158,8 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
 
   # Collect parameter values
   parametrization <- match.arg(parametrization)
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars)
+  check_same_means(parametrization=parametrization, same_means=same_means)
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
   W_constraints <- structural_pars$W
   structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   if(parametrization == "intercept") {
@@ -168,17 +192,10 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
     all_phi0 <- vapply(1:M, function(m) (Id - rowSums(all_A[, , , m, drop=FALSE], dims=2))%*%mu[,m], numeric(d))
   }
 
-  # Calculate the covariance matrices Sigma_{m,p} (Lutkepohl 2005, eq. (2.1.39))
-  I_dp2 <- diag(nrow=(d*p)^2)
-  ZER_lower <- matrix(0, nrow=d*(p-1), ncol=d*p)
-  ZER_right <- matrix(0, nrow=d, ncol=d*(p-1))
-  Sigmas <- array(NA, dim=c(d*p, d*p, M)) # Store the (dpxdp) covariance matrices
+  # Calculate the covariance matrices Sigma_{m,p} (Lutkepohl 2005, eq. (2.1.39) or the algorithm proposed by McElroy 2017)
+  Sigmas <- get_Sigmas(p=p, M=M, d=d, all_A=all_A, all_boldA=all_boldA, all_Omega=all_Omega) # Store the (dpxdp) covariance matrices
   chol_Sigmas <- array(NA, dim=c(d*p, d*p, M))
   for(m in 1:M) {
-    kronmat <- I_dp2 - kronecker(all_boldA[, , m], all_boldA[, , m])
-    sigma_epsm <- rbind(cbind(all_Omega[, , m], ZER_right), ZER_lower)
-    Sigma_m <- solve(kronmat, vec(sigma_epsm))
-    Sigmas[, , m] <- Sigma_m
     chol_Sigmas[, , m] <- chol(Sigmas[, , m]) # Take Cholesky here to avoid unnecessary warnings from mvnfast::dmvn
   }
 
@@ -249,7 +266,7 @@ loglikelihood_int <- function(data, p, M, params, conditional=TRUE, parametrizat
 #' @details Note that we index the time series as \eqn{-p+1,...,0,1,...,T} as in Kalliovirta et al. (2016).
 #' @return Returns the mixing weights a matrix of the same dimension as \code{log_mvnvalues} so
 #'   that the t:th row is for the time point t and m:th column is for the regime m.
-#' @inherit loglikelihood_int references
+#' @inherit in_paramspace_int references
 #' @seealso \code{\link{loglikelihood_int}}
 
 get_alpha_mt <- function(M, log_mvnvalues, alphas, epsilon, conditional, also_l_0=FALSE) {
@@ -332,18 +349,19 @@ get_alpha_mt <- function(M, log_mvnvalues, alphas, epsilon, conditional, also_l_
 #' @export
 
 loglikelihood <- function(data, p, M, params, conditional=TRUE, parametrization=c("intercept", "mean"), constraints=NULL,
-                          structural_pars=NULL, minval=NA, stat_tol=1e-3, posdef_tol=1e-8) {
+                          same_means=NULL, structural_pars=NULL, minval=NA, stat_tol=1e-3, posdef_tol=1e-8) {
   if(!all_pos_ints(c(p, M))) stop("Arguments p and M must be positive integers")
   parametrization <- match.arg(parametrization)
+  check_same_means(parametrization=parametrization, same_means=same_means)
   data <- check_data(data, p)
   d <- ncol(data)
-  check_constraints(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
-  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)) {
+  check_constraints(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
+  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)) {
     stop("Parameter vector has wrong dimension")
   }
-  loglikelihood_int(data, p, M, params, conditional=conditional, parametrization=parametrization,
-                    constraints=constraints, structural_pars=structural_pars, to_return="loglik", check_params=TRUE,
-                    minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol)
+  loglikelihood_int(data=data, p=p, M=M, params=params, conditional=conditional, parametrization=parametrization,
+                    constraints=constraints, same_means=same_means, structural_pars=structural_pars, to_return="loglik",
+                    check_params=TRUE, minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol)
 }
 
 
@@ -382,20 +400,21 @@ loglikelihood <- function(data, p, M, params, conditional=TRUE, parametrization=
 #'   to_return="total_ccovs")
 #' @export
 
-cond_moments <- function(data, p, M, params, parametrization=c("intercept", "mean"), constraints=NULL,
+cond_moments <- function(data, p, M, params, parametrization=c("intercept", "mean"), constraints=NULL, same_means=NULL,
                          structural_pars=NULL, to_return=c("regime_cmeans", "total_cmeans", "total_ccovs"),
                          stat_tol=1e-3, posdef_tol=1e-8) {
   if(!all_pos_ints(c(p, M))) stop("Arguments p and M must be positive integers")
   parametrization <- match.arg(parametrization)
+  check_same_means(parametrization=parametrization, same_means=same_means)
   to_return <- match.arg(to_return)
   data <- check_data(data, p)
   d <- ncol(data)
   check_constraints(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)
-  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, structural_pars=structural_pars)) {
+  if(length(params) != n_params(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)) {
     stop("Parameter vector has wrong dimension")
   }
-  loglikelihood_int(data, p, M, params, conditional=TRUE, parametrization=parametrization,
-                    constraints=constraints, structural_pars=structural_pars, to_return=to_return, check_params=TRUE,
+  loglikelihood_int(data=data, p=p, M=M, params=params, conditional=TRUE, parametrization=parametrization,
+                    constraints=constraints, same_means=same_means, structural_pars=structural_pars, to_return=to_return, check_params=TRUE,
                     minval=NA, stat_tol=stat_tol, posdef_tol=posdef_tol)
 }
 

@@ -31,21 +31,28 @@ reform_data <- function(data, p) {
 #'  No argument checks!
 #' @inherit in_paramspace_int references
 
-reform_constrained_pars <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, change_na=FALSE) {
-  if(is.null(constraints) && is.null(structural_pars)) {
+reform_constrained_pars <- function(p, M, d, params, constraints=NULL, same_means=NULL, structural_pars=NULL, change_na=FALSE) {
+  if(is.null(constraints) && is.null(structural_pars) && is.null(same_means)) {
     return(params)
-  } else if(is.null(constraints) && !is.null(structural_pars) && !any(structural_pars$W == 0, na.rm=TRUE) && is.null(structural_pars$C_lambda)) {
+  } else if(is.null(constraints) && is.null(same_means) && !is.null(structural_pars) && !any(structural_pars$W == 0, na.rm=TRUE) && is.null(structural_pars$C_lambda)) {
     return(params)
+  }
+
+  if(is.null(same_means)) {
+    less_pars <- 0 # Number of parameters less compared to models without same mean constraints
+  } else {
+    g <- length(same_means) # Number groups with the same mean parameters
+    less_pars <- d*(M - g) # Number of parameters less compared to models without same mean constraints
   }
 
   # Obtain the AR coefficients from the constraints
   if(is.null(constraints)) { # For SGMVAR model with constrained structural parameters but no AR constraints
     q <- M*p*d^2
-    psi_expanded <- params[(d*M + 1):(d*M + d^2*p*M)] # AR coefficients (without constraints)
+    psi_expanded <- params[(d*M + 1 - less_pars):(d*M + d^2*p*M - less_pars)] # AR coefficients (without constraints)
     psiNA <- FALSE
   } else {
     q <- ncol(constraints)
-    psi <- params[(M*d + 1):(M*d + q)]
+    psi <- params[(M*d + 1 - less_pars):(M*d + q - less_pars)]
     if(change_na) {
       if(anyNA(psi)) {
         warning("Replaced some NA values with -9.999")
@@ -58,33 +65,50 @@ reform_constrained_pars <- function(p, M, d, params, constraints=NULL, structura
     psi_expanded <- constraints%*%psi
   }
 
+  # Obtain the mean parameters from the constrained parameter vector
+  if(is.null(same_means)) {
+    if(is.null(structural_pars)) { # There is computationally more efficient way for structural models.
+      all_phi0 <- matrix(params[1:(d*M)], nrow=d, ncol=M) # params[((m - 1)*d + 1):(m*d)]
+    }
+  } else {
+    group_phi0 <- matrix(params[1:(d*g)], nrow=d, ncol=g) # Column for each group
+    all_phi0 <- matrix(NA, nrow=d, ncol=M) # Storage for all phi0 (=mean parameters in this case)
+    for(i1 in 1:g) {
+      all_phi0[,same_means[[i1]]] <- group_phi0[,i1]
+    }
+  }
+
   if(is.null(structural_pars)) { # Reduced form model
-    pars <- as.vector(vapply(1:M, function(m) c(params[((m - 1)*d + 1):(m*d)], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
-                                                params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1):(M*d + q + m*d*(d + 1)/2)]),
+    pars <- as.vector(vapply(1:M, function(m) c(all_phi0[,m], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
+                                                params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1 - less_pars):(M*d + q + m*d*(d + 1)/2 - less_pars)]),
                              numeric(p*d^2 + d + d*(d + 1)/2)))
   } else { # Structural model
     W <- structural_pars$W # Obtain the indices with zero constraints (the zeros don't exist in params)
     n_zeros <- sum(W == 0, na.rm=TRUE)
     new_W <- numeric(d^2)
-    W_pars <- params[(d*M + q + 1):(d*M + q + d^2 - n_zeros)]
+    W_pars <- params[(d*M + q + 1 - less_pars):(d*M + q + d^2 - n_zeros - less_pars)]
     new_W[W != 0 | is.na(W)] <- W_pars
 
     if(M > 1) {
       if(!is.null(structural_pars$C_lambda)) {
         r <- ncol(structural_pars$C_lambda)
-        gamma <- params[(d*M + q + d^2 - n_zeros + 1):(d*M + q + d^2 - n_zeros + r)]
+        gamma <- params[(d*M + q + d^2 - n_zeros + 1 - less_pars):(d*M + q + d^2 - n_zeros + r - less_pars)]
         if(change_na) {
           if(anyNA(gamma) && !psiNA) warning("Replaced some NA values with -9.999")
           gamma[is.na(gamma)] <- -9.999
         }
         lambdas <- structural_pars$C_lambda%*%gamma
       } else {
-        lambdas <- params[(d*M + q + d^2 - n_zeros + 1):(d*M + q + d^2 - n_zeros + d*(M - 1))]
+        lambdas <- params[(d*M + q + d^2 - n_zeros + 1 - less_pars):(d*M + q + d^2 - n_zeros + d*(M - 1) - less_pars)]
       }
     } else {
       lambdas <- numeric(0)
     }
-    pars <- c(params[1:(M*d)], psi_expanded, vec(new_W), lambdas)
+    if(is.null(same_means)) {
+      pars <- c(params[1:(M*d)], psi_expanded, vec(new_W), lambdas)
+    } else {
+      pars <- c(as.vector(all_phi0), psi_expanded, vec(new_W), lambdas)
+    }
   }
 
   if(M == 1) {
@@ -183,7 +207,8 @@ form_boldA <- function(p, M, d, all_A) {
 #'   to mixing weights into a decreasing order.
 #'
 #' @inheritParams is_stationary
-#' @details Constrained parameter vectors are not supported (expect for constraints in W)!
+#' @details Constrained parameter vectors are not supported (expect for constraints in W but including
+#'   constraining some mean parameters to be the same among different regimes)!
 #'   For structural models, the order of the first mixture component is fixed by construction,
 #'   so the rest \eqn{m=2,...,M} mixture components are rearranged only by the mixing weight
 #'   parameters.
@@ -257,6 +282,48 @@ sort_components <- function(p, M, d, params, structural_pars=NULL) {
 }
 
 
+#' @title Sort the columns of W matrix by sorting the lambda parameters of the second regime to increasing order
+#'
+#' @description \code{sort_W_and_lambdas} sorts the columns of W matrix by sorting the lambda parameters of
+#'  the second regime to increasing order.
+#'
+#' @inheritParams is_stationary
+#' @details Only structural models are supported (but there is no need to provide
+#'  structural_pars).
+#'  \strong{This function does not sort the constraints of the W matrix but just sorts
+#'  the columns of the W matrix and the lambda parameters.} It is mainly used in the genetic
+#'  algorithm to assist estimation with better identification when the constraints are not
+#'  itself strong for identification of the parameters (but are invariant to different orderings
+#'  of the columns of the W matrix).
+#'
+#'  Before using this function, make sure the parameter vector is sortable: the constraints on
+#'  the W matrix is invariant to different orderings of the columns, there are no zero restrictions,
+#'  and there are no constraints on the lambda parameters.
+#' @return Returns the sorted parameter vector (that implies the same reduced form model).
+#' @section Warning:
+#'  No argument checks!
+#' @references
+#'  \itemize{
+#'    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
+#'      paper, available as arXiv:2007.04713.
+#'  }
+
+sort_W_and_lambdas <- function(p, M, d, params) {
+  if(M == 1) return(params)
+  # The last M - 1 parameters are alphas, after that, the last d^2 + d*(M - 1) params
+  # are the W and lambda parameters.
+  W_and_lambda_inds <- (length(params) - (d^2 + d*(M - 1)) - (M - 1) + 1):(length(params) - (M - 1))
+  W_and_lambdas <- params[W_and_lambda_inds]
+  W <- matrix(W_and_lambdas[1:(d^2)], nrow=d, ncol=d, byrow=FALSE)
+  lambdas <- matrix(W_and_lambdas[(d^2 + 1):length(W_and_lambdas)], nrow=d, ncol=M - 1, byrow=FALSE)
+  new_order <- order(lambdas[,1], decreasing=FALSE) # Increasing order for second regime lambdas
+  W <- W[,new_order] # Columns to the new order
+  lambdas <- lambdas[new_order,] # Rows to the new order
+  params[W_and_lambda_inds] <- c(W, lambdas)
+  params
+}
+
+
 #' @title Change parametrization of a parameter vector
 #'
 #' @description \code{change_parametrization} changes the parametrization of the given parameter
@@ -269,13 +336,17 @@ sort_components <- function(p, M, d, params, structural_pars=NULL) {
 #'   it's assumed that \code{params} is intercept-parametrized.
 #' @return Returns parameter vector described in \code{params}, but with parametrization changed from intercept to mean
 #'   (when \code{change_to==mean}) or from mean to intercept (when \code{change_to==intercept}).
+#' @details Parametrization cannot be changed for models with same_means constraints!
 #' @section Warning:
 #'  No argument checks!
 #' @inherit is_stationary references
 
-change_parametrization <- function(p, M, d, params, constraints=NULL, structural_pars=NULL, change_to=c("intercept", "mean")) {
+change_parametrization <- function(p, M, d, params, constraints=NULL, same_means=NULL, structural_pars=NULL,
+                                   change_to=c("intercept", "mean")) {
+  stopifnot(is.null(same_means))
   re_params <- params
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, structural_pars=structural_pars) # Parameters in regular form
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints, same_means=same_means,
+                                    structural_pars=structural_pars) # Parameters in regular form
   change_to <- match.arg(change_to)
   Id <- diag(nrow=d)
   all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
@@ -314,7 +385,7 @@ change_parametrization <- function(p, M, d, params, constraints=NULL, structural
 #'     \item{For structural models:}{a length \eqn{pd^2 + d} vector \eqn{(\phi_{m,0},}\strong{\eqn{\phi_{m}}}\eqn{)}.}
 #'   }
 #' @return Returns parameter vector with \code{m}:th regime changed to \code{regime_pars}.
-#' @details Does not currently support models with AR or lambda parameter constraints.
+#' @details Does not currently support models with AR, mean, or lambda parameter constraints.
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace_int references
