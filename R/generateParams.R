@@ -43,11 +43,9 @@ random_ind <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pa
   }
   if(M > 1) {
     alphas <- runif(n=M)
-    if(is.null(constraints) && is.null(structural_pars$C_lambda) && is.null(same_means)) {
-      # alphas not ordered if certain constraints are employed because the constrained parameter vector won't be reordered
-      alphas <- alphas[order(alphas, decreasing=TRUE, method="radix")]
-    }
-    return(c(x, (alphas/sum(alphas))[-M]))
+    alphas <- sort_and_standardize_alphas(alphas=alphas, constraints=constraints, same_means=same_means,
+                                          structural_pars=structural_pars)
+    return(c(x, alphas[-M]))
   } else {
     return(x)
   }
@@ -101,7 +99,11 @@ smart_ind <- function(p, M, d, params, constraints=NULL, same_means=NULL, struct
       }, numeric(d + p*d^2 + d*(d + 1)/2))
     } else { # AR constraints, structural model, or same_means
       g <- ifelse(is.null(same_means), M, length(same_means)) # Number of groups of regimes with the same mean parameters
-      smart_regs <- (1:M)[-which_random]
+      if(length(which_random) == 0) {
+        smart_regs <- 1:M
+      } else {
+        smart_regs <- (1:M)[-which_random]
+      }
       less_pars <- ifelse(is.null(same_means), 0, d*(M - g)) # Number of (mean) parameters less in same_means models
       all_phi0 <- matrix(params[1:(d*g)], nrow=d, ncol=g, byrow=FALSE) # Always mean parameters when called from GA
       phi0_pars <- as.vector(vapply(1:g, function(m) {
@@ -166,7 +168,7 @@ smart_ind <- function(p, M, d, params, constraints=NULL, same_means=NULL, struct
       pars <- c(phi0_pars, AR_pars, covmat_pars)
     }
     if(M > 1) {
-      alphas <- abs(rnorm(M, mean=alphas, sd=0.2))
+      alphas <- abs(rnorm(M, mean=alphas, sd=0.1))
       return(c(pars, (alphas/sum(alphas))[-M]))
     } else {
       return(pars)
@@ -219,11 +221,9 @@ random_ind2 <- function(p, M, d, same_means=NULL, structural_pars=NULL, mu_scale
   }
   if(M > 1) {
     alphas <- runif(n=M)
-    if(is.null(structural_pars$C_lambda) && is.null(same_means)) {
-      # Alphas are ordered only in the absence of certain constraints, as constrained parameter vectors won't be reordered
-      alphas <- alphas[order(alphas, decreasing=TRUE, method="radix")]
-    }
-    return(c(x, (alphas/sum(alphas))[-M]))
+    alphas <- sort_and_standardize_alphas(alphas=alphas, constraints=NULL, same_means=same_means,
+                                          structural_pars=structural_pars)
+    return(c(x, alphas[-M]))
   } else {
     return(x)
   }
