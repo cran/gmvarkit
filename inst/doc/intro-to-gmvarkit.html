@@ -12,7 +12,7 @@
 
 <meta name="author" content="Savi Virolainen" />
 
-<meta name="date" content="2021-01-25" />
+<meta name="date" content="2021-05-12" />
 
 <title>Introduction to gmvarkit</title>
 
@@ -241,13 +241,13 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Introduction to gmvarkit</h1>
 <h4 class="author">Savi Virolainen</h4>
-<h4 class="date">2021-01-25</h4>
+<h4 class="date">2021-05-12</h4>
 
 
 
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<p>The package <code>gmvarkit</code> contains tools to estimate and analyze both reduced form and structural Gaussian mixture vector autoregressive (GMVAR) models (Kalliovirta, Meitz, and Saikkonen, 2016, and Virolainen, 2020). In this vignette, we first define the reduced form GMVAR model, briefly discuss some of its properties, and explain how to use the functions in <code>gmvarkit</code> to estimate the model, examine the estimates, check its adequacy with quantile residual diagnostics, simulate from the process, and forecast future observations of the process. Then, we define the structural GMVAR model, discuss its identification, and explain how to use the functions in <code>gmvarkit</code> to estimate generalized impulse response function and to test hypotheses regarding the paremeters. Most of the functions work with both, reduced form and structural models, but particularly the one for estimating generalized impulse response function accomodates structural models only.</p>
+<p>The package <code>gmvarkit</code> contains tools to estimate and analyze both reduced form and structural Gaussian mixture vector autoregressive (GMVAR) models (Kalliovirta, Meitz, and Saikkonen, 2016, and Virolainen, 2020). In this vignette, we first define the reduced form GMVAR model, briefly discuss some of its properties, and explain how to use the functions in <code>gmvarkit</code> to estimate the model, examine the estimates, check its adequacy with quantile residual diagnostics, simulate from the process, forecast future observations of the process, and test hypotheses regarding the model parameters. Then, we define the structural GMVAR model, discuss its identification, and explain how to use the functions in <code>gmvarkit</code> to estimate generalized impulse response function and generalized forecast error variance decomposition. Most of the functions work with both, reduced form and structural models, but particularly the ones for estimating generalized impulse response function and generalized forecast error variance decomposition accommodates structural models only.</p>
 <p>For more comprehensive discussion on the reduced form model, see the cited article by Kalliovirta, Meitz, and Saikkonen (2016), and for the structural model, see the cited unpublished manuscript by Virolainen (2020). For a shorter introduction and demonstration on how to use <code>gmvarkit</code>, see the readme file.</p>
 <div id="some-general-notes-on-gmvarkit" class="section level3">
 <h3>Some general notes on gmvarkit</h3>
@@ -526,6 +526,8 @@ B_t=\begin{bmatrix}
 </div>
 <div id="impulse-response-analysis" class="section level2">
 <h2>Impulse response analysis</h2>
+<div id="generalized-impulse-response-function" class="section level3">
+<h3>Generalized impulse response function</h3>
 <p>Following Koop et al. (1996) and Kilian &amp; Lütkepohl (2017), we consider the generalized impulse response function (GIRF) defined as <span class="math display">\[\begin{equation}\label{eq:girf}
 \text{GIRF}(n,\delta_j,\mathcal{F}_{t-1}) = \text{E}[y_{t+n}|\delta_j,\mathcal{F}_{t-1}] - \text{E}[y_{t+n}|\mathcal{F}_{t-1}],
 \end{equation}\]</span> where <span class="math inline">\(n\)</span> is the chosen horizon, <span class="math inline">\(\mathcal{F}_{t-1}=\sigma\lbrace y_{t-j},j&gt;0\rbrace\)</span> as before, the first term in the RHS is the expected realization of the process at time <span class="math inline">\(t+n\)</span> conditionally on a structural shock of magnitude <span class="math inline">\(\delta_j \in\mathbb{R}\)</span> in the <span class="math inline">\(j\)</span>th element of <span class="math inline">\(e_t\)</span> at time <span class="math inline">\(t\)</span> and the previous observations, and the second term in the RHS is the expected realization of the process conditionally on the previous observations only. GIRF thus expresses the expected difference in the future outcomes when the specific structural shock hits the system at time <span class="math inline">\(t\)</span> as opposed to all shocks being random.</p>
@@ -536,11 +538,30 @@ B_t=\begin{bmatrix}
 <p>Because estimating the GIRF and confidence intervals for it is computationally demanding, parallel computing is taken use of to shorten the estimation time. The number of CPU cores used can be set with the argument <code>ncores</code>.</p>
 <p>As final remarks, note that the objects returned by the GIRF function have their own plot and print methods. Also, cumulative impulse responses of the specified variables can be obtained directly by specifying the argument <code>which_cumulative</code> in the function <code>GIRF</code>.</p>
 </div>
+<div id="generalized-forecast-error-variance-decomposition" class="section level3">
+<h3>Generalized forecast error variance decomposition</h3>
+<p>Following Lanne and Nyberg (2016), we consider the generalized forecast error variance decomposition (GFEVD) that is defined for variable <span class="math inline">\(i\)</span>, shock <span class="math inline">\(j\)</span>, and horizon <span class="math inline">\(n\)</span> as <span class="math display">\[
+\text{GFEVD}(n,y_{it}, \delta_j,\mathcal{F}_{t-1}) = \frac{\sum_{l=0}^n\text{GIRF}(l,\delta_j,\mathcal{F}_{t-1})_i^2}{\sum_{k=1}^d\sum_{l=0}^n\text{GIRF}(l,\delta_k,\mathcal{F}_{t-1})_i^2},
+\]</span> where <span class="math inline">\(n\)</span> is the chosen and <span class="math inline">\(\text{GIRF}(l,\delta_j,\mathcal{F}_{t-1})_i\)</span> is the <span class="math inline">\(i\)</span>th element of the related GIRF (see also the notation described for GIRF in the previous section). That is, the GFEVD is otherwise similar to the conventional forecast error variance decomposition but with GIRFs in the place of conventional impulse response functions. Because the GFEVDs sum to unity (for each variable), they can be interpreted in a similar manner to the conventional FEVD.</p>
+<p>In <code>gmvarkit</code>, the GFEVD can be estimated with the function <code>GFEVD</code>. As with the GIRF, the GFEVD is dependent on the initial values. The type of the initial values is set with the argument <code>initval_type</code>, and there are three options:</p>
+<ol style="list-style-type: decimal">
+<li><p>“data” which estimates the GIRFs for all possible length <span class="math inline">\(p\)</span> histories in the data and then the GIRFs in the GFEVD are obtained as the sample mean over those GIRFs.</p></li>
+<li><p>“random” which generates the initial values from the stationary distribution of the process or from the mixture of the stationary distributions of some specific regime(s) with the relative mixing proportions given by the mixing weight parameters. The initial regimes can be set with the argument <code>init_regimes</code>. The GIRFs in the GFEVD are obtained as the sample mean over the GIRFs estimated for the different random initial values.</p></li>
+<li><p>“fixed” which estimates the GIRFs for a single fixed initial value that is set with the argument <code>init_ values</code>.</p></li>
+</ol>
+<p>The shock size is the same for all scalar components of the structural shock and it can be adjusted with the argument <code>shock_size</code>. If the GIRFs for some variables should be cumulative before calculating the GFEVD, specify them with the argument <code>which_cumulative</code>. Finally, note that the GFEVD objects have their own plot and print methods.</p>
+</div>
+</div>
+</div>
+<div id="more-documentation" class="section level1">
+<h1>More documentation</h1>
+<p>See the readme file for a simple example how to use <code>gmvarkit</code>.</p>
 <div id="references" class="section level2">
 <h2>References</h2>
 <ul>
 <li>Lanne, M. and Lütkepohl, H. (2010). Structural vector autoregressions with nonnormal residuals. <em>Journal of Business &amp; Economic Statistics</em>, 28(1):159–168.</li>
 <li>Lanne, M., Lütkepohl, H., and Maciejowsla, K. (2010). Structural vector autoregressions with markov switching. <em>Journal of Economic Dynamics and Control</em>, 34(2):121–131.</li>
+<li>Lanne M. and Nyberg H. 2016. Generalized Forecast Error Variance Decomposition for Linear and Nonlineae Multivariate Models. <em>Oxford Bulletin of Economics and Statistics</em>, 78(4), 595-603.</li>
 <li>Kalliovirta L., Meitz M. and Saikkonen P. (2016) Gaussian mixture vector autoregression. <em>Journal of Econometrics</em>, <strong>192</strong>, 485-498.</li>
 <li>Kalliovirta L. and Saikkonen P. (2010) Reliable Residuals for Multivariate Nonlinear Time Series Models. <em>Unpublished Revision of HECER Discussion Paper No. 247</em>.</li>
 <li>Kilian, L. and Lütkepohl, H. (2017). Structural Vector Autoregressive Analysis. Cambridge University Press, Cambridge, 1st edition.</li>

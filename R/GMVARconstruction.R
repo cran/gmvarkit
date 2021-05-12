@@ -132,7 +132,8 @@ GMVAR <- function(data, p, M, d, params, conditional=TRUE, parametrization=c("in
     qresiduals <- quantile_residuals_int(data=data, p=p, M=M, params=params,
                                          conditional=conditional, parametrization=parametrization,
                                          constraints=constraints, same_means=same_means,
-                                         structural_pars=structural_pars)
+                                         structural_pars=structural_pars, stat_tol=stat_tol,
+                                         posdef_tol=posdef_tol)
     obs <- ifelse(conditional, nrow(data) - p, nrow(data))
     IC <- get_IC(loglik=lok_and_mw$loglik, npars=npars, obs=obs)
   }
@@ -201,6 +202,7 @@ GMVAR <- function(data, p, M, d, params, conditional=TRUE, parametrization=c("in
                  all_estimates=NULL,
                  all_logliks=NULL,
                  which_converged=NULL,
+                 which_round=NULL,
                  num_tols=list(stat_tol=stat_tol,
                                posdef_tol=posdef_tol)),
             class="gmvar")
@@ -373,11 +375,20 @@ alt_gmvar <- function(gmvar, which_round=1, which_largest, calc_cond_moments=TRU
     stopifnot(which_largest >= 1 || which_largest <= length(gmvar$all_estimates))
     which_round <- order(gmvar$all_logliks, decreasing=TRUE)[which_largest]
   }
-  GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, d=gmvar$model$d, params=gmvar$all_estimates[[which_round]],
-        conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
-        constraints=gmvar$model$constraints, same_means=gmvar$model$same_means, structural_pars=gmvar$model$structural_pars,
-        calc_cond_moments=calc_cond_moments, calc_std_errors=calc_std_errors, stat_tol=gmvar$num_tols$stat_tol,
-        posdef_tol=gmvar$num_tols$posdef_tol)
+  ret <- GMVAR(data=gmvar$data, p=gmvar$model$p, M=gmvar$model$M, d=gmvar$model$d, params=gmvar$all_estimates[[which_round]],
+               conditional=gmvar$model$conditional, parametrization=gmvar$model$parametrization,
+               constraints=gmvar$model$constraints, same_means=gmvar$model$same_means, structural_pars=gmvar$model$structural_pars,
+               calc_cond_moments=calc_cond_moments, calc_std_errors=calc_std_errors, stat_tol=gmvar$num_tols$stat_tol,
+               posdef_tol=gmvar$num_tols$posdef_tol)
+
+  ret$all_estimates <- gmvar$all_estimates
+  ret$all_logliks <- gmvar$all_logliks
+  ret$which_converged <- gmvar$which_converged
+  if(!is.null(gmvar$which_round)) {
+   ret$which_round <- which_round
+  }
+  warn_eigens(ret)
+  ret
 }
 
 
@@ -386,6 +397,7 @@ alt_gmvar <- function(gmvar, which_round=1, which_largest, calc_cond_moments=TRU
 #' @description \code{gmvar_to_sgmvar} constructs SGMVAR model based on a reduced form GMVAR model.
 #'
 #' @inheritParams simulateGMVAR
+#' @inheritParams GMVAR
 #' @details The switch is made by simultaneously diagonalizing the two error term covariance matrices
 #'   with a well known matrix decomposition (Muirhead, 1982, Theorem A9.9) and then normalizing the
 #'   diagonal of the matrix W positive (which implies positive diagonal of the B-matrix). Models with
@@ -429,8 +441,9 @@ alt_gmvar <- function(gmvar, which_round=1, which_largest, calc_cond_moments=TRU
 #' }
 #' @export
 
-gmvar_to_sgmvar <- function(gmvar) {
+gmvar_to_sgmvar <- function(gmvar, calc_std_errors=TRUE) {
   check_gmvar(gmvar)
+  if(is.null(gmvar$data)) calc_std_errors <- FALSE
   if(!is.null(gmvar$model$structural_pars)) stop("Only reduced form models are supported!")
   p <- gmvar$model$p
   M <- gmvar$model$M
@@ -473,7 +486,6 @@ gmvar_to_sgmvar <- function(gmvar) {
   diag(new_W) <- rep(1, times=d)
 
   # Construct the SGMVAR model based on the obtained structural parameters
-  calc_std_errors <- ifelse(all(is.na(gmvar$std_errors)) || is.null(gmvar$data), FALSE, TRUE)
   GMVAR(data=gmvar$data, p=p, M=M, d=d, params=new_params, conditional=gmvar$model$conditional,
         parametrization=gmvar$model$parametrization, constraints=constraints, same_means=same_means,
         structural_pars=list(W=new_W), calc_std_errors=calc_std_errors, stat_tol=gmvar$num_tols$stat_tol,

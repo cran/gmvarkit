@@ -101,8 +101,25 @@
 
 # gmvarkit 1.4.1
 
-* Fixed CRACN check issues and examples regarding LR and Wald tests.
+* Fixed CRAN check issues and examples regarding LR and Wald tests.
 * Fixed a problem in the estimation procedure that was introduced in the previous version.
 * Updated some of the examples so that the running time fpr all of them is now shorter.
 * The genetic algorithm now sorts regimes of the structural models by mixing weight parameters to decreasing order by redecomposing the error term covariance matrices if the first regime changes (before, only regimes 2,..,M were sorted). As a result, the MLE is now found with higher probability in each estimation round.
 * In this version, the estimation results with a given seed are different to those in the previous versions due to the updates (see above).
+
+# gmvarkit 1.4.2
+
+* New exported function: GFEVD for estimating the generalized forecast error variance decomposition.
+* Print and summary methods for gmvar objects now display the number of parameters and observations.
+* Now also iterate_more and and alt_gmvar return the results from all estimation rounds.
+* There is now possibility to choose not to calculate approximate standard errors when using gmvar_to_sgmvar, becuase it is computationally demanding for large models.
+* Fixed a bug in the GIRF print method: it sometimes referred to wrong shocks when GIRF was estimated for only a subset of the shocks or the shocks were not in an increasing order.
+* Fixed a bug in that caused an error in some functions when the model was adjusted to have smaller stationarity/posdef tolerance than the default one and the model was outside the default tolerance.
+* Now fitGMVAR, iterate_more, and alt_gmvar warn if some regime has near-unit-roots or near-singular error term covariance matrix.
+* Now the argument shock_size in GIRF should be a scalar value.
+* Fixed a bug in the estimation algorithm that occurred when estimating structural models. This might have caused an error or just the model not to estimate that well. A small adjustment was also done. Because there was a change in the algorithm, the structural model estimations done with the previous versions are generally not reproducible with this version.
+* Fixed the documentation for the argument ar_scale2.
+* Fixed the argument "precission" in profile_logliks to "precision".
+* Now fitGMVAR, GFEVD, and GIRF don't call closeAllConnections: instead, they only close the connections they opened.
+* Added new datasets: usamone_prec and usamone
+
