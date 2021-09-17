@@ -45,6 +45,7 @@
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace_int references
+#' @keywords internal
 
 is_stationary <- function(p, M, d, params, all_boldA=NULL, structural_pars=NULL, tolerance=1e-3) {
   if(is.null(all_boldA)) {
@@ -89,6 +90,7 @@ is_stationary <- function(p, M, d, params, all_boldA=NULL, structural_pars=NULL,
 #'    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
 #'      paper, available as arXiv:2007.04713.
 #'  }
+#'  @keywords internal
 
 in_paramspace_int <- function(p, M, d, params, all_boldA, alphas, all_Omega, W_constraints=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
 
@@ -136,32 +138,32 @@ in_paramspace_int <- function(p, M, d, params, all_boldA, alphas, all_Omega, W_c
 #' @inherit in_paramspace_int references
 #' @examples
 #' # GMVAR(1,1), d=2 model:
-#' params112 <- c(1.07, 127.71, 0.99, 0.00, -0.01, 0.99, 4.05,
+#' params11 <- c(1.07, 127.71, 0.99, 0.00, -0.01, 0.99, 4.05,
 #'   2.22, 8.87)
-#' in_paramspace(p=1, M=1, d=2, params=params112)
+#' in_paramspace(p=1, M=1, d=2, params=params11)
 #'
 #' # GMVAR(2,2), d=2 model:
-#' params222 <- c(1.39, -0.77, 1.31, 0.14, 0.09, 1.29, -0.39,
+#' params22 <- c(1.39, -0.77, 1.31, 0.14, 0.09, 1.29, -0.39,
 #'  -0.07, -0.11, -0.28, 0.92, -0.03, 4.84, 1.01, 5.93, 1.25,
 #'   0.08, -0.04, 1.27, -0.27, -0.07, 0.03, -0.31, 5.85, 3.57,
 #'   9.84, 0.74)
-#' in_paramspace(p=2, M=2, d=2, params=params222)
+#' in_paramspace(p=2, M=2, d=2, params=params22)
 #'
 #' # GMVAR(2,2), d=2 model with AR-parameters restricted to be
 #' # the same for both regimes:
 #' C_mat <- rbind(diag(2*2^2), diag(2*2^2))
-#' params222c <- c(1.03, 2.36, 1.79, 3.00, 1.25, 0.06,0.04,
+#' params22c <- c(1.03, 2.36, 1.79, 3.00, 1.25, 0.06,0.04,
 #'  1.34, -0.29, -0.08, -0.05, -0.36, 0.93, -0.15, 5.20,
 #'  5.88, 3.56, 9.80, 0.37)
-#' in_paramspace(p=2, M=2, d=2, params=params222c, constraints=C_mat)
+#' in_paramspace(p=2, M=2, d=2, params=params22c, constraints=C_mat)
 #'
 #' # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
-#' params222s <- c(1.03, 2.36, 1.79, 3, 1.25, 0.06, 0.04, 1.34, -0.29,
+#' params22s <- c(1.03, 2.36, 1.79, 3, 1.25, 0.06, 0.04, 1.34, -0.29,
 #'  -0.08, -0.05, -0.36, 1.2, 0.05, 0.05, 1.3, -0.3, -0.1, -0.05, -0.4,
 #'   0.89, 0.72, -0.37, 2.16, 7.16, 1.3, 0.37)
-#' W_222 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
-#' in_paramspace(p=2, M=2, d=2, params=params222s,
-#'   structural_pars=list(W=W_222))
+#' W_22 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
+#' in_paramspace(p=2, M=2, d=2, params=params22s,
+#'   structural_pars=list(W=W_22))
 #' @export
 
 in_paramspace <- function(p, M, d, params, constraints=NULL, same_means=NULL, structural_pars=NULL, stat_tol=1e-3, posdef_tol=1e-8) {
@@ -197,16 +199,16 @@ in_paramspace <- function(p, M, d, params, constraints=NULL, same_means=NULL, st
 #' # These examples will cause an informative error
 #'
 #' # GMVAR(1, 1), d=2 model:
-#' params112 <- c(1.07, 127.71, 0.99, 0.00, -0.01, 1.00, 4.05,
+#' params11 <- c(1.07, 127.71, 0.99, 0.00, -0.01, 1.00, 4.05,
 #'   2.22, 8.87)
-#' check_parameters(p=1, M=1, d=2, params=params112)
+#' check_parameters(p=1, M=1, d=2, params=params11)
 #'
 #' # GMVAR(2, 2), d=2 model:
-#' params222 <- c(1.39, -0.77, 1.31, 0.14, 0.09, 1.29, -0.39,
+#' params22 <- c(1.39, -0.77, 1.31, 0.14, 0.09, 1.29, -0.39,
 #'  -0.07, -0.11, -0.28, 0.92, -0.03, 4.84, 1.01, 5.93, 1.25,
 #'   0.08, -0.04, 1.27, -0.27, -0.07, 0.03, -0.31, 5.85, 10.57,
 #'   9.84, 0.74)
-#' check_parameters(p=2, M=2, d=2, params=params222)
+#' check_parameters(p=2, M=2, d=2, params=params22)
 #'
 #' # GMVAR(2, 2), d=2 model with AR-parameters restricted to be
 #' # the same for both regimes:
@@ -214,16 +216,16 @@ in_paramspace <- function(p, M, d, params, constraints=NULL, same_means=NULL, st
 #' params222c <- c(1.03, 2.36, 1.79, 3.00, 1.25, 0.06,0.04,
 #'  1.34, -0.29, -0.08, -0.05, -0.36, 0.93, -0.15, 5.20,
 #'  5.88, 3.56, 9.80, 1.37)
-#' check_parameters(p=2, M=2, d=2, params=params222c, constraints=C_mat)
+#' check_parameters(p=2, M=2, d=2, params=params22c, constraints=C_mat)
 #'
 #' # Structural GMVAR(2, 2), d=2 model identified with sign-constraints
 #' # (no error):
-#' params222s <- c(1.03, 2.36, 1.79, 3, 1.25, 0.06, 0.04, 1.34, -0.29,
+#' params22s <- c(1.03, 2.36, 1.79, 3, 1.25, 0.06, 0.04, 1.34, -0.29,
 #'  -0.08, -0.05, -0.36, 1.2, 0.05, 0.05, 1.3, -0.3, -0.1, -0.05, -0.4,
 #'   0.89, 0.72, -0.37, 2.16, 7.16, 1.3, 0.37)
-#' W_222 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
-#' check_parameters(p=2, M=2, d=2, params=params222s,
-#'  structural_pars=list(W=W_222))
+#' W_22 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
+#' check_parameters(p=2, M=2, d=2, params=params22s,
+#'  structural_pars=list(W=W_22))
 #' }
 #' @export
 
@@ -281,6 +283,7 @@ check_parameters <- function(p, M, d, params, parametrization=c("intercept", "me
 #' @return Checks the constraint matrix \strong{C} and throws an error
 #'   if something is wrong.
 #' @details If \code{is.null(constraints)}, then this function doesn't do anything.
+#' @keywords internal
 
 check_constraints <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pars=NULL) {
   if(!is.null(constraints)) {
@@ -349,6 +352,7 @@ check_constraints <- function(p, M, d, constraints=NULL, same_means=NULL, struct
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace references
+#' @keywords internal
 
 n_params <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pars=NULL) {
   if(is.null(same_means)) {
@@ -375,6 +379,7 @@ n_params <- function(p, M, d, constraints=NULL, same_means=NULL, structural_pars
 #' @inheritParams loglikelihood_int
 #' @return Checks the data and tries to correct it. Throws an error if something is wrong and
 #'   returns the corrected data otherwise.
+#' @keywords internal
 
 check_data <- function(data, p) {
   if(is.data.frame(data)) {
@@ -399,6 +404,7 @@ check_data <- function(data, p) {
 #'
 #' @param x a vector containing the elements to be tested.
 #' @return Returns \code{TRUE} or \code{FALSE} accordingly.
+#' @keywords internal
 
 all_pos_ints <- function(x) {
   all(vapply(x, function(x1) x1 %% 1 == 0 && length(x1) == 1 && x1 >= 1, logical(1)))
@@ -411,6 +417,7 @@ all_pos_ints <- function(x) {
 #'
 #' @inheritParams is_stationary
 #' @return Throws an error if something is wrong.
+#' @keywords internal
 
 check_pMd <- function(p, M, d) {
   if(!all_pos_ints(c(p, M))) {
@@ -432,6 +439,7 @@ check_pMd <- function(p, M, d) {
 #' @param object S3 object to be tested
 #' @param object_name what is the name of the object that should of class 'gmvar'?
 #' @return Throws an error if the object doesn't have the class attribute 'gmvar'.
+#' @keywords internal
 
 check_gmvar <- function(object, object_name) {
   if(missing(object_name)) object_name <- "gmvar"
@@ -447,6 +455,7 @@ check_gmvar <- function(object, object_name) {
 #'
 #' @inheritParams simulateGMVAR
 #' @return Throws an error if is.null(gmvar$data).
+#' @keywords internal
 
 check_null_data <- function(gmvar) {
   if(is.null(gmvar$data)) {
@@ -461,6 +470,7 @@ check_null_data <- function(gmvar) {
 #'
 #' @inheritParams loglikelihood_int
 #' @return Throws an error if parametrization type is not "mean" and means are constrained
+#' @keywords internal
 
 check_same_means <- function(parametrization, same_means) {
   if(parametrization == "intercept" && !is.null(same_means)) {
@@ -478,6 +488,7 @@ check_same_means <- function(parametrization, same_means) {
 #' @details Warns if, for some regime, some moduli of "bold A" eigenvalues are larger than \code{1 - tol} or
 #'  some eigenvalue of the error term covariance matrix is smaller than \code{tol}.
 #' @return Doesn't return anything.
+#' @keywords internal
 
 warn_eigens <- function(gmvar, tol=0.002) {
   boldA_eigens <- get_boldA_eigens(gmvar)

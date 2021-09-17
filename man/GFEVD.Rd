@@ -44,31 +44,37 @@ the conditional covariance matrix of the structural shock is identity matrix.}
      \code{init_values}.}
 }}
 
-\item{R1}{the number of repetitions used to estimate GIRF for each initial value.}
+\item{R1}{the number of repetitions used to estimate GIRF for each initial
+value.}
 
 \item{R2}{the number of initial values to be drawn if \code{initval_type="random"}.}
 
-\item{init_regimes}{a numeric vector of length at most \eqn{M} and elements in \eqn{1,...,M}
-specifying the regimes from which the initial values should be generated from. The initial
-values will be generated from a mixture distribution with the mixture components being the
-stationary distributions of the specific regimes and the (proportional) mixing weights given
-by the mixing weight parameters of those regimes. Note that if \code{init_regimes=1:M}, the
-initial values are generated from the stationary distribution of the process and if
-\code{init_regimes=m}, the initial value are generated from the stationary distribution
-of the \eqn{m}th regime. Ignored if \code{init_value} is specified.}
+\item{init_regimes}{a numeric vector of length at most \eqn{M} and elements
+in \eqn{1,...,M} specifying the regimes from which the initial values
+should be generated from. The initial values will be generated from a
+mixture distribution with the mixture components being the stationary
+distributions of the specific regimes and the (proportional) mixing weights
+given by the mixing weight parameters of those regimes. Note that if
+\code{init_regimes=1:M}, the initial values are generated from the
+stationary distribution of the process and if \code{init_regimes=m}, the
+initial value are generated from the stationary distribution of the
+\eqn{m}th regime. Ignored if \code{init_value} is specified.}
 
-\item{init_values}{a matrix or a multivariate class \code{'ts'} object with \eqn{d} columns
-and at least \eqn{p} rows specifying an initial value for the GIRF. The last \eqn{p} rows
-are taken to be the initial value assuming that the \strong{last} row is the most recent observation.}
+\item{init_values}{a matrix or a multivariate class \code{'ts'} object with
+\eqn{d} columns and at least \eqn{p} rows specifying an initial value for
+the GIRF. The last \eqn{p} rows are taken to be the initial value assuming
+that the \strong{last} row is the most recent observation.}
 
-\item{which_cumulative}{a numeric vector with values in \eqn{1,...,d} (\code{d=ncol(data)}) specifying
-which the variables for which the impulse responses should be cumulative. Default is none.}
+\item{which_cumulative}{a numeric vector with values in \eqn{1,...,d}
+(\code{d=ncol(data)}) specifying which the variables for which the impulse
+responses should be cumulative. Default is none.}
 
 \item{include_mixweights}{should the GFEVD be estimated for the mixing weights as well? Note that this is
 ignored if \code{M=1} and if \code{M=2} the GFEVD will be the same for both regime's mixing weights.}
 
-\item{ncores}{the number CPU cores to be used in parallel computing. Only single core computing is
-supported if an initial value is specified (and the GIRF won't thus be estimated multiple times).}
+\item{ncores}{the number CPU cores to be used in parallel computing. Only
+single core computing is supported if an initial value is specified (and
+the GIRF won't thus be estimated multiple times).}
 
 \item{seeds}{a numeric vector containing the random number generator seed for estimation
 of each GIRF. Should have the length...
@@ -117,18 +123,18 @@ The model needs to be structural in order for this function to be applicable. A 
  # These are long-running examples that use parallel computing.
  # It takes approximately 30 seconds to run all the below examples.
 
- data(eurusd, package="gmvarkit")
- data <- cbind(10*eurusd[,1], 100*eurusd[,2])
- colnames(data) <- colnames(eurusd)
-
  # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
- params22s <- c(1.386, -0.766, 1.005, 5.928, 1.314, 0.145, 0.094, 1.292,
-  -0.389, -0.07, -0.109, -0.281, 1.248, 0.077, -0.04, 1.266, -0.272, -0.074,
-   0.034, -0.313, 0.903, 0.718, -0.324, 2.079, 7.001, 1.44, 0.741)
+ params22s <- c(0.36, 0.121, 0.484, 0.072, 0.223, 0.059, -0.151, 0.395,
+  0.406, -0.005, 0.083, 0.299, 0.218, 0.02, -0.119, 0.722, 0.093, 0.032,
+  0.044, 0.191, 0.057, 0.172, -0.46, 0.016, 3.518, 5.154, 0.58)
  W_22 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
- mod22s <- GMVAR(data, p=2, M=2, params=params22s,
+ mod22s <- GMVAR(gdpdef, p=2, M=2, params=params22s,
   structural_pars=list(W=W_22))
  mod22s
+ # Alternatively, use:
+ #fit22s <- fitGMVAR(gdpdef, p=2, M=2, structural_pars=list(W=W_22),
+ #                   ncalls=20, seeds=1:20)
+ # To obtain an estimated version of the same model.
 
  ## NOTE: Use larger R1 is empirical applications! Small R1 is used
  ## Below only to fasten the execution time of the examples.

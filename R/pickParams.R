@@ -14,6 +14,7 @@
 #' @section Warning:
 #'  No argument checks!
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_Ami <- function(p, M, d, params, m, i, structural_pars=NULL, unvec=TRUE) {
   if(is.null(structural_pars)) {
@@ -43,6 +44,7 @@ pick_Ami <- function(p, M, d, params, m, i, structural_pars=NULL, unvec=TRUE) {
 #' @inherit pick_Ami details
 #' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_Am <- function(p, M, d, params, m, structural_pars=NULL) {
   if(is.null(structural_pars)) {
@@ -70,6 +72,7 @@ pick_Am <- function(p, M, d, params, m, structural_pars=NULL) {
 #' @inherit pick_Ami details
 #' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_allA <- function(p, M, d, params, structural_pars=NULL) {
   if(is.null(structural_pars)) {
@@ -95,6 +98,7 @@ pick_allA <- function(p, M, d, params, structural_pars=NULL) {
 #' @inherit pick_Ami details
 #' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_phi0 <- function(p, M, d, params, structural_pars=NULL) {
   if(is.null(structural_pars)) {
@@ -119,6 +123,7 @@ pick_phi0 <- function(p, M, d, params, structural_pars=NULL) {
 #' @inherit pick_Ami details
 #' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_all_phi0_A <- function(p, M, d, params, structural_pars=NULL) {
   if(is.null(structural_pars)) {
@@ -146,6 +151,7 @@ pick_all_phi0_A <- function(p, M, d, params, structural_pars=NULL) {
 #' @inherit pick_Ami details
 #' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
+#' @keywords internal
 
 pick_Omegas <- function(p, M, d, params, structural_pars=NULL) {
   Omegas <- array(dim=c(d, d, M))
@@ -177,7 +183,7 @@ pick_Omegas <- function(p, M, d, params, structural_pars=NULL) {
 #'   including non-parametrized \eqn{alpha_{M}}.
 #' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
-
+#' @keywords internal
 
 pick_alphas <- function(p, M, d, params) {
   if(M == 1) {
@@ -199,6 +205,7 @@ pick_alphas <- function(p, M, d, params) {
 #'   Returns \code{NULL} for reduced form models.
 #' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
+#' @keywords internal
 
 pick_W <- function(p, M, d, params, structural_pars=NULL) {
   if(is.null(structural_pars)) return(NULL)
@@ -217,7 +224,7 @@ pick_W <- function(p, M, d, params, structural_pars=NULL) {
 #' @inherit pick_W details
 #' @inheritSection pick_Ami Warning
 #' @inherit in_paramspace_int references
-
+#' @keywords internal
 
 pick_lambdas <- function(p, M, d, params, structural_pars=NULL) {
   if(is.null(structural_pars) || M == 1) return(numeric(0))
@@ -240,6 +247,7 @@ pick_lambdas <- function(p, M, d, params, structural_pars=NULL) {
 #'   }
 #' @inheritSection pick_Ami Warning
 #' @inherit is_stationary references
+#' @keywords internal
 
 pick_regime <- function(p, M, d, params, m, structural_pars=NULL) {
   if(is.null(structural_pars)) {
@@ -265,12 +273,12 @@ pick_regime <- function(p, M, d, params, m, structural_pars=NULL) {
 #'  the AR coefficients correspinding to regime \eqn{m}.
 #' @inherit is_stationary references
 #' @examples
-#' params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
-#'  -0.070, -0.109, -0.281, 0.920, -0.025, 4.839, 11.633, 124.983, 1.248,
-#'   0.077, -0.040, 1.266, -0.272, -0.074, 0.034, -0.313, 5.855, 3.570,
-#'   9.838, 0.740)
-#' mod222 <- GMVAR(d=2, p=2, M=2, params=params222, parametrization="mean")
-#' get_boldA_eigens(mod222)
+#' # GMVAR(2, 2), d=2 model
+#' params22 <- c(0.36, 0.121, 0.223, 0.059, -0.151, 0.395, 0.406, -0.005,
+#'  0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218, 0.02, -0.119,
+#'   0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004, 0.105, 0.58)
+#' mod22 <- GMVAR(p=2, M=2, d=2, params=params22)
+#' get_boldA_eigens(mod22)
 #' @export
 
 get_boldA_eigens <- function(gmvar) {
@@ -301,12 +309,12 @@ get_boldA_eigens <- function(gmvar) {
 #'  of the \eqn{m}th regime.
 #' @inherit is_stationary references
 #' @examples
-#' params222 <- c(-11.904, 154.684, 1.314, 0.145, 0.094, 1.292, -0.389,
-#'  -0.070, -0.109, -0.281, 0.920, -0.025, 4.839, 11.633, 124.983, 1.248,
-#'   0.077, -0.040, 1.266, -0.272, -0.074, 0.034, -0.313, 5.855, 3.570,
-#'   9.838, 0.740)
-#' mod222 <- GMVAR(d=2, p=2, M=2, params=params222, parametrization="mean")
-#' get_omega_eigens(mod222)
+#' # GMVAR(2, 2), d=2 model
+#' params22 <- c(0.36, 0.121, 0.223, 0.059, -0.151, 0.395, 0.406, -0.005,
+#'  0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218, 0.02, -0.119,
+#'   0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004, 0.105, 0.58)
+#' mod22 <- GMVAR(p=2, M=2, d=2, params=params22)
+#' get_omega_eigens(mod22)
 #' @export
 
 get_omega_eigens <- function(gmvar) {

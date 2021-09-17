@@ -7,6 +7,7 @@
 #' @inheritParams loglikelihood_int
 #' @return A vector containing the approximate standard errors of the estimates.
 #' @inherit in_paramspace_int references
+#' @keywords internal
 
 standard_errors <- function(data, p, M, params, conditional=TRUE, parametrization=c("intercept", "mean"),
                             constraints=NULL, same_means=NULL, structural_pars=NULL, minval,
@@ -40,7 +41,9 @@ standard_errors <- function(data, p, M, params, conditional=TRUE, parametrizatio
 #' @inheritParams simulateGMVAR
 #' @param digits how many digits should be printed?
 #' @details The main purpose of \code{print_std_errors} is to provide a convenient tool to match the standard
-#'   errors to certain parameter estimates.
+#'   errors to certain parameter estimates. Note that if the model is intercept parametrized, there won't
+#'   be standard errors for the unconditional means, and vice versa. Also, there is no standard error for the
+#'   last mixing weight alpha_M because it is not parametrized.
 #'
 #'   Note that if linear constraints are imposed and they involve summations or multiplications, then the AR
 #'   parameter standard errors are printed separately as they don't correspond one-to-one to the model parameter
@@ -50,16 +53,8 @@ standard_errors <- function(data, p, M, params, conditional=TRUE, parametrizatio
 #' @inherit GMVAR references
 #' @examples
 #' \donttest{
-#' ## These are long running examples that use parallel computing!
-#' ## The below examples take around 20 seconds to run.
-#'
-#' # These examples use the data 'eurusd' which comes with the
-#' # package, but in a scaled form.
-#' data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-#' colnames(data) <- colnames(eurusd)
-#'
 #' # GMVAR(1,2) model
-#' fit12 <- fitGMVAR(data, p=1, M=2, ncalls=1, seeds=7)
+#' fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
 #' fit12
 #' print_std_errors(fit12)
 #' }
@@ -72,6 +67,7 @@ print_std_errors <- function(gmvar, digits=3) {
   M <- gmvar$model$M
   d <- gmvar$model$d
   constraints <- gmvar$model$constraints
+  parametrization <- gmvar$model$parametrization
   pars <- reform_constrained_pars(p=p, M=M, d=d, params=gmvar$std_errors, constraints=constraints,
                                   same_means=gmvar$model$same_means, structural_pars=gmvar$model$structural_pars,
                                   change_na=TRUE)
@@ -82,13 +78,13 @@ print_std_errors <- function(gmvar, digits=3) {
     all_Omega <- pick_Omegas(p=p, M=M, d=d, params=pars, structural_pars=structural_pars)
   } else {
     # No standard errors for cov. mats. as the model is parametrized with W and lambdas
-    all_Omega <- array(NA, dim=c(d, d, M))
+    all_Omega <- array(" ", dim=c(d, d, M))
   }
   alphas <- pick_alphas(p=p, M=M, d=d, params=pars)
   alphas[M] <- NA
-  if(gmvar$model$parametrization == "mean") {
+  if(parametrization == "mean") {
     all_mu <- all_phi0_or_mu
-    all_phi0 <- matrix(NA, nrow=d, ncol=M)
+    all_phi0 <- matrix(" ", nrow=d, ncol=M)
   } else {
     all_mu <- matrix(NA, nrow=d, ncol=M)
     all_phi0 <- all_phi0_or_mu
@@ -99,7 +95,7 @@ print_std_errors <- function(gmvar, digits=3) {
     # each row (no multiplications or summations).
     if(any(constraints != 1 & constraints != 0) | any(rowSums(constraints) > 1)) {
       sep_AR <- TRUE # The AR parameter std errors must be printed separately
-      all_A <- array(NA, dim=c(d, d, p, M))
+      all_A <- array(" ", dim=c(d, d, p, M))
       AR_stds <- gmvar$std_errors[(M*d + 1):(M*d + ncol(constraints))] # Constrained AR param std errors
     } else {
       sep_AR <- FALSE
@@ -112,7 +108,7 @@ print_std_errors <- function(gmvar, digits=3) {
   cat(paste0("p = ", p, ", M = ", M, ","),
       ifelse(gmvar$model$conditional, "conditional", "exact"),
       "log-likelihood,",
-      ifelse(gmvar$model$parametrization == "mean", "mean parametrization,", "intercept parametrization,"),
+      ifelse(parametrization == "mean", "mean parametrization,", "intercept parametrization,"),
       ifelse(is.null(constraints), "no AR parameter constraints", "linear constraints imposed on AR parameters"), "\n")
   cat("\n")
   cat("APPROXIMATE STANDARD ERRORS\n\n")
@@ -126,8 +122,9 @@ print_std_errors <- function(gmvar, digits=3) {
   for(m in seq_len(M)) {
     count <- 1
     cat(paste("Regime", m), "\n")
-    cat(paste("Mixing weight:", format_value(alphas[m])), "\n")
-    cat("Regime means:", paste0(format_value(all_mu[,m]), collapse=", "), "\n\n")
+    if(m < M) cat(paste("Mixing weight:", format_value(alphas[m])), "\n")
+    if(parametrization == "mean") cat("Regime means:", paste0(format_value(all_mu[,m]), collapse=", "), "\n")
+    cat("\n")
     df <- data.frame(Y=Y,
                      eq=c("=", rep(" ", d - 1)),
                      eq=left_brackets,

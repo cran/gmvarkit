@@ -13,7 +13,7 @@ fitGMVAR(
   constraints = NULL,
   same_means = NULL,
   structural_pars = NULL,
-  ncalls = floor(10 + 30 * log(M)),
+  ncalls = 100,
   ncores = 2,
   maxit = 500,
   seeds = NULL,
@@ -104,7 +104,10 @@ If you wish to estimate a structural model without overidentifying constraints t
  algorithms will end up in the global maximum point. It's expected that most of the estimation rounds will end up in
  some local maximum or saddle point instead. Therefore, a (sometimes large) number of estimation rounds is required
  for reliable results. Because of the nature of the model, the estimation may fail especially in the cases where the
- number of mixture components is chosen too large.
+ number of mixture components is chosen too large. \strong{With two regimes and couple hundred observations in a two-dimensional
+ time series, 50 rounds is usually enough. Several hundred estimation rounds often suffices for reliably fitting two-regimes
+ models to 3 or 4 dimensional time series. With more than two regimes and more than couple hundred
+ observations, thousands of estimation rounds (or more) are often required to obtain reliable results.}
 
  The estimation process is computationally heavy and it might take considerably long time for large models with
  large number of observations. If the iteration limit \code{maxit} in the variable metric algorithm is reached,
@@ -116,10 +119,8 @@ If you wish to estimate a structural model without overidentifying constraints t
  it usually helps to scale the individual series so that the AR coefficients (of a VAR model) will be
  relative small, preferably less than one. Even if one is able to create an initial population, it should
  be preferred to scale the series so that most of the AR coefficients will not be very large, as the
- estimation algorithm works better with small AR coefficients. If needed, another package can be used
+ estimation algorithm works better with relatively small AR coefficients. If needed, another package can be used
  to fit linear VARs to the series to see which scaling of the series results in relatively small AR coefficients.
- If initial population is still not found, you can try to adjust the parameters of the genetic algorithm
- according to the characteristics of the time series (for the list of the available settings, see \code{?GAfit}).
 
  The code of the genetic algorithm is mostly based on the description by \emph{Dorsey and Mayer (1995)} but it
  includes some extra features that were found useful for this particular estimation problem. For instance,
@@ -135,7 +136,7 @@ If you wish to estimate a structural model without overidentifying constraints t
  Also, be aware that if the lambda parameters are constrained in any other way than by restricting some of them to be
  identical, the parameter "lambda_scale" of the genetic algorithm (see \code{?GAfit}) needs to be carefully adjusted accordingly.
 
- Finally, the function fails to calculate approximative standard errors and the parameter estimates are near the border
+ Finally, the function fails to calculate approximate standard errors and the parameter estimates are near the border
  of the parameter space, it might help to use smaller numerical tolerance for the stationarity and positive
  definiteness conditions. The numerical tolerance of an existing model can be changed with the function
  \code{update_numtols}.
@@ -151,15 +152,9 @@ If you wish to estimate a structural model without overidentifying constraints t
 ## These are long running examples that use parallel computing!
 # Running all the below examples will take approximately 3-4 minutes.
 
-# These examples use the data 'eurusd' which comes with the
-# package, but in a scaled form (similar to Kalliovirta et al. 2016).
-data(eurusd, package="gmvarkit")
-data <- cbind(10*eurusd[,1], 100*eurusd[,2])
-colnames(data) <- colnames(eurusd)
-
 # GMVAR(1,2) model: 10 estimation rounds with seeds set
 # for reproducibility
-fit12 <- fitGMVAR(data, p=1, M=2, ncalls=10, seeds=1:10)
+fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=10, seeds=1:10)
 fit12
 plot(fit12)
 summary(fit12)
@@ -170,36 +165,31 @@ profile_logliks(fit12)
 # seed that produces the MLE to reduce running time of the examples. When
 # estimating models for empirical applications, a large number of estimation
 # rounds (ncalls = a large number) should be performed to ensure reliability
-# of the estimates.
+# of the estimates (see the section details).
 
 # Structural GMVAR(1,2) model identified with sign
 # constraints.
 W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
-fit12s <- fitGMVAR(data, p=1, M=2, structural_pars=list(W=W_122),
+fit12s <- fitGMVAR(gdpdef, p=1, M=2, structural_pars=list(W=W_122),
   ncalls=1, seeds=1)
 fit12s
-
-# Structural GMVAR(2, 2) model identified statistically only
-W_222 <- matrix(c(1, NA, 1, NA), nrow=2)
-fit22s <- fitGMVAR(data, p=2, M=2, structural_pars=list(W=W_222),
-  ncalls=1, seeds=12)
-fit22s
+# A statistically identified structural model can also be obtained with
+# gmvar_to_sgmvar(fit12)
 
 # GMVAR(2,2) model with autoregressive parameters restricted
 # to be the same for both regimes
 C_mat <- rbind(diag(2*2^2), diag(2*2^2))
-fit22c <- fitGMVAR(data, p=2, M=2, constraints=C_mat, ncalls=1, seeds=1)
+fit22c <- fitGMVAR(gdpdef, p=2, M=2, constraints=C_mat, ncalls=1, seeds=1)
 fit22c
 
 # GMVAR(2,2) model with autoregressive parameters restricted
 # to be the same for both regimes and non-diagonal elements
-# the coefficient matrices constrained to zero. Estimation
-# with only 10 estimation rounds.
+# the coefficient matrices constrained to zero.
 tmp <- matrix(c(1, rep(0, 10), 1, rep(0, 8), 1, rep(0, 10), 1),
  nrow=2*2^2, byrow=FALSE)
 C_mat2 <- rbind(tmp, tmp)
-fit22c2 <- fitGMVAR(data, p=2, M=2, constraints=C_mat2,
-                    ncalls=1, seeds=3)
+fit22c2 <- fitGMVAR(gdpdef, p=2, M=2, constraints=C_mat2, ncalls=1,
+  seeds=1)
 fit22c2
 }
 }
