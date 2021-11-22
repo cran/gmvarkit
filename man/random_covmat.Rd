@@ -9,7 +9,11 @@ random_covmat(d, M, omega_scale, W_scale, lambda_scale, structural_pars = NULL)
 \arguments{
 \item{d}{the number of time series in the system.}
 
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
 \item{omega_scale}{a size \eqn{(dx1)} strictly positive vector specifying the scale and variability of the
 random covariance matrices in random mutations. The covariance matrices are drawn from (scaled) Wishart
@@ -82,5 +86,10 @@ a time-varying diagonal matrix with positive diagonal entries).}
 \code{random_covmat} generates random VAR model \eqn{(dxd)} error term covariance matrix \eqn{\Omega}
   from (scaled) Wishart distribution for reduced form models and the parameters \eqn{W},\eqn{\lambda_1,...,\lambda_M}
   for structural models (from normal distributions).
+}
+\details{
+Note that for StMVAR type regimes, the error term covariance matrix is consists of an ARCH type scalar that
+  multiplies a constant covariance matrix. This function generates the constant covariance matrix part of the
+  error term covariance matrix.
 }
 \keyword{internal}

@@ -13,47 +13,55 @@ format_valuef <- function(digits) {
 }
 
 
-#' @describeIn GMVAR print method
-#' @inheritParams plot.gmvar
+#' @describeIn GSMVAR print method
+#' @inheritParams plot.gsmvar
 #' @param digits number of digits to be printed.
 #' @param summary_print if set to \code{TRUE} then the print
 #'   will include log-likelihood and information criteria values.
 #' @export
 
-print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
-  gmvar <- x
+print.gsmvar <- function(x, ..., digits=2, summary_print=FALSE) {
+  gsmvar <- x
   stopifnot(digits >= 0 & digits%%1 == 0)
   format_value <- format_valuef(digits)
-  p <- gmvar$model$p
-  M <- gmvar$model$M
-  d <- gmvar$model$d
-  IC <- gmvar$IC
-  constraints <- gmvar$model$constraints
-  same_means <- gmvar$model$same_means
-  structural_pars <- gmvar$model$structural_pars
-  all_mu <- round(get_regime_means(gmvar), digits)
-  params <- gmvar$params
+  p <- gsmvar$model$p
+  M <- gsmvar$model$M
+  d <- gsmvar$model$d
+  model <- gsmvar$model$model
+  IC <- gsmvar$IC
+  constraints <- gsmvar$model$constraints
+  same_means <- gsmvar$model$same_means
+  structural_pars <- gsmvar$model$structural_pars
+  all_mu <- round(get_regime_means(gsmvar), digits)
+  params <- gsmvar$params
   npars <- length(params)
-  T_obs <- ifelse(is.null(gmvar$data), NA, nrow(gmvar$data))
-  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, constraints=constraints,
-                                   same_means=same_means, structural_pars=structural_pars)
-  if(gmvar$model$parametrization == "mean") {
-    params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=NULL,
-                                     same_means=NULL, structural_pars=structural_pars,
-                                     change_to="intercept")
+  T_obs <- ifelse(is.null(gsmvar$data), NA, nrow(gsmvar$data))
+  params <- reform_constrained_pars(p=p, M=M, d=d, params=params, model=model,
+                                    constraints=constraints, same_means=same_means,
+                                    structural_pars=structural_pars)
+  if(gsmvar$model$parametrization == "mean") {
+    params <- change_parametrization(p=p, M=M, d=d, params=params, model=model,
+                                     constraints=NULL, same_means=NULL,
+                                     structural_pars=structural_pars, change_to="intercept")
   }
   structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   all_phi0 <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
   all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
   all_Omega <- pick_Omegas(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
-  alphas <- pick_alphas(p=p, M=M, d=d, params=params)
-  cat(ifelse(is.null(structural_pars), "Reduced form", "Structural"), "model:\n")
-  cat(paste0(" p = ", p, ", M = ", M, ", d = ", d, ","),
-      paste0("#parameters = " , npars, ","),
+  alphas <- pick_alphas(p=p, M=M, d=d, params=params, model=model)
+  all_df <- pick_df(M=M, params=params, model=model)
+  cat(ifelse(is.null(structural_pars), "Reduced form", "Structural"), model, "model:\n")
+  cat(paste0(" p = ", p, ", "))
+  if(model == "G-StMVAR") {
+    cat(paste0("M1 = ", M[1], ", M2 = ", M[2], ", "))
+  } else { # model == "GMVAR" or "StMVAR"
+    cat(paste0("M = ", M, ", "))
+  }
+  cat(paste0("d = ", d, ", #parameters = " , npars, ","),
       ifelse(is.na(T_obs), "\n", paste0("#observations = ", T_obs, " x ", d, ",\n")),
-      ifelse(gmvar$model$conditional, "conditional", "exact"),
+      ifelse(gsmvar$model$conditional, "conditional", "exact"),
       "log-likelihood,",
-      ifelse(gmvar$model$parametrization == "mean", "mean parametrization,", "intercept parametrization,"),
+      ifelse(gsmvar$model$parametrization == "mean", "mean parametrization,", "intercept parametrization,"),
       ifelse(is.null(same_means),
              ifelse(is.null(constraints), "no AR parameter constraints", "AR parameters constrained"),
              ifelse(is.null(constraints), "mean paremeters constrained, no AR parameter constraints",
@@ -61,29 +69,48 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
   cat("\n")
 
   if(summary_print) {
-    all_boldA_eigens <- get_boldA_eigens(gmvar)
-    all_omega_eigens <- get_omega_eigens(gmvar)
+    all_boldA_eigens <- get_boldA_eigens(gsmvar)
+    all_omega_eigens <- get_omega_eigens(gsmvar)
     form_val2 <- function(txt, val) paste(txt, format_value(val))
-    cat(paste(form_val2(" log-likelihood:", gmvar$loglik),
+    cat(paste(form_val2(" log-likelihood:", gsmvar$loglik),
                     form_val2("AIC:", IC$AIC),
                     form_val2("HQIC:", IC$HQIC),
                     form_val2("BIC:", IC$BIC),
                     sep=", "), "\n\n")
   }
 
-  plus <- c("+", rep(" ", d-1))
+  plus <- c("+", rep(" ", times=d-1))
+  arch_scalar <- c(rep(" ", times=d-1), "ARCH_mt")
+  round_lbrackets <- rep("(", times=d)
+  round_rbrackets <- rep(")", times=d)
   Y <- paste0("y", 1:d)
   tmp_names <- paste0("tmp", 1:(p*(d + 2) + d + 2))
 
-  for(m in seq_len(M)) {
+  for(m in seq_len(sum(M))) {
     count <- 1
-    cat(paste("Regime", m), "\n")
+    if(model == "GMVAR") {
+      regime_type <- "GMVAR"
+    } else if(model == "StMVAR") {
+      regime_type <- "StMVAR"
+      M1 <- 0
+    } else {
+      M1 <- M[1]
+      regime_type <- ifelse(m <= M1, "GMVAR", "StMVAR")
+    }
+    cat(paste("Regime", m))
+    if(model == "G-StMVAR") cat(paste0(" (", regime_type, " type)"))
+    cat("\n")
     if(summary_print) {
       cat(paste("Moduli of 'bold A' eigenvalues: ", paste0(format_value(all_boldA_eigens[,m]), collapse=", ")),"\n")
       cat(paste("Cov. matrix 'Omega' eigenvalues:", paste0(format_value(all_omega_eigens[,m]), collapse=", ")),"\n")
     }
     cat(paste("Mixing weight:", format_value(alphas[m])), "\n")
-    cat("Regime means:", paste0(format_value(all_mu[,m]), collapse=", "), "\n\n")
+    cat("Regime means:", paste0(format_value(all_mu[,m]), collapse=", "))
+    if(regime_type == "StMVAR") { # Print degrees of freedom parameter for StMVAR type regimes
+      cat("\nDf parameter: ", format_value(all_df[m - M1]))
+    }
+    cat("\n\n")
+
     left_brackets <- rep("[", times=d)
     right_brackets <- rep("]", times=d)
     df <- data.frame(Y=Y,
@@ -100,12 +127,19 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
       df[, tmp_names[count]] <- paste0(Y, ".", i1); count <- count + 1
       df <- cbind(df, plus)
     }
+    if(regime_type == "StMVAR") { # Time varying ARCH scalar multiplying the constant part of error term covariance matrix
+      df <- cbind(df, round_lbrackets, arch_scalar)
+    }
     df[, tmp_names[p*(d + 2) + 1]] <- left_brackets
     df[, c("Omega", tmp_names[(p*(d + 2) + 2):(p*(d + 2) + d)])] <- format_value(all_Omega[, , m])
     df[, tmp_names[p*(d + 2) + d + 1]] <- rep("]", times=d)
+    if(regime_type == "StMVAR") {
+      df <- cbind(df, round_rbrackets)
+    }
     df[, "1/2"] <- rep(" ", d)
     df[, tmp_names[p*(d + 2) + d + 2]] <- paste0("eps", 1:d)
-    names_to_omit <- unlist(lapply(c("plus", "eq", tmp_names), function(nam) grep(nam, colnames(df))))
+    names_to_omit <- unlist(lapply(c("plus", "eq", "arch_scalar", "round_lbrackets", "round_rbrackets", tmp_names),
+                                   function(nam) grep(nam, colnames(df))))
     colnames(df)[names_to_omit] <- " "
     print(df)
     cat("\n")
@@ -126,11 +160,11 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
       colnames(df2)[1 + i1] <- "tmp"
     }
     df2 <- cbind(df2, right_brackets)
-    if(M > 1) {
+    if(sum(M) > 1) {
       lambdas <- format_value(pick_lambdas(p=p, M=M, d=d, params=params, structural_pars=structural_pars))
       tmp <- c(rep(" ", times=d - 1), ",")
-      lambdas <- matrix(lambdas, nrow=d, ncol=M - 1, byrow=FALSE) # Column for each regime
-      for(i1 in 1:(M - 1)) {
+      lambdas <- matrix(lambdas, nrow=d, ncol=sum(M) - 1, byrow=FALSE) # Column for each regime
+      for(i1 in 1:(sum(M) - 1)) {
         lmb <- lambdas[,i1]
         df2 <- cbind(df2, tmp, left_brackets, lmb, right_brackets)
         colnames(df2)[grep("lmb", colnames(df2))] <- paste0("lamb", i1 + 1)
@@ -140,12 +174,12 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
     colnames(df2)[names_to_omit] <- " "
     print(df2)
     cat("\n")
-    W_orig <- gmvar$model$structural_pars$W
+    W_orig <- gsmvar$model$structural_pars$W
     n_zero <- sum(W_orig == 0, na.rm=TRUE)
     n_free <- sum(is.na(W_orig))
     n_sign <- d^2 - n_zero - n_free
     cat("The B-matrix (or equally W) is subject to", n_zero, "zero constraints and", n_sign, "sign constraints.\n")
-    cat("The eigenvalues lambda_{mi} are", ifelse(is.null(gmvar$model$structural_pars$C_lambda), "not subject to linear constraints.",
+    cat("The eigenvalues lambda_{mi} are", ifelse(is.null(gsmvar$model$structural_pars$C_lambda), "not subject to linear constraints.",
                                                   "subject to linear constraints."))
     cat("\n")
   }
@@ -153,16 +187,16 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
   if(summary_print) {
     cat("Print approximate standard errors with the function 'print_std_errors'.\n")
   }
-  invisible(gmvar)
+  invisible(gsmvar)
 }
 
 
-#' @title Summary print method from objects of class 'gmvarsum'
+#' @title Summary print method from objects of class 'gsmvarsum'
 #'
-#' @description \code{print.gmvarsum} is a print method for object \code{'gmvarsum'} generated
-#'   by \code{summary.gmvar}.
+#' @description \code{print.gsmvarsum} is a print method for object \code{'gsmvarsum'} generated
+#'   by \code{summary.gsmvar}.
 #'
-#' @param x object of class 'gmvarsum' generated by \code{summary.gmvar}.
+#' @param x object of class 'gsmvarsum' generated by \code{summary.gsmvar}.
 #' @param ... currently not used.
 #' @param digits the number of digits to be printed.
 #' @examples
@@ -170,30 +204,25 @@ print.gmvar <- function(x, ..., digits=2, summary_print=FALSE) {
 #' params22 <- c(0.36, 0.121, 0.223, 0.059, -0.151, 0.395, 0.406, -0.005,
 #'  0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218, 0.02, -0.119,
 #'  0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004, 0.105, 0.58)
-#' mod22 <- GMVAR(gdpdef, p=2, M=2, params=params22)
+#' mod22 <- GSMVAR(gdpdef, p=2, M=2, params=params22)
 #' sumry22 <- summary(mod22)
 #' print(sumry22)
 #' @export
 
-print.gmvarsum <- function(x, ..., digits) {
-  gmvarsum <- x
-  if(missing(digits)) digits <- gmvarsum$digits
-  print.gmvar(gmvarsum$gmvar, ..., digits=digits, summary_print=TRUE)
-  if(!is.null(gmvarsum$qrtest)) {
-    cat("_____________________________________\n")
-    cat("Quantile residual tests based on data\n\n")
-    print.qrtest(gmvarsum$qrtest)
-  }
-  invisible(gmvarsum)
+print.gsmvarsum <- function(x, ..., digits) {
+  gsmvarsum <- x
+  if(missing(digits)) digits <- gsmvarsum$digits
+  print.gsmvar(gsmvarsum$gsmvar, ..., digits=digits, summary_print=TRUE)
+  invisible(gsmvarsum)
 }
 
 
-#' @title Print method for class 'gmvarpred' objects
+#' @title Print method for class 'gsmvarpred' objects
 #'
-#' @description \code{print.gmvarpred} is a print method for object generated
-#'  by \code{predict.gmvar}.
+#' @description \code{print.gsmvarpred} is a print method for object generated
+#'  by \code{predict.gsmvar}.
 #'
-#' @inheritParams plot.gmvarpred
+#' @inheritParams plot.gsmvarpred
 #' @param digits the number of decimals to print
 #' @param ... currently not used.
 #' @examples
@@ -201,44 +230,44 @@ print.gmvarsum <- function(x, ..., digits) {
 #' params22 <- c(0.36, 0.121, 0.223, 0.059, -0.151, 0.395, 0.406, -0.005,
 #'  0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218, 0.02, -0.119,
 #'  0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004, 0.105, 0.58)
-#' mod22 <- GMVAR(gdpdef, p=2, M=2, params=params22)
+#' mod22 <- GSMVAR(gdpdef, p=2, M=2, params=params22)
 #' pred22 <- predict(mod22, n_ahead=3, plot_res=FALSE)
 #' print(pred22)
 #' print(pred22, digits=3)
 #' @export
 
-print.gmvarpred <- function(x, ..., digits=2) {
-  gmvarpred <- x
+print.gsmvarpred <- function(x, ..., digits=2) {
+  gsmvarpred <- x
   stopifnot(digits >= 0 & digits%%1 == 0)
   format_value <- format_valuef(digits)
 
-  if(gmvarpred$pred_type == "cond_mean") {
+  if(gsmvarpred$pred_type == "cond_mean") {
     cat("One-step-ahead forecast by exact conditional mean, no prediction intervals.\n")
-    cat("Forecast:", paste0(format_value(gmvarpred$pred), collapse=", "), "\n")
+    cat("Forecast:", paste0(format_value(gsmvarpred$pred), collapse=", "), "\n")
 
-  } else if(gmvarpred$pi_type == "none") {
-    cat(paste0("Point forecast by ", gmvarpred$pred_type, ", no prediction intervals."), "\n")
-    cat(paste0("Forecast ", gmvarpred$n_ahead, " steps ahead, based on ", gmvarpred$n_simu, " simulations.\n"))
-    print(gmvarpred$pred)
+  } else if(gsmvarpred$pi_type == "none") {
+    cat(paste0("Point forecast by ", gsmvarpred$pred_type, ", no prediction intervals."), "\n")
+    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$n_simu, " simulations.\n"))
+    print(gsmvarpred$pred)
 
   } else {
-    cat(paste0("Point forecast by ", gmvarpred$pred_type, ", ", gmvarpred$pi_type,
-               " prediction intervals with levels ", paste(gmvarpred$pi, collapse=", "), "."), "\n")
-    cat(paste0("Forecast ", gmvarpred$n_ahead, " steps ahead, based on ", gmvarpred$n_simu, " simulations.\n"))
+    cat(paste0("Point forecast by ", gsmvarpred$pred_type, ", ", gsmvarpred$pi_type,
+               " prediction intervals with levels ", paste(gsmvarpred$pi, collapse=", "), "."), "\n")
+    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$n_simu, " simulations.\n"))
 
     cat("\n")
-    q <- gmvarpred$q
-    pred_ints <- gmvarpred$pred_ints
-    pred <- gmvarpred$pred
-    pred_type <- gmvarpred$pred_type
-    for(i1 in seq_len(gmvarpred$gmvar$model$d)) {
+    q <- gsmvarpred$q
+    pred_ints <- gsmvarpred$pred_ints
+    pred <- gsmvarpred$pred
+    pred_type <- gsmvarpred$pred_type
+    for(i1 in seq_len(gsmvarpred$gsmvar$model$d)) {
       cat(paste0("Component ", i1, ":"), "\n")
-      df <- as.data.frame(lapply(1:length(gmvarpred$q), function(i2) format_value(pred_ints[, i2, i1])))
+      df <- as.data.frame(lapply(1:length(gsmvarpred$q), function(i2) format_value(pred_ints[, i2, i1])))
       names(df) <- q
       df[, pred_type] <- format_value(pred[,i1])
-      if(gmvarpred$pi_type == "two-sided") {
+      if(gsmvarpred$pi_type == "two-sided") {
         new_order <- as.character(c(q[1:(length(q)/2)], pred_type, q[(length(q)/2 + 1):length(q)]))
-      } else if(gmvarpred$pi_type == "upper") {
+      } else if(gsmvarpred$pi_type == "upper") {
         new_order <- as.character(c(pred_type, q))
       } else {
         new_order <- names(df)
@@ -246,16 +275,16 @@ print.gmvarpred <- function(x, ..., digits=2) {
       print(df[, new_order])
       cat("\n")
     }
-    if(gmvarpred$pred_type != "cond_mean") {
+    if(gsmvarpred$pred_type != "cond_mean") {
       cat("Point forecasts and prediction intervals for mixing weights can be obtained with $mix_pred and $mix_pred_ints, respectively.\n")
     }
   }
-  invisible(gmvarpred)
+  invisible(gsmvarpred)
 }
 
 
 #' @describeIn quantile_residual_tests Print method for class 'qrtest'
-#' @inheritParams print.gmvarpred
+#' @inheritParams print.gsmvarpred
 #' @param x object of class \code{'qrtest'} generated by the function \code{quantile_residual_tests)}.
 #' @param ... currently not used.
 #' @export
@@ -287,7 +316,7 @@ print.qrtest <- function(x, ..., digits=3) {
 
 
 #' @describeIn GIRF print method
-#' @inheritParams print.gmvarpred
+#' @inheritParams print.gsmvarpred
 #' @param x object of class \code{'girf'} generated by the function \code{GIRF}.
 #' @param N_to_print an integer specifying the horizon how far to print the estimates and
 #'   confidence intervals. The default is that all the values are printed.
@@ -331,7 +360,7 @@ print.girf <- function(x, ..., digits=2, N_to_print) {
 
 
 #' @describeIn GFEVD print method
-#' @inheritParams print.gmvarpred
+#' @inheritParams print.gsmvarpred
 #' @param x object of class \code{'gfevd'} generated by the function \code{GFEVD}.
 #' @param N_to_print an integer specifying the horizon how far to print the estimates.
 #'   The default is that all the values are printed.

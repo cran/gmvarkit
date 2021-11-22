@@ -2,18 +2,18 @@
 % Please edit documentation in R/standardErrors.R
 \name{print_std_errors}
 \alias{print_std_errors}
-\title{Print standard errors of GMVAR model in the same form as the model estimates are printed}
+\title{Print standard errors of a GMVAR, StMVAR, or G-StMVAR model in the same form as the model estimates are printed}
 \usage{
-print_std_errors(gmvar, digits = 3)
+print_std_errors(gsmvar, digits = 3)
 }
 \arguments{
-\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gsmvar}{an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.}
 
 \item{digits}{how many digits should be printed?}
 }
 \description{
-\code{print_std_errors} prints the approximate standard errors of GMVAR model in the
-  same form as the parameters of objects of class \code{'gmvar'} are printed.
+\code{print_std_errors} prints the approximate standard errors of a GMVAR, StMVAR, or G-StMVAR model in the
+  same form as the parameters of objects of class \code{'gsmvar'} are printed.
 }
 \details{
 The main purpose of \code{print_std_errors} is to provide a convenient tool to match the standard
@@ -28,7 +28,7 @@ The main purpose of \code{print_std_errors} is to provide a convenient tool to m
 \examples{
 \donttest{
 # GMVAR(1,2) model
-fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
+fit12 <- fitGSMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
 fit12
 print_std_errors(fit12)
 }
@@ -41,9 +41,11 @@ print_std_errors(fit12)
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
 }
 \seealso{
-\code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{print.gmvar}},
+\code{\link{profile_logliks}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link{print.gsmvar}},
  \code{\link{swap_parametrization}}
 }

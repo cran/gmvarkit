@@ -2,99 +2,116 @@
 % Please edit documentation in R/loglikelihood.R
 \name{loglikelihood_int}
 \alias{loglikelihood_int}
-\title{Compute log-likelihood of a Gaussian mixture vector autoregressive model}
+\title{Compute log-likelihood of a GMVAR, StMVAR, and G-StMVAR models}
 \usage{
 loglikelihood_int(
   data,
   p,
   M,
   params,
+  model = c("GMVAR", "StMVAR", "G-StMVAR"),
   conditional = TRUE,
   parametrization = c("intercept", "mean"),
   constraints = NULL,
   same_means = NULL,
   structural_pars = NULL,
   to_return = c("loglik", "mw", "mw_tplus1", "loglik_and_mw", "terms", "regime_cmeans",
-    "total_cmeans", "total_ccovs"),
+    "regime_ccovs", "total_cmeans", "total_ccovs", "arch_scalars",
+    "loglik_mw_archscalars"),
   check_params = TRUE,
   minval = NULL,
   stat_tol = 0.001,
-  posdef_tol = 1e-08
+  posdef_tol = 1e-08,
+  df_tol = 1e-08
 )
 }
 \arguments{
 \item{data}{a matrix or class \code{'ts'} object with \code{d>1} columns. Each column is taken to represent
-a single time series. \code{NA} values are not supported.}
+a univariate time series. \code{NA} values are not supported.}
 
 \item{p}{a positive integer specifying the autoregressive order of the model.}
 
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
 \item{params}{a real valued vector specifying the parameter values.
-\describe{
-  \item{\strong{For unconstrained models:}}{
-    Should be size \eqn{((M(pd^2+d+d(d+1)/2+1)-1)x1)} and have the form
-    \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
-    ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1}}), where
-    \itemize{
-      \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
-      \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
-      \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M.
+  \describe{
+    \item{\strong{For unconstrained models:}}{
+      Should be size \eqn{((M(pd^2+d+d(d+1)/2+2)-M1-1)x1)} and have the form
+      \strong{\eqn{\theta}}\eqn{ = }(\strong{\eqn{\upsilon}}\eqn{_{1}},
+      ...,\strong{\eqn{\upsilon}}\eqn{_{M}}, \eqn{\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}\eqn{)}, where
+      \itemize{
+        \item \strong{\eqn{\upsilon}}\eqn{_{m}} \eqn{ = (\phi_{m,0},}\strong{\eqn{\phi}}\eqn{_{m}}\eqn{,\sigma_{m})}
+        \item \strong{\eqn{\phi}}\eqn{_{m}}\eqn{ = (vec(A_{m,1}),...,vec(A_{m,p})}
+        \item and \eqn{\sigma_{m} = vech(\Omega_{m})}, m=1,...,M,
+        \item \strong{\eqn{\nu}}\eqn{=(\nu_{M1+1},...,\nu_{M})}
+        \item \eqn{M1} is the number of GMVAR type regimes.
+      }
+    }
+    \item{\strong{For constrained models:}}{
+      Should be size \eqn{((M(d+d(d+1)/2+2)+q-M1-1)x1)} and have the form
+      \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi},}
+      \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}), where
+      \itemize{
+        \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+        \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is a \eqn{(Mpd^2xq)}
+        constraint matrix.
+      }
+    }
+    \item{\strong{For same_means models:}}{
+      Should have the form
+      \strong{\eqn{\theta}}\eqn{ = (}\strong{\eqn{\mu},}\strong{\eqn{\psi},}
+      \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}\eqn{)}, where
+      \itemize{
+        \item \strong{\eqn{\mu}}\eqn{= (\mu_{1},...,\mu_{g})} where
+          \eqn{\mu_{i}} is the mean parameter for group \eqn{i} and
+          \eqn{g} is the number of groups.
+        \item If AR constraints are employed, \strong{\eqn{\psi}} is as for constrained
+          models, and if AR constraints are not employed, \strong{\eqn{\psi}}\eqn{ = }
+          (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M})}.
+      }
+    }
+    \item{\strong{For structural models:}}{
+      Should have the form
+      \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
+      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}\eqn{)}, where
+      \itemize{
+        \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
+      }
+      \describe{
+        \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+        \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
+        \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
+        \item{\strong{If same_means: }}{Replace \eqn{(\phi_{1,0},...,\phi_{M,0})} with \eqn{(\mu_{1},...,\mu_{g})},
+          as above.}
+        \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
+         the sign constraints.}
+        \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
+         with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+        \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
+         constraint matrix.}
+      }
     }
   }
-  \item{\strong{For constrained models:}}{
-    Should be size \eqn{((M(d+d(d+1)/2+1)+q-1)x1)} and have the form
-    \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\psi},}
-    \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
-    \itemize{
-      \item \strong{\eqn{\psi}} \eqn{(qx1)} satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
-      \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}} where \strong{\eqn{C}} is \eqn{(Mpd^2xq)}
-      constraint matrix.
-    }
-  }
-  \item{\strong{For same_means models:}}{
-    Should have the form
-    \strong{\eqn{\theta}}\eqn{ = (}\strong{\eqn{\mu},}\strong{\eqn{\psi},}
-    \eqn{\sigma_{1},...,\sigma_{M},\alpha_{1},...,\alpha_{M-1})}, where
-    \itemize{
-      \item \strong{\eqn{\mu}}\eqn{= (\mu_{1},...,\mu_{g})} where
-        \eqn{\mu_{i}} is the mean parameter for group \eqn{i} and
-        \eqn{g} is the number of groups.
-      \item If AR constraints are employed, \strong{\eqn{\psi}} is as for constrained
-        models, and if AR constraints are not employed, \strong{\eqn{\psi}}\eqn{ = }
-        (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M})}.
-    }
-  }
-  \item{\strong{For structural GMVAR model:}}{
-    Should have the form
-    \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
-    vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1})}, where
-    \itemize{
-      \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
-    }
-    \describe{
-      \item{\strong{If AR parameters are constrained: }}{Replace \strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
-      \strong{\eqn{\phi}}\eqn{_{M}} with \strong{\eqn{\psi}} \eqn{(qx1)} that satisfies (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}
-      \strong{\eqn{\phi}}\eqn{_{M}) =} \strong{\eqn{C \psi}}, as above.}
-      \item{\strong{If same_means: }}{Replace \eqn{(\phi_{1,0},...,\phi_{M,0})} with \eqn{(\mu_{1},...,\mu_{g})},
-        as above.}
-      \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
-       the sign constraints.}
-      \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
-       with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
-      \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
-       constraint matrix.}
-    }
-  }
-}
-Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}th coefficient matrix of the \eqn{m}th
-mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
-\eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the
-error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
-If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
-\eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
-of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
-The notation is in line with the cited article by \emph{Kalliovirta, Meitz and Saikkonen (2016)} introducing the GMVAR model.}
+  Above, \eqn{\phi_{m,0}} is the intercept parameter, \eqn{A_{m,i}} denotes the \eqn{i}th coefficient matrix of the \eqn{m}th
+  mixture component, \eqn{\Omega_{m}} denotes the error term covariance matrix of the \eqn{m}:th mixture component, and
+  \eqn{\alpha_{m}} is the mixing weight parameter. The \eqn{W} and \eqn{\lambda_{mi}} are structural parameters replacing the
+  error term covariance matrices (see Virolainen, 2020). If \eqn{M=1}, \eqn{\alpha_{m}} and \eqn{\lambda_{mi}} are dropped.
+  If \code{parametrization=="mean"}, just replace each \eqn{\phi_{m,0}} with regimewise mean \eqn{\mu_{m}}.
+  \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
+  of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
+
+  In the \strong{GMVAR model}, \eqn{M1=M} and \strong{\eqn{\nu}} is dropped from the parameter vector. In the \strong{StMVAR} model, \eqn{M1=0}.
+  In the \strong{G-StMVAR} model, the first \code{M1} regimes are \emph{GMVAR type} and the rest \code{M2} regimes are \emph{StMVAR type}.
+  In \strong{StMVAR} and \strong{G-StMVAR} models, the degrees of freedom parameters in \strong{\eqn{\nu}} should be strictly larger than two.
+
+  The notation is similar to the cited literature.}
+
+\item{model}{is "GMVAR", "StMVAR", or "G-StMVAR" model considered? In the G-StMVAR model, the first \code{M1} components
+are GMVAR type and the rest \code{M2} components are StMVAR type.}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function
 should be used.}
@@ -133,11 +150,8 @@ the following elements:
 See Virolainen (2020) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
 a time-varying diagonal matrix with positive diagonal entries).}
 
-\item{to_return}{should the returned object be the log-likelihood value, mixing weights, mixing weights including
-value for \eqn{alpha_{m,T+1}}, a list containing log-likelihood value and mixing weights, or
-the terms \eqn{l_{t}: t=1,..,T} in the log-likelihood function (see \emph{KMS 2016, eq.(9)})? Or should
-the regimewise conditional means, total conditional means, or total conditional covariance matrices
-be returned? Default is the log-likelihood value (\code{"loglik"}).}
+\item{to_return}{should the returned object be the log-likelihood value, which is default, or something else?
+See the section "Return" for all the options.}
 
 \item{check_params}{should it be checked that the parameter vector satisfies the model assumptions? Can be skipped to save
 computation time if it does for sure.}
@@ -153,26 +167,36 @@ tolerance is too small, numerical evaluation of the log-likelihood might fail an
 the error term covariance matrix of any regime has eigenvalues smaller than this, the model is classified
 as not satisfying positive definiteness assumption. Note that if the tolerance is too small, numerical
 evaluation of the log-likelihood might fail and cause error.}
+
+\item{df_tol}{the parameter vector is considered to be outside the parameter space if all degrees of
+freedom parameters are not larger than \code{2 + df_tol}.}
 }
 \value{
-\describe{
-  \item{By default:}{log-likelihood value of the specified GMVAR model,}
+\item{By default:}{log-likelihood value of the specified GMVAR, StMVAR, or G-StMVAR model,}
   \item{If \code{to_return=="mw"}:}{a size ((n_obs-p)xM) matrix containing the mixing weights: for m:th component in m:th column.}
   \item{If \code{to_return=="mw_tplus1"}:}{a size ((n_obs-p+1)xM) matrix containing the mixing weights: for m:th component in m:th column.
-    The last row is for \eqn{\alpha_{m,T+1}}}.
+    The last row is for \eqn{\alpha_{m,T+1}}.}
   \item{If \code{to_return=="terms"}:}{a size ((n_obs-p)x1) numeric vector containing the terms \eqn{l_{t}}.}
   \item{if \code{to_return=="loglik_and_mw"}:}{a list of two elements. The first element contains the log-likelihood value and the
     second element contains the mixing weights.}
   \item{If \code{to_return=="regime_cmeans"}:}{an \code{[T-p, d, M]} array containing the regimewise conditional means
    (the first p values are used as the initial values).}
+   \item{If \code{to_return=="regime_ccovs"}:}{an \code{[d, d, T-p, M]} array containing the regimewise conditional
+   covariance matrices (the first p values are used as the initial values). The index \code{[ , , t, m]} gives the time
+   \code{t} conditional covariance matrix for the regime \code{m}.}
   \item{If \code{to_return=="total_cmeans"}:}{a \code{[T-p, d]} matrix containing the conditional means of the process
    (the first p values are used as the initial values).}
   \item{If \code{to_return=="total_ccov"}:}{an \code{[d, d, T-p]} array containing the conditional covariance matrices of the process
    (the first p values are used as the initial values).}
- }
+  \item{If \code{to_return=="arch_scalars"}:}{a \code{[T-p, M]} matrix containing the regimewise arch scalars
+   multiplying error term covariance matrix in the conditional covariance matrix of the regime. For GMVAR type regimes, these
+   are all ones (the first p values are used as the initial values).}
+  \item{if \code{to_return=="loglik_mw_archscalars"}:}{a list of three elements. The first element contains the log-likelihood value, the
+    second element contains the mixing weights, the third element contains the arch scalars
+    (this is used in \code{quantile_residuals_int}).}
 }
 \description{
-\code{loglikelihood_int} computes log-likelihood of a GMVAR model.
+\code{loglikelihood_int} computes log-likelihoodof a GMVAR, StMVAR, and G-StMVAR models.
 }
 \details{
 \code{loglikelihood_int} takes use of the function \code{dmvn} from the package \code{mvnfast}.
@@ -187,6 +211,8 @@ evaluation of the log-likelihood might fail and cause error.}
          \emph{Statistics and Probability Letters}, \strong{124}, 92-96.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
          paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
 }
 \keyword{internal}

@@ -4,10 +4,10 @@
 \alias{get_boldA_eigens}
 \title{Calculate absolute values of the eigenvalues of the "bold A" matrices containing the AR coefficients}
 \usage{
-get_boldA_eigens(gmvar)
+get_boldA_eigens(gsmvar)
 }
 \arguments{
-\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gsmvar}{an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.}
 }
 \value{
 Returns a matrix with \eqn{d*p} rows and \eqn{M} columns - one column for each regime.
@@ -23,7 +23,7 @@ Returns a matrix with \eqn{d*p} rows and \eqn{M} columns - one column for each r
 params22 <- c(0.36, 0.121, 0.223, 0.059, -0.151, 0.395, 0.406, -0.005,
  0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218, 0.02, -0.119,
   0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004, 0.105, 0.58)
-mod22 <- GMVAR(p=2, M=2, d=2, params=params22)
+mod22 <- GSMVAR(p=2, M=2, d=2, params=params22)
 get_boldA_eigens(mod22)
 }
 \references{
@@ -32,6 +32,8 @@ get_boldA_eigens(mod22)
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
  @keywords internal
 }

@@ -5,18 +5,19 @@
 \title{Plot profile log-likehoods around the estimates}
 \usage{
 profile_logliks(
-  gmvar,
+  gsmvar,
   which_pars,
   scale = 0.02,
   nrows,
   ncols,
   precision = 200,
   stat_tol = 0.001,
-  posdef_tol = 1e-08
+  posdef_tol = 1e-08,
+  df_tol = 1e-08
 )
 }
 \arguments{
-\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gsmvar}{an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.}
 
 \item{which_pars}{the profile log-likelihood function of which parameters should be plotted? An integer
  vector specifying the positions of the parameters in the parameter vector. The parameter vector has the
@@ -67,6 +68,9 @@ tolerance is too small, numerical evaluation of the log-likelihood might fail an
 the error term covariance matrix of any regime has eigenvalues smaller than this, the model is classified
 as not satisfying positive definiteness assumption. Note that if the tolerance is too small, numerical
 evaluation of the log-likelihood might fail and cause error.}
+
+\item{df_tol}{the parameter vector is considered to be outside the parameter space if all degrees of
+freedom parameters are not larger than \code{2 + df_tol}.}
 }
 \value{
 Only plots to a graphical device and doesn't return anything.
@@ -85,7 +89,7 @@ The red vertical line points the estimate.
 # Running all the below examples takes approximately 2 minutes.
 
 # GMVAR(1,2) model
-fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
+fit12 <- fitGSMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
 fit12
 profile_logliks(fit12)
 
@@ -94,9 +98,16 @@ profile_logliks(fit12)
 W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
 params12s <- c(0.55, 0.11, 0.62, 0.17, 0.34, 0.05, -0.01, 0.72, 0.25,
  0.02, -0.14, 0.86, 0.54, 0.06, -0.16, 0.16, 3.62, 4.73, 0.67)
-mod12s <- GMVAR(gdpdef, p=1, M=2, params=params12s,
+mod12s <- GSMVAR(gdpdef, p=1, M=2, params=params12s,
                 structural_pars=list(W=W_122))
 profile_logliks(mod12s)
+
+#' # G-StMVAR(2, 1, 1), d=2 model:
+params22gs <- c(0.697, 0.154, 0.049, 0.374, 0.476, 0.318, -0.645, -0.302,
+ -0.222, 0.193, 0.042, -0.013, 0.048, 0.554, 0.033, 0.184, 0.005, -0.186,
+  0.683, 0.256, 0.031, 0.026, 0.204, 0.583, -0.002, 0.048, 0.182, 4.334)
+mod22gs <- GSMVAR(gdpdef, p=2, M=c(1, 1), params=params22gs, model="G-StMVAR")
+profile_logliks(mod22gs, which_pars=c(1, 3, 28))
 }
 }
 \references{
@@ -109,9 +120,11 @@ profile_logliks(mod12s)
          \emph{Statistics and Probability Letters}, \strong{124}, 92-96.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
          paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
 }
 \seealso{
-\code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}},
+\code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
   \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}
 }

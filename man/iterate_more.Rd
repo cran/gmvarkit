@@ -2,22 +2,29 @@
 % Please edit documentation in R/MAINest.R
 \name{iterate_more}
 \alias{iterate_more}
-\title{Maximum likelihood estimation of a GMVAR model with preliminary estimates}
+\title{Maximum likelihood estimation of a GMVAR, StMVAR, or G-StMVAR model with preliminary estimates}
 \usage{
 iterate_more(
-  gmvar,
+  gsmvar,
   maxit = 100,
   calc_std_errors = TRUE,
+  custom_h = NULL,
   stat_tol = 0.001,
-  posdef_tol = 1e-08
+  posdef_tol = 1e-08,
+  df_tol = 1e-08
 )
 }
 \arguments{
-\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gsmvar}{an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.}
 
 \item{maxit}{the maximum number of iterations in the variable metric algorithm.}
 
 \item{calc_std_errors}{should approximate standard errors be calculated?}
+
+\item{custom_h}{A numeric vector with same the length as the parameter vector: i:th element of custom_h is the difference
+used in central difference approximation for partial differentials of the log-likelihood function for the i:th parameter.
+If \code{NULL} (default), then the difference used for differentiating overly large degrees of freedom parameters
+is adjusted to avoid numerical problems, and the difference is \code{6e-6} for the other parameters.}
 
 \item{stat_tol}{numerical tolerance for stationarity of the AR parameters: if the "bold A" matrix of any regime
 has eigenvalues larger that \code{1 - stat_tol} the model is classified as non-stationary. Note that if the
@@ -27,19 +34,22 @@ tolerance is too small, numerical evaluation of the log-likelihood might fail an
 the error term covariance matrix of any regime has eigenvalues smaller than this, the model is classified
 as not satisfying positive definiteness assumption. Note that if the tolerance is too small, numerical
 evaluation of the log-likelihood might fail and cause error.}
+
+\item{df_tol}{the parameter vector is considered to be outside the parameter space if all degrees of
+freedom parameters are not larger than \code{2 + df_tol}.}
 }
 \value{
-Returns an object of class \code{'gmvar'} defining the estimated GMVAR model.
+Returns an object of class \code{'gsmvar'} defining the estimated GMVAR, StMVAR, or G-StMVAR model.
 }
 \description{
 \code{iterate_more} uses a variable metric algorithm to finalize maximum likelihood
- estimation of a GMVAR model (object of class \code{'gmvar'}) which already has preliminary estimates.
+ estimation of a GMVAR, StMVAR, or G-StMVAR model (object of class \code{'gsmvar'}) which already has preliminary estimates.
 }
 \details{
 The purpose of \code{iterate_more} is to provide a simple and convenient tool to finalize
-  the estimation when the maximum number of iterations is reached when estimating a GMVAR model
-  with the main estimation function \code{fitGMVAR}. \code{iterate_more} is essentially a wrapper
-  around the function \code{optim} from the package \code{stats} and \code{GMVAR} from the package
+  the estimation when the maximum number of iterations is reached when estimating a GMVAR, StMVAR, or G-StMVAR model
+  with the main estimation function \code{fitGSMVAR}. \code{iterate_more} is essentially a wrapper
+  around the function \code{optim} from the package \code{stats} and \code{GSMVAR} from the package
   \code{gmvarkit}.
 }
 \examples{
@@ -49,7 +59,7 @@ The purpose of \code{iterate_more} is to provide a simple and convenient tool to
 
 # GMVAR(1,2) model, only 5 iterations of the variable metric
 # algorithm
-fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=1, maxit=5, seeds=1)
+fit12 <- fitGSMVAR(gdpdef, p=1, M=2, ncalls=1, maxit=5, seeds=1)
 fit12
 
 # Iterate more:
@@ -65,9 +75,11 @@ fit12_2
          Time Series Models. \emph{Unpublished Revision of HECER Discussion Paper No. 247}.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
 }
 \seealso{
-\code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link[stats]{optim}},
+\code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link[stats]{optim}},
  \code{\link{profile_logliks}}, \code{\link{update_numtols}}
 }

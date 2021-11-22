@@ -2,12 +2,13 @@
 % Please edit documentation in R/generateParams.R
 \name{random_ind2}
 \alias{random_ind2}
-\title{Create somewhat random parameter vector of a GMVAR model that is always stationary}
+\title{Create somewhat random parameter vector of a GMVAR, StMVAR, or G-StMVAR model that is always stationary}
 \usage{
 random_ind2(
   p,
   M,
   d,
+  model = c("GMVAR", "StMVAR", "G-StMVAR"),
   same_means = NULL,
   structural_pars = NULL,
   mu_scale,
@@ -21,9 +22,16 @@ random_ind2(
 \arguments{
 \item{p}{a positive integer specifying the autoregressive order of the model.}
 
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
 \item{d}{the number of time series in the system.}
+
+\item{model}{is "GMVAR", "StMVAR", or "G-StMVAR" model considered? In the G-StMVAR model, the first \code{M1} components
+are GMVAR type and the rest \code{M2} components are StMVAR type.}
 
 \item{same_means}{Restrict the mean parameters of some regimes to be the same? Provide a list of numeric vectors
 such that each numeric vector contains the regimes that should share the common mean parameters. For instance, if
@@ -129,6 +137,8 @@ The coefficient matrices are generated using the algorithm proposed by Ansley
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
  @keywords internal
 }

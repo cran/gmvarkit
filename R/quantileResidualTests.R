@@ -4,11 +4,12 @@
 #'  by \emph{Kalliovirta and Saikkonen 2010}, testing autocorrelation, conditional heteroskedasticity,
 #'  and normality.
 #'
-#' @inheritParams quantile_residuals
 #' @inheritParams loglikelihood_int
+#' @inheritParams get_test_Omega
+#' @param gsmvar an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.
 #' @param lags_ac a positive integer vector specifying the lags used to test autocorrelation.
 #' @param lags_ch a positive integer vector specifying the lags used to test conditional heteroskedasticity.
-#' @param nsimu to how many simulations should the covariance matrix Omega used in the qr-tests be based on?
+#' @param nsim to how many simulations should the covariance matrix Omega used in the qr-tests be based on?
 #'   If smaller than sample size, then the covariance matrix will be evaluated from the sample. Larger number
 #'   of simulations might improve the tests size properties but it increases the computation time.
 #' @param print_res should the test results be printed while computing the tests?
@@ -23,51 +24,59 @@
 #'   associated (vectorized) individual statistics divided by their standard errors
 #'   (see \emph{Kalliovirta and Saikkonen 2010}, s.17-20) under the label \code{$ind_stats}.
 #' @inherit quantile_residuals references
-#' @seealso \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residuals}}, \code{\link{GIRF}},
-#'   \code{\link{diagnostic_plot}}, \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
+#' @seealso \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link{quantile_residuals}}, \code{\link{GIRF}},
+#'   \code{\link{diagnostic_plot}}, \code{\link{predict.gsmvar}}, \code{\link{profile_logliks}},
 #'   \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}, \code{\link{update_numtols}}
 #' @examples
 #' \donttest{
 #' # GMVAR(3,2) model
-#' fit32 <- fitGMVAR(gdpdef, p=3, M=2, ncalls=1, seeds=2)
+#' fit32 <- fitGSMVAR(gdpdef, p=3, M=2, ncalls=1, seeds=2)
 #' qrtests32 <- quantile_residual_tests(fit32)
 #' qrtests32
 #' plot(qrtests32)
 #'
 #' # Structural GMVAR(1,2) model identified with sign
 #' # constraints and build with hand-specified parameter values.
-#' # Tests based on simulation procedure with nsimu=1000:
+#' # Tests based on simulation procedure with nsim=1000:
 #' params12s <- c(0.55, 0.112, 0.619, 0.173, 0.344, 0.055, -0.009, 0.718,
 #'  0.255, 0.017, -0.136, 0.858, 0.541, 0.057, -0.162, 0.162, 3.623,
 #'  4.726, 0.674)
 #' W_12 <- matrix(c(1, 1, -1, 1), nrow=2)
-#' mod12s <- GMVAR(gdpdef, p=1, M=2, params=params12s,
+#' mod12s <- GSMVAR(gdpdef, p=1, M=2, params=params12s,
 #'                 structural_pars=list(W=W_12))
-#' qrtests12s <- quantile_residual_tests(mod12s, nsimu=1000)
+#' qrtests12s <- quantile_residual_tests(mod12s, nsim=1000)
 #' qrtests12s
 #' }
 #' @export
 
-quantile_residual_tests <- function(gmvar, lags_ac=c(1, 3, 6, 12), lags_ch=lags_ac, nsimu=1, print_res=TRUE,
-                                    stat_tol, posdef_tol) {
-  check_gmvar(gmvar)
-  check_null_data(gmvar)
+quantile_residual_tests <- function(gsmvar, lags_ac=c(1, 3, 6, 12), lags_ch=lags_ac, nsim=1, ncores=1, print_res=TRUE,
+                                    stat_tol, posdef_tol, df_tol) {
+  gsmvar <- gmvar_to_gsmvar(gsmvar) # Backward compatibility
+  check_gsmvar(gsmvar)
+  check_null_data(gsmvar)
   if(!all_pos_ints(c(lags_ac, lags_ch))) stop("arguments 'lags_ac' and 'lags_ch' must be strictly positive integer vectors")
-  p <- gmvar$model$p
-  M <- gmvar$model$M
-  d <- gmvar$model$d
-  data <- gmvar$data
+  if(!all_pos_ints(ncores) || length(ncores) > 1) stop("The argument 'ncores' must be a strictly positive integer")
+  p <- gsmvar$model$p
+  M <- gsmvar$model$M
+  d <- gsmvar$model$d
+  model <- gsmvar$model$model
+  data <- gsmvar$data
   n_obs <- nrow(data)
   T_obs <- n_obs - p
-  if(missing(stat_tol)) stat_tol <- gmvar$num_tols$stat_tol
-  if(missing(posdef_tol)) posdef_tol <- gmvar$num_tols$posdef_tol
+  if(missing(stat_tol)) stat_tol <- gsmvar$num_tols$stat_tol
+  if(missing(posdef_tol)) posdef_tol <- gsmvar$num_tols$posdef_tol
+  if(missing(df_tol)) df_tol <- gsmvar$num_tols$df_tol
   if(max(c(lags_ac, lags_ch)) >= T_obs) stop("The lags are too large compared to the data size")
 
-  qresiduals <- gmvar$quantile_residuals
-  if(nsimu > n_obs) {
-    omega_data <- simulateGMVAR(gmvar, nsimu=nsimu, init_values=NULL, ntimes=1)$sample
+  qresiduals <- gsmvar$quantile_residuals
+  if(nsim > n_obs) {
+    omega_data <- simulate.gsmvar(gsmvar, nsim=nsim, init_values=NULL, ntimes=1)$sample
   } else {
     omega_data <- data
+  }
+  if(Sys.info()[1] == "Windows" && ncores > 1) {
+    message("Multiple cores are not supported on Windows.")
+    ncores <- 1
   }
 
   # Function to calculate covariance matrix omega
@@ -82,15 +91,16 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1, 3, 6, 12), lags_ch=lags_
       }
     }
     omg <- tryCatch(get_test_Omega(data=omega_data, p=p, M=M,
-                                   params=gmvar$params,
-                                   conditional=gmvar$model$conditional,
-                                   parametrization=gmvar$model$parametrization,
-                                   constraints=gmvar$model$constraints,
-                                   same_means=gmvar$model$same_means,
-                                   structural_pars=gmvar$model$structural_pars,
-                                   g=g, dim_g=dim_g, stat_tol=stat_tol,
-                                   posdef_tol=posdef_tol),
+                                   params=gsmvar$params, model=model,
+                                   conditional=gsmvar$model$conditional,
+                                   parametrization=gsmvar$model$parametrization,
+                                   constraints=gsmvar$model$constraints,
+                                   same_means=gsmvar$model$same_means,
+                                   structural_pars=gsmvar$model$structural_pars,
+                                   g=g, dim_g=dim_g, ncores=ncores, stat_tol=stat_tol,
+                                   posdef_tol=posdef_tol, df_tol=df_tol),
                     error=function(e) {
+                      print(e)
                       print_message(which_test, which_lag, because_of="because of numerical problems")
                       return(NA)
                     })
@@ -127,6 +137,9 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1, 3, 6, 12), lags_ch=lags_
       cat(" ", format_value0(lag), "| ", format_value3(p_val), "\n")
     }
   }
+
+  # Print information about the parallel computing procedure
+  message(paste("Using", ncores, "cores to calculate the tests..."), "\n")
 
   ######################
   # Test for normality # (Kalliovirta and Saikkonen 2010, sec. 3.3)
@@ -233,12 +246,14 @@ quantile_residual_tests <- function(gmvar, lags_ac=c(1, 3, 6, 12), lags_ch=lags_
 #' @inheritParams loglikelihood
 #' @param g function g specifying the transformation.
 #' @param dim_g output dimension of the transformation \code{g}.
+#' @param ncores the number of CPU cores to be used in numerical differentiation. Multiple cores
+#'   are not supported on Windows, though.
 #' @return Returns the covariance matrix Omega described by \emph{Kalliovirta and Saikkonen 2010}.
 #' @inherit quantile_residuals references
 #' @keywords internal
 
-get_test_Omega <- function(data, p, M, params, conditional, parametrization, constraints, same_means, structural_pars=NULL, g, dim_g,
-                           stat_tol=1e-3, posdef_tol=1e-8) {
+get_test_Omega <- function(data, p, M, params, model, conditional, parametrization, constraints, same_means, structural_pars=NULL,
+                           g, dim_g, ncores=1, stat_tol=1e-3, posdef_tol=1e-8, df_tol=1e-8) {
 
   n_obs <- nrow(data)
   T_obs <- n_obs - p
@@ -247,7 +262,7 @@ get_test_Omega <- function(data, p, M, params, conditional, parametrization, con
 
   # Function used to to calculate gradient for function g
   g_fn <- function(pars) {
-    qresiduals <- quantile_residuals_int(data=data, p=p, M=M, params=pars, conditional=conditional,
+    qresiduals <- quantile_residuals_int(data=data, p=p, M=M, params=pars, model=model, conditional=conditional,
                                          parametrization=parametrization, constraints=constraints,
                                          same_means=same_means, structural_pars=structural_pars,
                                          stat_tol=stat_tol, posdef_tol=posdef_tol)
@@ -256,7 +271,7 @@ get_test_Omega <- function(data, p, M, params, conditional, parametrization, con
 
   # Function used to calculate gradient for log-likelihood
   loglik_fn <- function(pars) {
-    loglikelihood_int(data, p, M, params=pars, conditional=conditional, parametrization=parametrization,
+    loglikelihood_int(data, p, M, params=pars, model=model, conditional=conditional, parametrization=parametrization,
                       constraints=constraints, same_means=same_means, structural_pars=structural_pars,
                       check_params=TRUE, to_return="terms", minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol)
   }
@@ -270,14 +285,14 @@ get_test_Omega <- function(data, p, M, params, conditional, parametrization, con
   T0 <- nrow(g_qres)
 
   # Calculate matrix G (Kalliovirta ja Saikkonen 2010, s.13)
-  dg <- array(dim=c(T0, dim_g, npars))
-  for(i1 in 1:npars) {
-    dg[, , i1] <- central_diff(params, g_fn, i1)
-  }
+  dg <- array(simplify2array(parallel::mclapply(1:npars, function(i1) central_diff(params, g_fn, i1),
+                             mc.cores=ncores, mc.cleanup=TRUE)), dim=c(T0, dim_g, npars)) # [T0, dim_g, npars]
   G <- colMeans(dg)
 
+
   # Calculate gradients of the terms l_t
-  dl <- vapply(1:npars, function(i1) central_diff(params, loglik_fn, i1), numeric(T_obs)) # (T x npars)
+   dl <- simplify2array(parallel::mclapply(1:npars, function(i1) central_diff(params, loglik_fn, i1),
+                                           mc.cores=ncores, mc.cleanup=TRUE)) # (T x npars)
 
   # Approximate Fisher information matrix, calculate Psi matrix and H matrix
   diff0 <- nrow(dl) - T0

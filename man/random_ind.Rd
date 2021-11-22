@@ -2,12 +2,13 @@
 % Please edit documentation in R/generateParams.R
 \name{random_ind}
 \alias{random_ind}
-\title{Create random mean-parametrized parameter vector of a GMVAR model that may not be stationary}
+\title{Create random mean-parametrized parameter vector of a GMVAR, StMVAR, or G-StMVAR model that may not be stationary}
 \usage{
 random_ind(
   p,
   M,
   d,
+  model = c("GMVAR", "StMVAR", "G-StMVAR"),
   constraints = NULL,
   same_means = NULL,
   structural_pars = NULL,
@@ -22,9 +23,16 @@ random_ind(
 \arguments{
 \item{p}{a positive integer specifying the autoregressive order of the model.}
 
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
 \item{d}{the number of time series in the system.}
+
+\item{model}{is "GMVAR", "StMVAR", or "G-StMVAR" model considered? In the G-StMVAR model, the first \code{M1} components
+are GMVAR type and the rest \code{M2} components are StMVAR type.}
 
 \item{constraints}{a size \eqn{(Mpd^2 x q)} constraint matrix \strong{\eqn{C}} specifying general linear constraints
 to the autoregressive parameters. We consider constraints of form
@@ -125,6 +133,8 @@ Returns random mean-parametrized parameter vector that has the same form as the 
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
  @keywords internal
 }

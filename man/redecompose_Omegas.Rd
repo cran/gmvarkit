@@ -5,10 +5,14 @@
 \title{In the decomposition of the covariance matrices (Muirhead, 1982, Theorem A9.9), change
   the order of the covariance matrices.}
 \usage{
-redecompose_Omegas(M, d, W, lambdas, perm = 1:M)
+redecompose_Omegas(M, d, W, lambdas, perm = 1:sum(M))
 }
 \arguments{
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
 \item{d}{the number of time series in the system.}
 

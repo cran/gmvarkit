@@ -5,24 +5,26 @@
 \alias{GIRF}
 \alias{plot.girf}
 \alias{print.girf}
-\title{Estimate generalized impulse response function for a structural GMVAR
-  model.}
+\title{Estimate generalized impulse response function for a structural GMVAR,
+  StMVAR, or G-StMVAR model.}
 \usage{
 GIRF(
-  gmvar,
+  gsmvar,
   which_shocks,
   shock_size = 1,
   N = 30,
   R1 = 250,
   R2 = 250,
-  init_regimes = 1:gmvar$model$M,
+  init_regimes = 1:sum(gsmvar$model$M),
   init_values = NULL,
   which_cumulative = numeric(0),
   scale = NULL,
+  scale_type = c("instant", "peak"),
+  scale_horizon = N,
   ci = c(0.95, 0.8),
   include_mixweights = TRUE,
   ncores = 2,
-  plot = TRUE,
+  plot_res = TRUE,
   seeds = NULL,
   ...
 )
@@ -32,7 +34,7 @@ GIRF(
 \method{print}{girf}(x, ..., digits = 2, N_to_print)
 }
 \arguments{
-\item{gmvar}{an object of class \code{'gmvar'} created with \code{fitGMVAR} or \code{GMVAR}.}
+\item{gsmvar}{an object of class \code{'gsmvar'}, typically created with \code{fitGSMVAR} or \code{GSMVAR}.}
 
 \item{which_shocks}{a numeric vector of length at most \eqn{d}
 (\code{=ncol(data)}) and elements in \eqn{1,...,d} specifying the
@@ -64,26 +66,35 @@ given by the mixing weight parameters of those regimes. Note that if
 \code{init_regimes=1:M}, the initial values are generated from the
 stationary distribution of the process and if \code{init_regimes=m}, the
 initial value are generated from the stationary distribution of the
-\eqn{m}th regime. Ignored if \code{init_value} is specified.}
+\eqn{m}th regime. Ignored if the argument \code{init_values} is specified.}
 
-\item{init_values}{a matrix or a multivariate class \code{'ts'} object with
-\eqn{d} columns and at least \eqn{p} rows specifying an initial value for
-the GIRF. The last \eqn{p} rows are taken to be the initial value assuming
-that the \strong{last} row is the most recent observation.}
+\item{init_values}{a size \eqn{(pxd)} matrix specifying the initial values, where d is the number
+of time series in the system. The \strong{last} row will be used as initial values for the first lag,
+the second last row for second lag etc. If not specified, initial values will be drawn according to
+mixture distribution specifed by the argument \code{init_regimes}.}
 
 \item{which_cumulative}{a numeric vector with values in \eqn{1,...,d}
 (\code{d=ncol(data)}) specifying which the variables for which the impulse
 responses should be cumulative. Default is none.}
 
 \item{scale}{should the GIRFs to some of the shocks be scaled so that they
-correspond to a specific magnitude of instantaneous movement of some specific
-variable? Provide a length three vector where the shock of interest
+correspond to a specific magnitude of instantaneous or peak response
+of some specific variable (see the argument \code{scale_type})?
+Provide a length three vector where the shock of interest
 is given in the first element (an integer in \eqn{1,...,d}), the variable of
 interest is given in the second element (an integer in \eqn{1,...,d}), and
-the magnitude of its instantaneous movement (a non-zero real number) in the
-third element. If the GIRFs of multiple shocks should be scaled, provide
+the magnitude of its instantaneous or peak response in the third element
+(a non-zero real number). If the GIRFs of multiple shocks should be scaled, provide
 a matrix which has one column for each of the shocks with the columns being
 the length three vectors described above.}
+
+\item{scale_type}{If argument \code{scale} is specified, should the GIRFs be
+scaled to match an instantaneous response (\code{"instant"}) or peak response
+(\code{"peak"}). If \code{"peak"}, the scale is based on the largest magnitude
+of peak response in absolute value. Ignored if \code{scale} is not specified.}
+
+\item{scale_horizon}{If \code{scale_type == "peak"} what the maximum horizon up
+to which peak response is expected? Scaling won't based on values after this.}
 
 \item{ci}{a numeric vector with elements in \eqn{(0, 1)} specifying the
 confidence levels of the confidence intervals.}
@@ -95,7 +106,7 @@ calculated for the mixing weights as well? \code{TRUE} or \code{FALSE}.}
 single core computing is supported if an initial value is specified (and
 the GIRF won't thus be estimated multiple times).}
 
-\item{plot}{\code{TRUE} if the results should be plotted, \code{FALSE} if
+\item{plot_res}{\code{TRUE} if the results should be plotted, \code{FALSE} if
 not.}
 
 \item{seeds}{a length \code{R2} vector containing the random number generator
@@ -129,12 +140,12 @@ Returns a class \code{'girf'} list with the GIRFs in the first
 }
 \description{
 \code{GIRF} estimates generalized impulse response function for
-  a structural GMVAR model.
+  a structural GMVAR, StMVAR, or G-StMVAR model.
 }
 \details{
 The model needs to be structural in order for this function to be
-  applicable. A structural GMVAR model can be estimated by specifying the
-  argument \code{structural_pars} in the function \code{fitGMVAR}.
+  applicable. A structural GMVAR, StMVAR, or G-StMVAR model can be estimated
+  by specifying the argument \code{structural_pars} in the function \code{fitGSMVAR}.
 
   The confidence bounds reflect uncertainty about the initial state (but
   currently not about the parameter estimates) if initial values are not
@@ -143,7 +154,7 @@ The model needs to be structural in order for this function to be
   about the algorithm.
 
   Note that if the argument \code{scale} is used, the scaled responses of
-  the mixing weights might be more than one in absolute valie.
+  the mixing weights might be more than one in absolute value.
 }
 \section{Methods (by generic)}{
 \itemize{
@@ -162,11 +173,11 @@ The model needs to be structural in order for this function to be
   0.406, -0.005, 0.083, 0.299, 0.218, 0.02, -0.119, 0.722, 0.093, 0.032,
    0.044, 0.191, 0.057, 0.172, -0.46, 0.016, 3.518, 5.154, 0.58)
  W_22 <- matrix(c(1, 1, -1, 1), nrow=2, byrow=FALSE)
- mod22s <- GMVAR(gdpdef, p=2, M=2, params=params22s,
+ mod22s <- GSMVAR(gdpdef, p=2, M=2, params=params22s,
   structural_pars=list(W=W_22))
  mod22s
  # Alternatively, use:
- #fit22s <- fitGMVAR(gdpdef, p=2, M=2, structural_pars=list(W=W_22),
+ #fit22s <- fitGSMVAR(gdpdef, p=2, M=2, structural_pars=list(W=W_22),
  #                   ncalls=20, seeds=1:20)
  # To obtain an estimated version of the same model.
 
@@ -197,14 +208,16 @@ The model needs to be structural in order for this function to be
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
  @keywords internal
 }
 \seealso{
-\code{\link{GFEVD}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}},
-  \code{\link{gmvar_to_sgmvar}}, \code{\link{reorder_W_columns}},
-  \code{\link{swap_W_signs}}, \code{\link{simulateGMVAR}},
-  \code{\link{predict.gmvar}}, \code{\link{profile_logliks}},
+\code{\link{GFEVD}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
+  \code{\link{gsmvar_to_sgsmvar}}, \code{\link{reorder_W_columns}},
+  \code{\link{swap_W_signs}}, \code{\link{simulate.gsmvar}},
+  \code{\link{predict.gsmvar}}, \code{\link{profile_logliks}},
   \code{\link{quantile_residual_tests}}, \code{\link{LR_test}},
   \code{\link{Wald_test}}
 }

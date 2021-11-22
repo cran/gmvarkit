@@ -134,3 +134,20 @@
 * Internal functions are now removed from the user manual. 
 * Added the data gdpdef, updated the examples for this data, and removed the old data.
 
+# gmvarkit 2.0.0
+
+* This update should be mostly backward compatible, but some changes made in the argument names are not.
+* gmvarkit now accommodates new models: the StMVAR model and the G-StMVAR model, as well their structural versions (see the vignette or the references in the package description). 
+* Changed the model class from 'gmvar' to 'gsmvar' to accommodate also StMVAR and G-StMVAR models.
+* Renamed functions: GMVAR -> GSMVAR; fitGMVAR -> fitGSMVAR; alt_gmvar -> alt_gsmvar; gmvar_to_sgmvar -> gsmvar_to_sgsmvars; also all the class 'gmvar' methods were changed to class 'gsmvar' methods.
+* New improved vignette.
+* The old simulation function 'simulateGMVAR' is now deprecated. Now, we use the class 'gsmvar' simulation method 'simulate.gsmvar' instead.
+* simulate.gsmvar now allows to generate initial values from the stationary distribution of a specific regime or from a mixture distribution of any set of regimes. Some argument names needed to be changed to make the method CRAN compatible.
+* New exported function 'stmvar_to_gstmvar': estimate a G-StMVAR model based on a StMVAR model with large degrees of freedom parameters.
+* Now the function 'quantile_residual_tests' takes use of parallel computing to shorten the computation time.
+* Changes to the default arguments 'M' and 'maxit' of the function  'fitGSMVAR'
+* In the method predict.gsmvar, changed the argument name n_simu to nsim, since nsim is now used in the simulation method as well.
+* Changed the argument name nsimu to nsim in quantile_residual_tests as well, so that the argument name is the same as in the predict and simulate methods (while this specific name was required by CRAN compatibility in the simulation method). 
+* Fixed a bug in the argument scale of the function GIRF. Fixed also a bug that caused an error in some cases.
+* Now the plot method for class 'gsmvar' objects enables to plot only a single figure: series plot or density plot.
+* Note that this version might produce different results with the same random number generator seed than the previous versions.

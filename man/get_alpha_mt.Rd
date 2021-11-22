@@ -4,12 +4,16 @@
 \alias{get_alpha_mt}
 \title{Get mixing weights alpha_mt (this function is for internal use)}
 \usage{
-get_alpha_mt(M, log_mvnvalues, alphas, epsilon, conditional, also_l_0 = FALSE)
+get_alpha_mt(M, log_mvdvalues, alphas, epsilon, conditional, also_l_0 = FALSE)
 }
 \arguments{
-\item{M}{a positive integer specifying the number of mixture components.}
+\item{M}{\describe{
+  \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
+   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+}}
 
-\item{log_mvnvalues}{\eqn{T x M} matrix containing the log multivariate normal densities.}
+\item{log_mvdvalues}{\eqn{T x M} matrix containing the log multivariate normal densities.}
 
 \item{alphas}{\eqn{M x 1} vector containing the mixing weight pa}
 
@@ -22,7 +26,7 @@ should be used.}
 \item{also_l_0}{return also l_0 (the first term in the exact log-likelihood function)?}
 }
 \value{
-Returns the mixing weights a matrix of the same dimension as \code{log_mvnvalues} so
+Returns the mixing weights a matrix of the same dimension as \code{log_mvdvalues} so
   that the t:th row is for the time point t and m:th column is for the regime m.
 }
 \description{
@@ -39,6 +43,8 @@ Note that we index the time series as \eqn{-p+1,...,0,1,...,T} as in Kalliovirta
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
    \item Virolainen S. 2020. Structural Gaussian mixture vector autoregressive model. Unpublished working
      paper, available as arXiv:2007.04713.
+   \item Virolainen S. 2021. Gaussian and Student's t mixture vector autoregressive model. Unpublished working
+     paper, available as arXiv:2109.13648.
  }
  @keywords internal
 }

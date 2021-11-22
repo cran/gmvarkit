@@ -1,12 +1,12 @@
 #' @import graphics
 #'
-#' @title Quantile residual diagnostic plot for a GMVAR model
+#' @title Quantile residual diagnostic plot for a GMVAR, StMVAR, or G-StMVAR model
 #'
 #' @description \code{diagnostic_plot} plots a multivariate quantile residual diagnostic plot
 #'   for either autocorrelation, conditional heteroskedasticity, or normality, or simply draws
 #'   the quantile residual time series.
 #'
-#' @inheritParams simulateGMVAR
+#' @inheritParams quantile_residual_tests
 #' @param type which type of diagnostic plot should be plotted?
 #'   \itemize{
 #'     \item{\code{"all"} all below sequentially.}
@@ -21,15 +21,15 @@
 #' @details Auto- and cross-correlations (types \code{"ac"} and \code{"ch"}) are calculated with the function
 #'  \code{acf} from the package \code{stats} and the plot method for class \code{'acf'} objects is employed.
 #' @inherit quantile_residual_tests references
-#' @seealso \code{\link{profile_logliks}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}}, \code{\link{quantile_residual_tests}},
+#' @seealso \code{\link{profile_logliks}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link{quantile_residual_tests}},
 #'  \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}, \code{\link[stats]{acf}},
-#'   \code{\link[stats]{density}}, \code{\link{predict.gmvar}}
+#'   \code{\link[stats]{density}}, \code{\link{predict.gsmvar}}
 #' @examples
 #' # GMVAR(1,2), d=2 model:
 #' params12 <- c(0.55, 0.112, 0.344, 0.055, -0.009, 0.718, 0.319,
 #'  0.005, 0.03, 0.619, 0.173, 0.255, 0.017, -0.136, 0.858, 1.185,
 #'  -0.012, 0.136, 0.674)
-#' mod12 <- GMVAR(gdpdef, p=1, M=2, params=params12)
+#' mod12 <- GSMVAR(gdpdef, p=1, M=2, params=params12)
 #' diagnostic_plot(mod12, type="series")
 #' diagnostic_plot(mod12, type="ac")
 #'
@@ -38,29 +38,30 @@
 #'  -0.005, 0.083, 0.299, 0.215, 0.002, 0.03, 0.484, 0.072, 0.218,
 #'  0.02, -0.119, 0.722, 0.093, 0.032, 0.044, 0.191, 1.101, -0.004,
 #'   0.105, 0.58)
-#' mod22 <- GMVAR(gdpdef, p=2, M=2, params=params22)
+#' mod22 <- GSMVAR(gdpdef, p=2, M=2, params=params22)
 #' diagnostic_plot(mod22, type="ch")
 #' diagnostic_plot(mod22, type="norm")
 #'
-#' # GMVAR(2,2), d=2 model with AR-parameters restricted to be
-#' # the same for both regimes:
-#' C_mat <- rbind(diag(2*2^2), diag(2*2^2))
-#' params22c <- c(0.418, 0.153, 0.513, 0.057, 0.204, 0.028, -0.169,
-#'  0.591, 0.241, 0.014, 0.091, 0.248, 1.068, -0.01, 0.111, 0.219,
-#'  0.004, 0.027, 0.501)
-#' mod22c <- GMVAR(gdpdef, p=2, M=2, params=params22c, constraints=C_mat)
-#' diagnostic_plot(mod22c, wait_time=0.2)
-#' diagnostic_plot(mod22c, type="ac", maxlag=12)
+#' # G-StMVAR(2, 1, 1), d=2 model:
+#' params22gs <- c(0.697, 0.154, 0.049, 0.374, 0.476, 0.318, -0.645, -0.302,
+#'  -0.222, 0.193, 0.042, -0.013, 0.048, 0.554, 0.033, 0.184, 0.005, -0.186,
+#'   0.683, 0.256, 0.031, 0.026, 0.204, 0.583, -0.002, 0.048, 0.182, 4.334)
+#' mod22gs <- GSMVAR(gdpdef, p=2, M=c(1, 1), params=params22gs, model="G-StMVAR")
+#' diagnostic_plot(mod22gs, wait_time=0)
 #' @export
 
-diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), maxlag=12, wait_time=4) {
-  check_gmvar(gmvar)
-  check_null_data(gmvar)
+diagnostic_plot <- function(gsmvar, type=c("all", "series", "ac", "ch", "norm"), maxlag=12, wait_time=4) {
+  # Backward compatibility
+  gsmvar <- gmvar_to_gsmvar(gsmvar)
+
+  # Proceed with class 'gsmvar' object
+  check_gsmvar(gsmvar)
+  check_null_data(gsmvar)
   stopifnot(wait_time >= 0)
   type <- match.arg(type)
-  qres <- gmvar$quantile_residuals
-  d <- gmvar$model$d
-  names_ts <- colnames(as.ts(gmvar$data))
+  qres <- gsmvar$quantile_residuals
+  d <- gsmvar$model$d
+  names_ts <- colnames(as.ts(gsmvar$data))
   colnames(qres) <- names_ts
   old_par <- par(no.readonly=TRUE)
   on.exit(par(old_par))
@@ -107,7 +108,7 @@ diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), 
   }
   if(type == "norm" || type == "all") {
     waitifall()
-    d <- gmvar$model$d
+    d <- gsmvar$model$d
     par(mfrow=c(2, d), mar=c(2.5, 2.8, 2.1, 1.0))
     for(i1 in 1:d) {
       hs <- hist(qres[,i1], breaks="Scott", probability=TRUE, col="skyblue", plot=TRUE,
@@ -127,7 +128,7 @@ diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), 
 #'
 #' @description \code{profile_logliks} plots profile log-likelihoods around the estimates.
 #'
-#' @inheritParams simulateGMVAR
+#' @inheritParams quantile_residual_tests
 #' @inheritParams in_paramspace_int
 #' @param which_pars the profile log-likelihood function of which parameters should be plotted? An integer
 #'  vector specifying the positions of the parameters in the parameter vector. The parameter vector has the
@@ -171,14 +172,14 @@ diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), 
 #' The red vertical line points the estimate.
 #' @return  Only plots to a graphical device and doesn't return anything.
 #' @inherit loglikelihood references
-#' @seealso  \code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGMVAR}}, \code{\link{GMVAR}},
+#' @seealso  \code{\link{get_soc}}, \code{\link{diagnostic_plot}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
 #'   \code{\link{GIRF}}, \code{\link{LR_test}}, \code{\link{Wald_test}}, \code{\link{cond_moment_plot}}
 #' @examples
 #' \donttest{
 #' # Running all the below examples takes approximately 2 minutes.
 #'
 #' # GMVAR(1,2) model
-#' fit12 <- fitGMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
+#' fit12 <- fitGSMVAR(gdpdef, p=1, M=2, ncalls=1, seeds=1)
 #' fit12
 #' profile_logliks(fit12)
 #'
@@ -187,29 +188,49 @@ diagnostic_plot <- function(gmvar, type=c("all", "series", "ac", "ch", "norm"), 
 #' W_122 <- matrix(c(1, 1, -1, 1), nrow=2)
 #' params12s <- c(0.55, 0.11, 0.62, 0.17, 0.34, 0.05, -0.01, 0.72, 0.25,
 #'  0.02, -0.14, 0.86, 0.54, 0.06, -0.16, 0.16, 3.62, 4.73, 0.67)
-#' mod12s <- GMVAR(gdpdef, p=1, M=2, params=params12s,
+#' mod12s <- GSMVAR(gdpdef, p=1, M=2, params=params12s,
 #'                 structural_pars=list(W=W_122))
 #' profile_logliks(mod12s)
+#'
+#' #' # G-StMVAR(2, 1, 1), d=2 model:
+#' params22gs <- c(0.697, 0.154, 0.049, 0.374, 0.476, 0.318, -0.645, -0.302,
+#'  -0.222, 0.193, 0.042, -0.013, 0.048, 0.554, 0.033, 0.184, 0.005, -0.186,
+#'   0.683, 0.256, 0.031, 0.026, 0.204, 0.583, -0.002, 0.048, 0.182, 4.334)
+#' mod22gs <- GSMVAR(gdpdef, p=2, M=c(1, 1), params=params22gs, model="G-StMVAR")
+#' profile_logliks(mod22gs, which_pars=c(1, 3, 28))
 #' }
 #' @export
 
-profile_logliks <- function(gmvar, which_pars, scale=0.02, nrows, ncols, precision=200, stat_tol=1e-3, posdef_tol=1e-8) {
-  check_gmvar(gmvar)
-  check_null_data(gmvar)
-  p <- gmvar$model$p
-  M <- gmvar$model$M
-  d <- gmvar$model$d
-  params <- gmvar$params
-  parametrization <- gmvar$model$parametrization
+profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precision=200, stat_tol=1e-3, posdef_tol=1e-8, df_tol=1e-8) {
+  gsmvar <- gmvar_to_gsmvar(gsmvar) # Backward compatibility
+  check_gsmvar(gsmvar)
+  check_null_data(gsmvar)
+  p <- gsmvar$model$p
+  M <- gsmvar$model$M
+  d <- gsmvar$model$d
+  model <- gsmvar$model$model
+  if(model == "GMVAR") { # The number of degrees of freedom parameters
+    n_df <- 0
+  } else if(model == "StMVAR") {
+    n_df <- M
+    M1 <- 0
+  } else { # model == "G-StMVAR"
+    n_df <- M[2]
+    M1 <- M[1]
+  }
+  M_orig <- M
+  M <- sum(M)
+  params <- gsmvar$params
+  parametrization <- gsmvar$model$parametrization
   if(missing(which_pars)) which_pars <- 1:length(params)
   if(!all_pos_ints(which_pars) || any(which_pars > length(params))) {
     stop("The argument 'which_pars' should contain strictly positive integers not larger than length of the parameter vector.")
   } else if(anyDuplicated(which_pars) != 0) {
     stop("There are dublicates in which_pars")
   }
-  constraints <- gmvar$model$constraints
-  same_means <- gmvar$model$same_means
-  structural_pars <- gmvar$model$structural_pars
+  constraints <- gsmvar$model$constraints
+  same_means <- gsmvar$model$same_means
+  structural_pars <- gsmvar$model$structural_pars
   npars <- length(which_pars)
 
   if(missing(nrows)) nrows <- max(ceiling(log2(npars) - 1), 1)
@@ -246,12 +267,12 @@ profile_logliks <- function(gmvar, which_pars, scale=0.02, nrows, ncols, precisi
     logliks <- vapply(vals, function(val) {
       new_pars <- pars
       new_pars[i1] <- val # Change the single parameter value
-      loglikelihood_int(data=gmvar$data, p=p, M=M, params=new_pars,
-                        conditional=gmvar$model$conditional, parametrization=parametrization,
+      loglikelihood_int(data=gsmvar$data, p=p, M=M_orig, params=new_pars, model=model,
+                        conditional=gsmvar$model$conditional, parametrization=parametrization,
                         constraints=constraints, same_means=same_means,
                         structural_pars=structural_pars,
                         check_params=TRUE, minval=NA,
-                        stat_tol=stat_tol, posdef_tol=posdef_tol)
+                        stat_tol=stat_tol, posdef_tol=posdef_tol, df_tol=df_tol)
     }, numeric(1))
 
     # In order to get the labels right, we first determine which parameter is in question.
@@ -285,12 +306,15 @@ profile_logliks <- function(gmvar, which_pars, scale=0.02, nrows, ncols, precisi
             main <- substitute(A[foo](foo2), list(foo=paste0(m, ",", which_mat), foo2=paste0(row_ind, ",", col_ind)))
           }
         }
-      } else { # alphas; we know that M > 1 by the fact that we are here
-            m <- i1 - max(cum_q)
-            main <- substitute(alpha[foo], list(foo=m))
+      } else if(M > 1 && i1 <= length(params) - n_df) { # alphas
+        m <- i1 - max(cum_q)
+        main <- substitute(alpha[foo], list(foo=m))
+      } else { # degrees of freedom: i1 > length(params) - n_df (this is the case also if M == 1 && i1 > max(cum_q))
+        m <- i1 - max(cum_q) - (M - 1) + M1
+        main <- substitute(nu[foo], list(foo=m))
       }
     } else { ## If AR parameters are constrained, mean parameters are constrained, or a structural model is considered
-      last_covmat_par_index <- length(params) - (M - 1)
+      last_covmat_par_index <- length(params) - (M - 1) - n_df
       g <- ifelse(is.null(same_means), M, length(same_means)) # Number groups with the same mean parameters
       less_pars <- d*(M - g) # Number of parameters less compared to models without same mean constraints
 
@@ -360,9 +384,12 @@ profile_logliks <- function(gmvar, which_pars, scale=0.02, nrows, ncols, precisi
             }
           }
         }
-      } else { # alphas; we know M > 1 since we ended up here
+      } else if(M > 1 && i1 <= length(params) - n_df) { # alphas
         m <- i1 - last_covmat_par_index
         main <- substitute(alpha[foo], list(foo=m))
+      } else { # degrees of freedom: i1 > length(params) - n_df (this is the case if also M == 1 && i1 > last_covmat_par_index)
+        m <- i1 - last_covmat_par_index - (M - 1) + M1
+        main <- substitute(nu[foo], list(foo=m))
       }
     }
     plot(x=vals, y=logliks, type="l", main=main)
