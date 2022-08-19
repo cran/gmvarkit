@@ -1,6 +1,6 @@
-39a7ddf25678ac1516d3aaabc8333f7e *DESCRIPTION
+76ad182564938d7b5e55428967783a00 *DESCRIPTION
 c4fb80424596fcb9c9653ba41101b873 *NAMESPACE
-4ffa0d99aa1cbf1dd70e52a408e47df0 *NEWS.md
+1fc1f10eeed14c325aa6c683ad4383af *NEWS.md
 439ead2dbfb6383f93d1dfa785372fc5 *R/GIRFandGFEVD.R
 acab72eba6272493d4883fe7e1c51f96 *R/GSMVARconstruction.R
 61831afdf33f943bbd18178c41fdf675 *R/MAINest.R
@@ -12,7 +12,7 @@ c26fc65c3d0ce120d066a7f676e8a73d *R/data.R
 231cc3d41afd61cdf4b12a2a0f7fad2b *R/generateParams.R
 167d5636b127ce7e43f28d6a63a64516 *R/geneticAlgorithm.R
 88f26c30661af713bfae6b275c75ed17 *R/gmvarkit.R
-a849cea232118cd03cfde85650a9caef *R/loglikelihood.R
+af9cb64e3d6dcdde3306914dec68a0ce *R/loglikelihood.R
 0b932928c101f55da439ad69f4008c9a *R/matcal.R
 9bfb3931014b4c5450dcf97d279939aa *R/miscS3methods.R
 2644297c94c6f66bb6a7894f4408745a *R/morePlots.R
@@ -34,12 +34,12 @@ f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 d759040baef0654e9a8f8dddf6beb247 *data/usamone.rda
 c5929bc97cf0d126800f9d30a0ee6830 *inst/doc/gmvarkit-vignette.R
 bf2aa549783ea2079138271dc74ca5ab *inst/doc/gmvarkit-vignette.Rnw
-ad63cd1a7beaa25de049316cd7c6499f *inst/doc/gmvarkit-vignette.pdf
+5080a255c3198e99711f876a1df8b4da *inst/doc/gmvarkit-vignette.pdf
 cf416264f706143c721a862a36ba9658 *man/GAfit.Rd
-8b0f4ccf0c64fd1bc8f2b332c3545e33 *man/GFEVD.Rd
-9828e31e4efd01e155501df714efbc11 *man/GIRF.Rd
+6d9d37d45993429c2f5b5f625f86b232 *man/GFEVD.Rd
+cf04589702a88d9dd5091b51eef86e82 *man/GIRF.Rd
 e51c6a80c1b651032d2da95382ec6f6c *man/GMVAR.Rd
-ae92956ab6b98e0a87e42d3070dceac1 *man/GSMVAR.Rd
+209bd175d2dacb59e79b7c9df896dc7b *man/GSMVAR.Rd
 f743ed8dd5b4b351ab4bac4d7daafda1 *man/LR_test.Rd
 f280ceb037de662ddd35919bc1ebcca5 *man/VAR_pcovmat.Rd
 4826724611f16cff264dbd4bcdc49939 *man/Wald_test.Rd
@@ -59,7 +59,7 @@ f4f4a9cad421c8ed6f8c6f24588cf1e4 *man/check_constraints.Rd
 34d73e9d419d3e2b560ddda8258cc482 *man/check_parameters.Rd
 e3c453202b5f663fb7a139d20392a3c9 *man/check_same_means.Rd
 2495b2d485590e9b53fe7198f2271029 *man/cond_moment_plot.Rd
-2909fa638a253e4c3a9b48c63059847c *man/cond_moments.Rd
+0e4c1b37c37ba375873f1b9e83d4d980 *man/cond_moments.Rd
 a754b4b3396a26b99dd759802ba8c464 *man/diag_Omegas.Rd
 1d645c23ce6d39feb346c30c94f74e13 *man/diagnostic_plot.Rd
 010983385cc257ff6ec30b093a3dcab8 *man/dlogmultinorm.Rd
@@ -93,7 +93,7 @@ bf349fe127e582b3f2e965d7c683426f *man/in_paramspace.Rd
 977b7835c971f152943e8a153f065949 *man/is_stationary.Rd
 3dc0509a16a45f4c80924020f191ddeb *man/iterate_more.Rd
 e5de8c822af76ceb4278adc580edc09d *man/loglikelihood.Rd
-a0d25d99551f4de4ab6e7b6c5d0fc2c2 *man/loglikelihood_int.Rd
+93d7c3159750b32e50deeef8b9bc0c3d *man/loglikelihood_int.Rd
 103d828c0c880883e0c85c328a2d92bb *man/n_params.Rd
 674803eb7fe1294eacd6fe5584fb93bc *man/pick_Am.Rd
 4e362b7fcefaf2a4336ff1f75e2f459f *man/pick_Ami.Rd
@@ -117,7 +117,7 @@ b925f8cb0ad2742631ab1ecf298ad089 *man/print.gmvar.Rd
 a816dba918de3787bbccfe97cbd59a78 *man/print.hypotest.Rd
 8bd755484236848bf486b90ffc35395a *man/print_std_errors.Rd
 fecd1e12b3a829a843a89ff62039131f *man/profile_logliks.Rd
-7f9d67ca02a7925f698bdf3ec3de944a *man/quantile_residual_tests.Rd
+9208c649a58585eca8c2bba367b36f30 *man/quantile_residual_tests.Rd
 177b65a35733a99eb4d6f30a8de873ce *man/quantile_residuals.Rd
 b3895cf094a4e4eabffd807d63de7e99 *man/quantile_residuals_int.Rd
 02e95ec431a0a8fd10f7c1c7f64f16cb *man/random_coefmats.Rd

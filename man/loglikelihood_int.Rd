@@ -172,7 +172,8 @@ evaluation of the log-likelihood might fail and cause error.}
 freedom parameters are not larger than \code{2 + df_tol}.}
 }
 \value{
-\item{By default:}{log-likelihood value of the specified GMVAR, StMVAR, or G-StMVAR model,}
+\describe{
+  \item{By default:}{log-likelihood value of the specified GMVAR, StMVAR, or G-StMVAR model,}
   \item{If \code{to_return=="mw"}:}{a size ((n_obs-p)xM) matrix containing the mixing weights: for m:th component in m:th column.}
   \item{If \code{to_return=="mw_tplus1"}:}{a size ((n_obs-p+1)xM) matrix containing the mixing weights: for m:th component in m:th column.
     The last row is for \eqn{\alpha_{m,T+1}}.}
@@ -194,6 +195,7 @@ freedom parameters are not larger than \code{2 + df_tol}.}
   \item{if \code{to_return=="loglik_mw_archscalars"}:}{a list of three elements. The first element contains the log-likelihood value, the
     second element contains the mixing weights, the third element contains the arch scalars
     (this is used in \code{quantile_residuals_int}).}
+ }
 }
 \description{
 \code{loglikelihood_int} computes log-likelihoodof a GMVAR, StMVAR, and G-StMVAR models.

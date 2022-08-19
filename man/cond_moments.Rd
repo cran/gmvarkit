@@ -163,7 +163,8 @@ evaluation of the log-likelihood might fail and cause error.}
 freedom parameters are not larger than \code{2 + df_tol}.}
 }
 \value{
-\item{If \code{to_return=="regime_cmeans"}:}{an \code{[T-p, d, M]} array containing the regimewise conditional means
+\describe{
+  \item{If \code{to_return=="regime_cmeans"}:}{an \code{[T-p, d, M]} array containing the regimewise conditional means
     (the first p values are used as the initial values).}
   \item{If \code{to_return=="regime_ccovs"}:}{an \code{[d, d, T-p, M]} array containing the regimewise conditional
     covariance matrices (the first p values are used as the initial values). The index \code{[ , , t, m]} gives the time
@@ -175,9 +176,10 @@ freedom parameters are not larger than \code{2 + df_tol}.}
   \item{If \code{to_return=="arch_scalars"}:}{a \code{[T-p, M]} matrix containing the regimewise arch scalars
    multiplying error term covariance matrix in the conditional covariance matrix of the regime. For GMVAR type regimes, these
    are all ones (the first p values are used as the initial values).}
+ }
 }
 \description{
-\code{loglikelihood} compute conditional regimewise means, conditional means, and conditional covariance matrices
+\code{cond_moments} compute conditional regimewise means, conditional means, and conditional covariance matrices
  of a GMVAR, StMVAR, or G-StMVAR model.
 }
 \details{
