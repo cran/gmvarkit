@@ -1,6 +1,6 @@
-76ad182564938d7b5e55428967783a00 *DESCRIPTION
+b5827430e0c618be3f45629ea4e4c335 *DESCRIPTION
 c4fb80424596fcb9c9653ba41101b873 *NAMESPACE
-1fc1f10eeed14c325aa6c683ad4383af *NEWS.md
+89e69e6cef6b0ba85817384ec741b7cb *NEWS.md
 439ead2dbfb6383f93d1dfa785372fc5 *R/GIRFandGFEVD.R
 acab72eba6272493d4883fe7e1c51f96 *R/GSMVARconstruction.R
 61831afdf33f943bbd18178c41fdf675 *R/MAINest.R
@@ -34,7 +34,7 @@ f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 d759040baef0654e9a8f8dddf6beb247 *data/usamone.rda
 c5929bc97cf0d126800f9d30a0ee6830 *inst/doc/gmvarkit-vignette.R
 bf2aa549783ea2079138271dc74ca5ab *inst/doc/gmvarkit-vignette.Rnw
-5080a255c3198e99711f876a1df8b4da *inst/doc/gmvarkit-vignette.pdf
+b5bb4611ffe610b27eb9f43dbaab5759 *inst/doc/gmvarkit-vignette.pdf
 cf416264f706143c721a862a36ba9658 *man/GAfit.Rd
 6d9d37d45993429c2f5b5f625f86b232 *man/GFEVD.Rd
 cf04589702a88d9dd5091b51eef86e82 *man/GIRF.Rd
@@ -160,7 +160,7 @@ c21ec1e9a54ac9ab3e4daa66fc694468 *tests/testthat.R
 dd6cce860f8b9a48f02b14b3b2a51487 *tests/testthat/test_GIRFandGFEVD.R
 61c9dfdaa7791d9f84f547b7861143e7 *tests/testthat/test_MAINest.R
 59f731ef2c8d2ca47753b0b6b2d8c376 *tests/testthat/test_S3methods.R
-28fecd562013ff67c3f6511d586c7e04 *tests/testthat/test_argumentChecks.R
+b60c88ca0983fe1e585bb654909a6939 *tests/testthat/test_argumentChecks.R
 5b8416ee70a88027a31000afedcb62c4 *tests/testthat/test_generateParams.R
 2b7a2be50b6a12736d82d6c3d9d04ef8 *tests/testthat/test_gsmvarConstruction.R
 f399c7d9fe22bc61887e9b220776c87b *tests/testthat/test_loglikelihood.R
