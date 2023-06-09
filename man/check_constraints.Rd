@@ -56,13 +56,10 @@ See Virolainen (2022) for the conditions required to identify the shocks and for
 a time-varying diagonal matrix with positive diagonal entries).}
 }
 \value{
-Checks the constraint matrix \strong{C} and throws an error
+Checks the constraints and throws an error
   if something is wrong.
 }
 \description{
 \code{check_constraints} checks that the constraints are correctly set.
-}
-\details{
-If \code{is.null(constraints)}, then this function doesn't do anything.
 }
 \keyword{internal}

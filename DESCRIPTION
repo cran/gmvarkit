@@ -1,7 +1,7 @@
 Package: gmvarkit
 Title: Estimate Gaussian and Student's t Mixture Vector Autoregressive
         Models
-Version: 2.0.6
+Version: 2.0.7
 Authors@R: person("Savi", "Virolainen", email = "savi.virolainen@helsinki.fi", role = c("aut", "cre"))
 Description: Unconstrained and constrained maximum likelihood estimation of structural and reduced form 
     Gaussian mixture vector autoregressive, Student's t mixture vector autoregressive, and Gaussian and Student's t
@@ -24,8 +24,8 @@ Imports: Brobdingnag (>= 1.2-4), mvnfast (>= 0.2.5), parallel (>=
 Suggests: testthat, knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2023-02-15 11:49:20 UTC; savi
+Packaged: 2023-06-09 13:03:59 UTC; savi
 Author: Savi Virolainen [aut, cre]
 Maintainer: Savi Virolainen <savi.virolainen@helsinki.fi>
 Repository: CRAN
-Date/Publication: 2023-02-15 12:50:02 UTC
+Date/Publication: 2023-06-09 14:00:09 UTC

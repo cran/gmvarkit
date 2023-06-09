@@ -1,11 +1,11 @@
-b5827430e0c618be3f45629ea4e4c335 *DESCRIPTION
+1fb2bc3ae0f25c4e7575a37a618450a0 *DESCRIPTION
 c4fb80424596fcb9c9653ba41101b873 *NAMESPACE
-89e69e6cef6b0ba85817384ec741b7cb *NEWS.md
+14680ec92e278f8ef49976e1cf35c74d *NEWS.md
 439ead2dbfb6383f93d1dfa785372fc5 *R/GIRFandGFEVD.R
 acab72eba6272493d4883fe7e1c51f96 *R/GSMVARconstruction.R
 61831afdf33f943bbd18178c41fdf675 *R/MAINest.R
 52d34d2aa17e038bfa839a0dbdf0e0e1 *R/WaldAndLR.R
-9b1bfd28c753164a3d91e6f64bcc7546 *R/argumentChecks.R
+4621cba83a70385b69ab8785c61959dc *R/argumentChecks.R
 e91c5df7bf4ed54dcbad0571e23c6da3 *R/backwardCompatibility.R
 c26fc65c3d0ce120d066a7f676e8a73d *R/data.R
 1115bab110f6fec7c4af30349bce4be7 *R/diagnosticPlot.R
@@ -21,10 +21,10 @@ af9cb64e3d6dcdde3306914dec68a0ce *R/loglikelihood.R
 8230f29afbe730b54c0570222841ca5d *R/pickParams.R
 7cc62e19168179458ce1066675c8c90d *R/plotMethods.R
 2c957c42d11c855c6bb5699ef378a618 *R/predictMethod.R
-b0ac99f07f6191fa9c0db4b666120c25 *R/printMethods.R
+c77f41d5adbfa91762f66e5afdf87c50 *R/printMethods.R
 5c19083863b9510d48394f740bc421e6 *R/quantileResidualTests.R
 101e0afa610f962ff843f364b03d5c3f *R/quantileResiduals.R
-47ab3a04db4429adf0ae8a68206e0306 *R/simulate.R
+3b169eed398f06194701038b2f3a32b4 *R/simulate.R
 eb88faa95a2cf8da5dab35a41221bf96 *R/standardErrors.R
 f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 61259e800f03f2734c0d00f2dcd8ddd4 *README.md
@@ -34,7 +34,7 @@ f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 d759040baef0654e9a8f8dddf6beb247 *data/usamone.rda
 c5929bc97cf0d126800f9d30a0ee6830 *inst/doc/gmvarkit-vignette.R
 bf2aa549783ea2079138271dc74ca5ab *inst/doc/gmvarkit-vignette.Rnw
-b5bb4611ffe610b27eb9f43dbaab5759 *inst/doc/gmvarkit-vignette.pdf
+0455f7c702a66f5eb175ff3f786bb4f9 *inst/doc/gmvarkit-vignette.pdf
 cf416264f706143c721a862a36ba9658 *man/GAfit.Rd
 6d9d37d45993429c2f5b5f625f86b232 *man/GFEVD.Rd
 cf04589702a88d9dd5091b51eef86e82 *man/GIRF.Rd
@@ -51,7 +51,7 @@ ac11ec5b045b0a737d16f4b92a4b63ac *man/add_data.Rd
 e0d1887d129a8a05f599f68e43253aa6 *man/calc_gradient.Rd
 29b1d71da72a9950c5acb690d9dcb9f9 *man/change_parametrization.Rd
 fb481befabd15814aed1854f2bc2440c *man/change_regime.Rd
-f4f4a9cad421c8ed6f8c6f24588cf1e4 *man/check_constraints.Rd
+73c0ef6acb8d392c3b358b1ce5504581 *man/check_constraints.Rd
 84d585485fef9e73adf8ad4f4d3b1818 *man/check_data.Rd
 74cfbeeb415090201d1fb5843382df54 *man/check_gsmvar.Rd
 461bcc50498fc1d65b85efd7d04cf174 *man/check_null_data.Rd
@@ -157,9 +157,9 @@ b2799e3448e04c6b063464d56e61dab0 *man/vech.Rd
 2218474395cad6cef8a94ceabdecfd9d *man/warn_df.Rd
 871eaae4522a8cc72da32faec2d719cc *man/warn_eigens.Rd
 c21ec1e9a54ac9ab3e4daa66fc694468 *tests/testthat.R
-dd6cce860f8b9a48f02b14b3b2a51487 *tests/testthat/test_GIRFandGFEVD.R
+1eac9b2f7b59bc6055a7e6119bbc488f *tests/testthat/test_GIRFandGFEVD.R
 61c9dfdaa7791d9f84f547b7861143e7 *tests/testthat/test_MAINest.R
-59f731ef2c8d2ca47753b0b6b2d8c376 *tests/testthat/test_S3methods.R
+a49d2b6b7c1c12656f2391dcba9133ae *tests/testthat/test_S3methods.R
 b60c88ca0983fe1e585bb654909a6939 *tests/testthat/test_argumentChecks.R
 5b8416ee70a88027a31000afedcb62c4 *tests/testthat/test_generateParams.R
 2b7a2be50b6a12736d82d6c3d9d04ef8 *tests/testthat/test_gsmvarConstruction.R
@@ -170,7 +170,7 @@ c995fdce5f76e3128fcd6516b09058e9 *tests/testthat/test_parameterReforms.R
 4cb3614db3dbcfc5d78b4c1e08dab2ba *tests/testthat/test_pickParams.R
 94dbe157a2a7c17d7d55d8587616dd51 *tests/testthat/test_quantileResidualTests.R
 bf9658810adc14a46e49d46cf359f51f *tests/testthat/test_quantileResiduals.R
-5296012ac3e6bae498867c89cb89d062 *tests/testthat/test_simulate.R
+7fcfdd93d5d4e80cd8afc135199f304e *tests/testthat/test_simulate.R
 17453136332c310a918422855a8d4eb1 *tests/testthat/test_standardErrors.R
 98918703ee2f48fe6625917115fd7ae0 *tests/testthat/test_uncondMoments.R
 2ec797fcef6ba4f0aa8258023c1ce251 *tests/testthat/test_waldAndLR.R

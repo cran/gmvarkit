@@ -247,21 +247,22 @@ print.gsmvarpred <- function(x, ..., digits=2) {
 
   } else if(gsmvarpred$pi_type == "none") {
     cat(paste0("Point forecast by ", gsmvarpred$pred_type, ", no prediction intervals."), "\n")
-    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$n_simu, " simulations.\n"))
+    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$nsim, " Monte Carlo repetitions.\n"))
     print(gsmvarpred$pred)
 
   } else {
     cat(paste0("Point forecast by ", gsmvarpred$pred_type, ", ", gsmvarpred$pi_type,
                " prediction intervals with levels ", paste(gsmvarpred$pi, collapse=", "), "."), "\n")
-    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$n_simu, " simulations.\n"))
+    cat(paste0("Forecast ", gsmvarpred$n_ahead, " steps ahead, based on ", gsmvarpred$nsim, " Monte Carlo repetitions.\n"))
 
     cat("\n")
     q <- gsmvarpred$q
     pred_ints <- gsmvarpred$pred_ints
     pred <- gsmvarpred$pred
     pred_type <- gsmvarpred$pred_type
+    series_names <- colnames(gsmvarpred$pred)
     for(i1 in seq_len(gsmvarpred$gsmvar$model$d)) {
-      cat(paste0("Component ", i1, ":"), "\n")
+      cat(paste0(series_names[i1], ":"), "\n")
       df <- as.data.frame(lapply(1:length(gsmvarpred$q), function(i2) format_value(pred_ints[, i2, i1])))
       names(df) <- q
       df[, pred_type] <- format_value(pred[,i1])

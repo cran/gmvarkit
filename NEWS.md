@@ -188,3 +188,8 @@
 # gmvarkit 2.0.6
 
 * Fixed a CRAN issue
+
+# gmvarkit 2.0.7
+
+* Fixed a bug in simulations from Student's t regimes
+* Updated the print method of gsmvarpred objects
