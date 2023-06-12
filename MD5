@@ -1,6 +1,6 @@
-1fb2bc3ae0f25c4e7575a37a618450a0 *DESCRIPTION
+603921e3c720d97109fd99fa4d2f6a50 *DESCRIPTION
 c4fb80424596fcb9c9653ba41101b873 *NAMESPACE
-14680ec92e278f8ef49976e1cf35c74d *NEWS.md
+079254c26682fee8daf1f84031e9e6ba *NEWS.md
 439ead2dbfb6383f93d1dfa785372fc5 *R/GIRFandGFEVD.R
 acab72eba6272493d4883fe7e1c51f96 *R/GSMVARconstruction.R
 61831afdf33f943bbd18178c41fdf675 *R/MAINest.R
@@ -24,7 +24,7 @@ af9cb64e3d6dcdde3306914dec68a0ce *R/loglikelihood.R
 c77f41d5adbfa91762f66e5afdf87c50 *R/printMethods.R
 5c19083863b9510d48394f740bc421e6 *R/quantileResidualTests.R
 101e0afa610f962ff843f364b03d5c3f *R/quantileResiduals.R
-3b169eed398f06194701038b2f3a32b4 *R/simulate.R
+73975ed62d8c13d1aa9927aa31848416 *R/simulate.R
 eb88faa95a2cf8da5dab35a41221bf96 *R/standardErrors.R
 f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 61259e800f03f2734c0d00f2dcd8ddd4 *README.md
@@ -34,7 +34,7 @@ f0dca053fbd1a4bb610cbb75c91cd3ca *R/uncondMoments.R
 d759040baef0654e9a8f8dddf6beb247 *data/usamone.rda
 c5929bc97cf0d126800f9d30a0ee6830 *inst/doc/gmvarkit-vignette.R
 bf2aa549783ea2079138271dc74ca5ab *inst/doc/gmvarkit-vignette.Rnw
-0455f7c702a66f5eb175ff3f786bb4f9 *inst/doc/gmvarkit-vignette.pdf
+4360bbf3cd7f0ee448383478bb00a23e *inst/doc/gmvarkit-vignette.pdf
 cf416264f706143c721a862a36ba9658 *man/GAfit.Rd
 6d9d37d45993429c2f5b5f625f86b232 *man/GFEVD.Rd
 cf04589702a88d9dd5091b51eef86e82 *man/GIRF.Rd
@@ -157,7 +157,7 @@ b2799e3448e04c6b063464d56e61dab0 *man/vech.Rd
 2218474395cad6cef8a94ceabdecfd9d *man/warn_df.Rd
 871eaae4522a8cc72da32faec2d719cc *man/warn_eigens.Rd
 c21ec1e9a54ac9ab3e4daa66fc694468 *tests/testthat.R
-1eac9b2f7b59bc6055a7e6119bbc488f *tests/testthat/test_GIRFandGFEVD.R
+50618753b6bc865a5386dec6bef24bf5 *tests/testthat/test_GIRFandGFEVD.R
 61c9dfdaa7791d9f84f547b7861143e7 *tests/testthat/test_MAINest.R
 a49d2b6b7c1c12656f2391dcba9133ae *tests/testthat/test_S3methods.R
 b60c88ca0983fe1e585bb654909a6939 *tests/testthat/test_argumentChecks.R
