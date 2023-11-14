@@ -6,12 +6,16 @@
 #'   Parallel computing is utilized to perform multiple rounds of estimations in parallel.
 #'
 #' @inheritParams GAfit
+#' @inheritParams GSMVAR
 #' @param ncalls the number of estimation rounds that should be performed.
 #' @param ncores the number CPU cores to be used in parallel computing.
 #' @param maxit the maximum number of iterations in the variable metric algorithm.
 #' @param seeds a length \code{ncalls} vector containing the random number generator seed for each call to the genetic algorithm,
 #'  or \code{NULL} for not initializing the seed. Exists for creating reproducible results.
 #' @param print_res should summaries of estimation results be printed?
+#' @param use_parallel employ parallel computing? If \code{FALSE}, no progression bar etc will be generated.
+#' @param filter_estimates should the likely inappropriate estimates be filtered? See details.
+#' @param calc_std_errors calculate approximate standard errors for the estimates?
 #' @param ... additional settings passed to the function \code{GAfit} employing the genetic algorithm.
 #' @details
 #'  If you wish to estimate a structural model without overidentifying constraints that is identified statistically,
@@ -64,6 +68,15 @@
 #'  of the parameter space, it might help to use smaller numerical tolerance for the stationarity and positive
 #'  definiteness conditions. The numerical tolerance of an existing model can be changed with the function
 #'  \code{update_numtols}.
+#'
+#'  \strong{Filtering inappropriate estimates:} If \code{filter_estimates == TRUE}, the function will automatically filter
+#'  out estimates that it deems "inappropriate". That is, estimates that are not likely solutions of interest.
+#'  Specifically, solutions that incorporate a near-singular error term covariance matrix (any eigenvalue less than \eqn{0.002}),
+#'  mixing weights such that they are close to zero for almost all \eqn{t} for at least one regime, or mixing weight parameter
+#'  estimate close to zero (or one). It also filters out estimates with any modulus "bold A" eigenvalues larger than 0.9985,
+#' as the solution is near the boundary of the stationarity region and likely not a local maximum. You can also set
+#'  \code{filter_estimates=FALSE} and find the solutions of interest yourself by using the
+#'  function \code{alt_gsmvar}.
 #' @return Returns an object of class \code{'gsmvar'} defining the estimated (reduced form or structural) GMVAR, StMVAR, or G-StMVAR model.
 #'   Multivariate quantile residuals (Kalliovirta and Saikkonen 2010) are also computed and included in the returned object.
 #'   In addition, the returned object contains the estimates and log-likelihood values from all the estimation rounds performed.
@@ -111,6 +124,9 @@
 #' print_std_errors(fit12)
 #' profile_logliks(fit12)
 #'
+#' fit42t <- fitGSMVAR(gdpdef, p=4, M=2, ncalls=5, model="StMVAR", seeds=1:5, use_parallel=FALSE,
+#'  filter_estimates=TRUE, print_res=FALSE)
+#'
 #' # The rest of the examples only use a single estimation round with a given
 #' # seed that produces the MLE to reduce running time of the examples. When
 #' # estimating models for empirical applications, a large number of estimation
@@ -141,6 +157,8 @@
 #' fit22c <- fitGSMVAR(gdpdef, p=2, M=2, constraints=C_mat, ncalls=1, seeds=1)
 #' fit22c
 #'
+#' # G-StMVAR(2, 1, 1) model with autoregressive parameters and unconditional means restricted
+#' # to be the same for both regimes:
 #' fit22gscm <- fitGSMVAR(gdpdef, p=2, M=c(1, 1), model="G-StMVAR", constraints=C_mat,
 #'    parametrization="mean", same_means=list(1:2), ncalls=1, seeds=1)
 #'
@@ -157,8 +175,9 @@
 #' @export
 
 fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), conditional=TRUE, parametrization=c("intercept", "mean"),
-                      constraints=NULL, same_means=NULL, structural_pars=NULL, ncalls=(M + 1)^5, ncores=2, maxit=1000,
-                      seeds=NULL, print_res=TRUE, ...) {
+                      constraints=NULL, same_means=NULL, weight_constraints=NULL, structural_pars=NULL,
+                      ncalls=(M + 1)^5, ncores=2, maxit=1000, seeds=NULL, print_res=TRUE, use_parallel=TRUE,
+                      filter_estimates=FALSE, calc_std_errors=TRUE, ...) {
 
   model <- match.arg(model)
   parametrization <- match.arg(parametrization)
@@ -170,38 +189,49 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
   d <- ncol(data)
   n_obs <- nrow(data)
   check_same_means(parametrization=parametrization, same_means=same_means)
-  check_constraints(p=p, M=M, d=d, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
-  npars <- n_params(p=p, M=M, d=d, model=model, constraints=constraints, same_means=same_means, structural_pars=structural_pars)
+  check_constraints(p=p, M=M, d=d, constraints=constraints, same_means=same_means,
+                    weight_constraints=weight_constraints, structural_pars=structural_pars)
+  npars <- n_params(p=p, M=M, d=d, model=model, constraints=constraints, same_means=same_means,
+                    weight_constraints=weight_constraints, structural_pars=structural_pars)
   if(npars >= d*nrow(data)) stop("There are at least as many parameters in the model as there are observations in the data")
   dot_params <- list(...)
   minval <- ifelse(is.null(dot_params$minval), get_minval(data), dot_params$minval)
   red_criteria <- ifelse(rep(is.null(dot_params$red_criteria), 2), c(0.05, 0.01), dot_params$red_criteria)
 
-  if(ncores > parallel::detectCores()) {
-    ncores <- parallel::detectCores()
-    message("ncores was set to be larger than the number of cores detected")
-  }
-  if(ncores > ncalls) {
-    ncores <- ncalls
-    message("ncores was set to be larger than the number of estimation rounds")
-  }
-  cat(paste("Using", ncores, "cores for", ncalls, "estimations rounds..."), "\n")
+  if(use_parallel) {
+    if(ncores > parallel::detectCores()) {
+      ncores <- parallel::detectCores()
+      message("ncores was set to be larger than the number of cores detected")
+    }
+    if(ncores > ncalls) {
+      ncores <- ncalls
+      message("ncores was set to be larger than the number of estimation rounds")
+    }
+    cat(paste("Using", ncores, "cores for", ncalls, "estimations rounds..."), "\n")
 
-  ### Optimization with the genetic algorithm ###
-  cl <- parallel::makeCluster(ncores)
-  on.exit(try(parallel::stopCluster(cl), silent=TRUE)) # Close the cluster on exit, if not already closed.
-  parallel::clusterExport(cl, ls(environment(fitGSMVAR)), envir = environment(fitGSMVAR)) # assign all variables from package:gmvarkit
-  parallel::clusterEvalQ(cl, c(library(Brobdingnag), library(mvnfast), library(pbapply)))
+    ### Optimization with the genetic algorithm ###
+    cl <- parallel::makeCluster(ncores)
+    on.exit(try(parallel::stopCluster(cl), silent=TRUE)) # Close the cluster on exit, if not already closed.
+    parallel::clusterExport(cl, ls(environment(fitGSMVAR)), envir = environment(fitGSMVAR)) # assign all variables from package:gmvarkit
+    parallel::clusterEvalQ(cl, c(library(Brobdingnag), library(mvnfast), library(pbapply)))
 
-  cat("Optimizing with a genetic algorithm...\n")
-  GAresults <- pbapply::pblapply(1:ncalls, function(i1) GAfit(data=data, p=p, M=M, model=model, conditional=conditional,
-                                                              parametrization=parametrization, constraints=constraints,
-                                                              same_means=same_means, structural_pars=structural_pars,
-                                                              seed=seeds[i1], ...), cl=cl)
+    cat("Optimizing with a genetic algorithm...\n")
+    GAresults <- pbapply::pblapply(1:ncalls, function(i1) GAfit(data=data, p=p, M=M, model=model, conditional=conditional,
+                                                                parametrization=parametrization, constraints=constraints,
+                                                                same_means=same_means, weight_constraints=weight_constraints,
+                                                                structural_pars=structural_pars,
+                                                                seed=seeds[i1], ...), cl=cl)
+  } else {
+    GAresults <- lapply(1:ncalls, function(i1) GAfit(data=data, p=p, M=M, model=model, conditional=conditional,
+                                                     parametrization=parametrization, constraints=constraints,
+                                                     same_means=same_means, weight_constraints=weight_constraints,
+                                                     structural_pars=structural_pars, seed=seeds[i1], ...))
+  }
 
   loks <- vapply(1:ncalls, function(i1) loglikelihood_int(data=data, p=p, M=M, params=GAresults[[i1]], model=model,
                                                           conditional=conditional, parametrization=parametrization,
                                                           constraints=constraints, same_means=same_means,
+                                                          weight_constraints=weight_constraints,
                                                           structural_pars=structural_pars, check_params=TRUE,
                                                           to_return="loglik", minval=minval), numeric(1))
 
@@ -239,6 +269,7 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
     tryCatch(loglikelihood_int(data=data, p=p, M=M, params=params, model=model,
                                conditional=conditional, parametrization=parametrization,
                                constraints=constraints, same_means=same_means,
+                               weight_constraints=weight_constraints,
                                structural_pars=structural_pars, check_params=TRUE,
                                to_return="loglik", minval=minval), error=function(e) minval)
   }
@@ -249,10 +280,16 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
     vapply(1:npars, function(i1) (loglik_fn(params + I[i1,]*h) - loglik_fn(params - I[i1,]*h))/(2*h), numeric(1))
   }
 
-  cat("Optimizing with a variable metric algorithm...\n")
-  NEWTONresults <- pbapply::pblapply(1:ncalls, function(i1) optim(par=GAresults[[i1]], fn=loglik_fn, gr=loglik_grad, method="BFGS",
-                                                                  control=list(fnscale=-1, maxit=maxit)), cl=cl)
-  parallel::stopCluster(cl=cl)
+  if(use_parallel) {
+    cat("Optimizing with a variable metric algorithm...\n")
+    NEWTONresults <- pbapply::pblapply(1:ncalls, function(i1) optim(par=GAresults[[i1]], fn=loglik_fn, gr=loglik_grad, method="BFGS",
+                                                                    control=list(fnscale=-1, maxit=maxit)), cl=cl)
+    parallel::stopCluster(cl=cl)
+  } else {
+    NEWTONresults <- lapply(1:ncalls, function(i1) optim(par=GAresults[[i1]], fn=loglik_fn, gr=loglik_grad, method="BFGS",
+                                                         control=list(fnscale=-1, maxit=maxit)))
+  }
+
 
   loks <- vapply(1:ncalls, function(i1) NEWTONresults[[i1]]$value, numeric(1)) # Log-likelihoods
   converged <- vapply(1:ncalls, function(i1) NEWTONresults[[i1]]$convergence == 0, logical(1)) # Which coverged
@@ -262,25 +299,90 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
     print_loks()
   }
 
-
-  ### Obtain estimates and standard errors, calculate IC ###
+  ### Obtain estimates and filter the inapproriate estimates
   all_estimates <- lapply(NEWTONresults, function(x) x$par)
   if(model == "StMVAR" || model == "G-StMVAR") { # Unlogarithmize degrees of freedom parameter values
     all_estimates <- lapply(1:ncalls, function(i1) manipulateDFS(M=M, params=all_estimates[[i1]], model=model, FUN=exp))
   }
-  which_best_fit <- which(loks == max(loks))[1]
-  best_fit <- all_estimates[[which_best_fit]]
-  params <- best_fit
-  if(is.null(constraints) && is.null(structural_pars$C_lambda) && is.null(same_means)) {
+
+  if(filter_estimates) {
+    if(use_parallel) cat("Filtering inappropriate estimates...\n")
+    ord_by_loks <- order(loks, decreasing=TRUE) # Ordering from largest loglik to smaller
+
+    # Go through estimates, take the estimate that yield the higher likelihood
+    # among estimates that are do not include wasted regimes or near-singular
+    # error term covariance matrices. Also checks near-the-boundary of the
+    # stationarity region.
+    for(i1 in 1:length(all_estimates)) {
+      which_round <- ord_by_loks[i1] # Est round with i1:th largest loglik
+      pars <- all_estimates[[which_round]]
+      mod <- suppressWarnings(GSMVAR(data=data, p=p, M=M, d=d, params=pars,
+                                     conditional=conditional, model=model,
+                                     parametrization=parametrization,
+                                     constraints=constraints,
+                                     same_means=same_means,
+                                     weight_constraints=weight_constraints,
+                                     structural_pars=structural_pars, calc_std_errors=FALSE))
+
+      # Check Omegas
+      Omega_eigens <- get_omega_eigens(mod)
+      Omegas_ok <- !any(Omega_eigens < 0.002)
+
+      # Checks stationarity
+      boldA_eigens <- get_boldA_eigens(mod)
+      stat_ok <- !any(boldA_eigens > 0.9985)
+
+      # Check mixing weight params
+      pars_std <- reform_constrained_pars(p=p, M=M, d=d, params=pars, model=model,
+                                          constraints=constraints,
+                                          same_means=same_means,
+                                          weight_constraints=weight_constraints,
+                                          structural_pars=structural_pars,
+                                          change_na=FALSE) # Pars in standard form for pick pars fns
+      alphas <- pick_alphas(p=p, M=M, d=d, params=pars_std, model=model)
+      alphas_ok <- !any(alphas < 0.01)
+
+      # Check mixing weights
+      mixing_weights_ok <- tryCatch(!any(vapply(1:M,
+                                          function(m) sum(mod$mixing_weights[,m] > red_criteria[1]) < red_criteria[2]*n_obs,
+                                          logical(1))),
+                              error=function(e) FALSE)
+      if(Omegas_ok && alphas_ok && stat_ok && mixing_weights_ok) {
+        which_best_fit <- which_round # The estimation round of the appropriate estimate with the largest loglik
+        break
+      }
+      if(i1 == length(all_estimates)) {
+        message("No 'appropriate' estimates were found!
+                 Check that all the variables are scaled to vary in similar magninutes, also not very small or large magnitudes.
+                 Consider running more estimation rounds or study the obtained estimates one-by-one with the function alt_gsmvar.")
+        if(M > 2) {
+          message("Consider also using smaller M. Too large M leads to identification problems.")
+        }
+        which_best_fit <- which(loks == max(loks))[1]
+      }
+    }
+  } else {
+    which_best_fit <- which(loks == max(loks))[1]
+  }
+  params <- all_estimates[[which_best_fit]] # The params to return
+
+
+
+  ### Obtain estimates and standard errors, calculate IC ###
+  if(is.null(constraints) && is.null(structural_pars$C_lambda) && is.null(structural_pars$fixed_lambdas) &&
+     is.null(same_means) && is.null(weight_constraints)) {
     params <- sort_components(p=p, M=M, d=d, params=params, model=model, structural_pars=structural_pars)
-    all_estimates <- lapply(all_estimates, function(pars) sort_components(p=p, M=M, d=d, params=pars, model=model, structural_pars=structural_pars))
+    all_estimates <- lapply(all_estimates, function(pars) sort_components(p=p, M=M, d=d, params=pars, model=model,
+                                                                          structural_pars=structural_pars))
   }
   if(NEWTONresults[[which_best_fit]]$convergence == 1) {
-    message("Iteration limit was reached when estimating the best fitting individual! Consider further estimation with the function 'iterate_more'")
+    message(paste("Iteration limit was reached when estimating the best fitting individual!",
+                  "Consider further estimation with the function 'iterate_more'"))
   }
   mixing_weights <- loglikelihood_int(data=data, p=p, M=M, params=params, model=model,
                                       conditional=conditional, parametrization=parametrization,
                                       constraints=constraints, same_means=same_means,
+                                      weight_constraints=weight_constraints,
                                       structural_pars=structural_pars, to_return="mw",
                                       check_params=TRUE, minval=NULL)
   if(any(vapply(1:sum(M), function(i1) sum(mixing_weights[,i1] > red_criteria[1]) < red_criteria[2]*n_obs, logical(1)))) {
@@ -289,17 +391,18 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
 
 
   ### Wrap up ###
-  cat("Calculating approximate standard errors...\n")
+  if(use_parallel && calc_std_errors) cat("Calculating approximate standard errors...\n")
   ret <- GSMVAR(data=data, p=p, M=M, d=d, params=params, model=model,
                 conditional=conditional, parametrization=parametrization,
                 constraints=constraints, same_means=same_means,
-                structural_pars=structural_pars, calc_std_errors=TRUE)
+                weight_constraints=weight_constraints,
+                structural_pars=structural_pars, calc_std_errors=calc_std_errors)
   ret$all_estimates <- all_estimates
   ret$all_logliks <- loks
   ret$which_converged <- converged
   ret$which_round <- which_best_fit # Which estimation round induced the largest log-likelihood?
   warn_eigens(ret)
-  cat("Finished!\n")
+  if(use_parallel) cat("Finished!\n")
   ret
 }
 
@@ -355,9 +458,9 @@ iterate_more <- function(gsmvar, maxit=100, calc_std_errors=TRUE, custom_h=NULL,
     tryCatch(loglikelihood_int(data=gsmvar$data, p=gsmvar$model$p, M=gsmvar$model$M, params=params, model=gsmvar$model$model,
                                conditional=gsmvar$model$conditional, parametrization=gsmvar$model$parametrization,
                                constraints=gsmvar$model$constraints, same_means=gsmvar$model$same_means,
+                               weight_constraints=gsmvar$model$weight_constraints,
                                structural_pars=gsmvar$model$structural_pars, check_params=TRUE,
-                               to_return="loglik", minval=minval,
-                               stat_tol=stat_tol, posdef_tol=posdef_tol, df_tol=df_tol),
+                               to_return="loglik", minval=minval, stat_tol=stat_tol, posdef_tol=posdef_tol, df_tol=df_tol),
              error=function(e) minval)
   }
   gr <- function(params) {
@@ -370,6 +473,7 @@ iterate_more <- function(gsmvar, maxit=100, calc_std_errors=TRUE, custom_h=NULL,
   ret <- GSMVAR(data=gsmvar$data, p=gsmvar$model$p, M=gsmvar$model$M, params=res$par, model=gsmvar$model$model,
                 conditional=gsmvar$model$conditional, parametrization=gsmvar$model$parametrization,
                 constraints=gsmvar$model$constraints, same_means=gsmvar$model$same_means,
+                weight_constraints=gsmvar$model$weight_constraints,
                 structural_pars=gsmvar$model$structural_pars, calc_std_errors=calc_std_errors,
                 stat_tol=stat_tol, posdef_tol=posdef_tol, df_tol=df_tol)
 
@@ -408,6 +512,8 @@ iterate_more <- function(gsmvar, maxit=100, calc_std_errors=TRUE, custom_h=NULL,
 #'   obtain the corresponding, statistically identified structural model. After obtaining the statistically identified
 #'   structural model, overidentifying constraints may be placed the W-matrix (or equally B-matrix). This function makes
 #'   imposing the overidentifying constraints and estimating the overidentified structural model convenient.
+#'   \strong{Reduced form models can be directly used as lower-triangular Cholesky identified SVARs without having
+#'   to estimate a structural model separately.}
 #'
 #'   \strong{Note that the surface of the log-likelihood function is extremely multimodal, and this function is designed
 #'   to only explore the neighbourhood of the preliminary estimates, so it finds its way reliably to the correct MLE
@@ -463,11 +569,14 @@ estimate_sgsmvar <- function(gsmvar, new_W, ncalls=16, ncores=2, maxit=1000, see
   gsmvar <- gsmvar_to_sgsmvar(gsmvar, calc_std_errors=FALSE, cholesky=FALSE) # Turn it to a structural model
   }
   pars <- gsmvar$params
-  n_alphas <- sum(M) - 1
-  if(is.null(gsmvar$model$structural_pars$C_lambda)) { # Structural model without lambda constraints
+  n_alphas <- ifelse(is.null(gsmvar$model$weight_constraints), sum(M) - 1, 0)
+  if(is.null(gsmvar$model$structural_pars$C_lambda) && is.null(gsmvar$model$structural_pars$fixed_lambdas)) {
+    # Structural model without lambda constraints
     n_lambdas <- (sum(M) - 1)*d
-  } else { # Structural model with lambda constraints
+  } else if(!is.null(gsmvar$model$structural_pars$C_lambda)) { # Structural model with C_lambda constraints
     n_lambdas <- ncol(gsmvar$model$structural_pars$C_lambda) # The number of constraint params
+  } else { # Structural model with fixed_lambdas
+    n_lambdas <- 0
   }
   model <- gsmvar$model$model
   if(model == "GMVAR") {
@@ -527,21 +636,42 @@ estimate_sgsmvar <- function(gsmvar, new_W, ncalls=16, ncores=2, maxit=1000, see
                 then applying this function.\n"))
   }
 
-
   new_loglik <- loglikelihood_int(data=gsmvar$data, p=p, M=M, params=new_pars, model=model,
                                   conditional=gsmvar$model$conditional,
-                                  structural_pars=list(W=new_W, C_lambda=gsmvar$model$structural_pars$C_lambda),
-                                  constraints=gsmvar$model$constraints, parametrization=gsmvar$model$parametrization,
-                                  same_means=gsmvar$model$same_means)
+                                  parametrization=gsmvar$model$parametrization,
+                                  constraints=gsmvar$model$constraints,
+                                  same_means=gsmvar$model$same_means,
+                                  weight_constraints=gsmvar$model$weight_constraints,
+                                  structural_pars=list(W=new_W,
+                                                       C_lambda=gsmvar$model$structural_pars$C_lambda,
+                                                       fixed_lambdas=gsmvar$model$structural_pars$fixed_lambdas))
+
+  if(is.null(new_loglik)) {
+    cat("Problem with the new parameter vector - try a different new_W?\n See:\n")
+    check_parameters(p=p, M=M, d=2, params=new_pars, model=model,
+                     parametrization=gsmvar$model$parametrization,
+                     constraints=gsmvar$model$constraints,
+                     same_means=gsmvar$model$same_means,
+                     weight_constraints=gsmvar$model$weight_constraints,
+                     structural_pars=list(W=new_W,
+                                          C_lambda=gsmvar$model$structural_pars$C_lambda,
+                                          fixed_lambdas=gsmvar$model$structural_pars$fixed_lambdas))
+  }
 
   cat("The log-likelihood of the supplied model:   ", round(c(gsmvar$loglik), 3),
       "\nConstrained log-likelihood prior estimation:", round(new_loglik, 3), "\n\n")
 
-  fitGSMVAR(data=gsmvar$data, p=p, M=M, model=model, conditional=gsmvar$model$conditional,
+  fitGSMVAR(data=gsmvar$data, p=p, M=M, model=model,
+            conditional=gsmvar$model$conditional,
             parametrization=gsmvar$model$parametrization,
-            structural_pars=list(W=new_W, C_lambda=gsmvar$model$structural_pars$C_lambda),
-            constraints=gsmvar$model$constraints, same_means=gsmvar$model$same_means,
-            ncalls=ncalls, ncores=ncores, seeds=seeds, maxit=maxit, smart_mu=1, initpop=list(new_pars))
+            structural_pars=list(W=new_W,
+                                 C_lambda=gsmvar$model$structural_pars$C_lambda,
+                                 fixed_lambdas=gsmvar$model$structural_pars$fixed_lambdas),
+            constraints=gsmvar$model$constraints,
+            same_means=gsmvar$model$same_means,
+            weight_constraints=gsmvar$model$weight_constraints,
+            ncalls=ncalls, ncores=ncores, seeds=seeds, maxit=maxit,
+            smart_mu=1, initpop=list(new_pars))
 }
 
 

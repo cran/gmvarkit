@@ -11,8 +11,9 @@ random_covmat(d, M, omega_scale, W_scale, lambda_scale, structural_pars = NULL)
 
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
-   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+   in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
+   is \code{M=M1+M2}.}
 }}
 
 \item{omega_scale}{a size \eqn{(dx1)} strictly positive vector specifying the scale and variability of the
@@ -56,8 +57,9 @@ is considered.}
   that if lambdas are constrained in some other way than restricting some of them to be identical, this parameter
   should be adjusted accordingly in order to the estimation succeed!}
 
-\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
-the following elements:
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. Reduced models can be used directly as recursively
+identified structural models. For a structural model identified by conditional heteroskedasticity, should be a list containing
+at least the first one of the following elements:
 \itemize{
   \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
     unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
@@ -67,6 +69,10 @@ the following elements:
     parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
     must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
     should not be constrained.
+  \item \code{fixed_lambdas} - a length \eqn{d(M-1)} numeric vector (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M})} with elements strictly larger than zero specifying the fixed parameter values for the
+    parameters \eqn{\lambda_{mi}} should be constrained to. This constraint is alternative \code{C_lambda}.
+    Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}} should not be constrained.
 }
 See Virolainen (2022) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
 a time-varying diagonal matrix with positive diagonal entries).}
@@ -78,8 +84,9 @@ a time-varying diagonal matrix with positive diagonal entries).}
     \item{For \strong{structural models}:}{Returns a length \eqn{d^2 - n_zeros - d*(M - 1)} vector of the form
       \eqn{(Wvec(W),\lambda_2,...,\lambda_M)} where \eqn{\lambda_m=(\lambda_{m1},...,\lambda_{md})}
       contains the eigenvalue parameters of the \eqn{m}th regime \eqn{(m>1)} and \eqn{n_zeros} is the number of zero constraints
-      in \eqn{W}. If lambdas are constrained, replacce \eqn{d*(M - 1)} in the length with \eqn{r} and
-      \eqn{\lambda_2,...,\lambda_M)} with \strong{\eqn{\gamma}}. The operator \eqn{Wvec()} vectorizes a matrix and removes zeros.}
+      in \eqn{W}. If lambdas are \code{C_lambda} constrained, replace \eqn{d*(M - 1)} in the length with \eqn{r} and
+      \eqn{\lambda_2,...,\lambda_M)} with \strong{\eqn{\gamma}}. If \code{fixed_lambdas} are used, the \eqn{\lambda_{mi}} parameters
+       are not included. The operator \eqn{Wvec()} vectorizes a matrix and removes zeros.}
   }
 }
 \description{

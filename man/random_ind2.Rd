@@ -10,6 +10,7 @@ random_ind2(
   d,
   model = c("GMVAR", "StMVAR", "G-StMVAR"),
   same_means = NULL,
+  weight_constraints = NULL,
   structural_pars = NULL,
   mu_scale,
   mu_scale2,
@@ -24,8 +25,9 @@ random_ind2(
 
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
-   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+   in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
+   is \code{M=M1+M2}.}
 }}
 
 \item{d}{the number of time series in the system.}
@@ -40,8 +42,13 @@ the same but the first regime has freely estimated (unconditional) mean. Ignore 
 should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
 that is, when \code{parametrization="mean"}.}}
 
-\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
-the following elements:
+\item{weight_constraints}{a numeric vector of length \eqn{M-1} specifying fixed parameter values for the mixing weight parameters
+\eqn{\alpha_m, \ m=1,...,M-1}. Each element should be strictly between zero and one, and the sum of all the elements should
+be strictly less than one.}
+
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. Reduced models can be used directly as recursively
+identified structural models. For a structural model identified by conditional heteroskedasticity, should be a list containing
+at least the first one of the following elements:
 \itemize{
   \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
     unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
@@ -51,6 +58,10 @@ the following elements:
     parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
     must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
     should not be constrained.
+  \item \code{fixed_lambdas} - a length \eqn{d(M-1)} numeric vector (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M})} with elements strictly larger than zero specifying the fixed parameter values for the
+    parameters \eqn{\lambda_{mi}} should be constrained to. This constraint is alternative \code{C_lambda}.
+    Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}} should not be constrained.
 }
 See Virolainen (2022) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
 a time-varying diagonal matrix with positive diagonal entries).}

@@ -204,4 +204,22 @@
 
 # gmvarkit 2.0.10
 
-* Fixed the package overview help file and removed reduntant argument from the documentation of warn_eigens. 
+* Fixed the package overview help file and removed redundant argument from the documentation of warn_eigens. 
+
+# gmvarkit 2.1.0
+
+* Added support for recursively identified structural GSMVAR models.
+* Added the function linear_IRF to calculate linear impulse response functions based on a single regime. Bootstrapped confidence bounds are also available for models that impose linear autoregressive dynamics. 
+* Added a possibility to constrain the mixing weight parameters alphas to fixed constants.
+* Added a possibility to constrain the lambda parameters of structural models to fixed constant.
+* Added the function Pearson_residuals to calculate the standardized Pearson residuals or the raw residuals. 
+* Added the dataset 'usamon'.
+* fitGSMVAR can now filter out (many of the) inappropriate estimates by setting filter_estimates=TRUE. 
+* fitGSMVAR can now estimate without parallel computing and printout by specifying use_parallel=FALSE.
+* Updated the vignette (e.g., added a description of the Monte Carlo algorithm implemented to estimate GIRFs). 
+* Fixed the .Rd files for random_df and smart_df.
+* Fixed a bug in the estimation of GIRF and GFEVD for StMVAR and G-StMVAR models 
+* Fixed a bug that occurred using stmvar_to_gstmvar for structural models.
+* Fixed a bug that occurred when using swap_W_signs with C_lambda constraints.
+* Fixed a bug in Rao test when using G-StMVAR model
+* Fixed a bug in get_foc, get_gradient, get_soc, and get_hessian that returned only NAs for models with same_means.

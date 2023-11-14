@@ -24,21 +24,21 @@
 #' @param ntimes how many sets of simulations should be performed?
 #' @param drop if \code{TRUE} (default) then the components of the returned list are coerced to lower dimension if \code{ntimes==1}, i.e.,
 #'   \code{$sample} and \code{$mixing_weights} will be matrices, and \code{$component} will be vector.
-#' @param girf_pars This argument is used internally in the estimation of generalized impulse response functions (see \code{?GIRF}). You
-#'   should ignore it.
-#' @details The argument \code{ntimes} is intended for forecasting: a GMVAR, StMVAR, or G-StMVAR process can be forecasted by simulating its possible future values.
-#'  One can easily perform a large number simulations and calculate the sample quantiles from the simulated values to obtain prediction
-#'  intervals (see the forecasting example).
+#' @param girf_pars This argument is used internally in the estimation of generalized impulse response functions (see \code{?GIRF}).
+#'   You should ignore it (specifying something else than null to it will change how the function behaves).
+#' @details The argument \code{ntimes} is intended for forecasting: a GMVAR, StMVAR, or G-StMVAR process can be forecasted by simulating
+#'  its possible future values. One can easily perform a large number simulations and calculate the sample quantiles from the simulated
+#'  values to obtain prediction intervals (see the forecasting example).
 #' @return If \code{drop==TRUE} and \code{ntimes==1} (default): \code{$sample}, \code{$component}, and \code{$mixing_weights} are matrices.
 #'   Otherwise, returns a list with...
 #'   \describe{
 #'     \item{\code{$sample}}{a size (\code{nsim}\eqn{ x d x }\code{ntimes}) array containing the samples: the dimension \code{[t, , ]} is
 #'      the time index, the dimension \code{[, d, ]} indicates the marginal time series, and the dimension \code{[, , i]} indicates
 #'      the i:th set of simulations.}
-#'     \item{\code{$component}}{a size (\code{nsim}\eqn{ x }\code{ntimes}) matrix containing the information from which mixture component each
-#'      value was generated from.}
-#'     \item{\code{$mixing_weights}}{a size (\code{nsim}\eqn{ x M x }\code{ntimes}) array containing the mixing weights corresponding to the
-#'      sample: the dimension \code{[t, , ]} is the time index, the dimension \code{[, m, ]} indicates the regime, and the dimension
+#'     \item{\code{$component}}{a size (\code{nsim}\eqn{ x }\code{ntimes}) matrix containing the information from which mixture component
+#'      each value was generated from.}
+#'     \item{\code{$mixing_weights}}{a size (\code{nsim}\eqn{ x M x }\code{ntimes}) array containing the mixing weights corresponding to
+#'      the sample: the dimension \code{[t, , ]} is the time index, the dimension \code{[, m, ]} indicates the regime, and the dimension
 #'      \code{[, , i]} indicates the i:th set of simulations.}
 #'   }
 #' @seealso \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link{diagnostic_plot}}, \code{\link{predict.gsmvar}},
@@ -126,11 +126,13 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
   params <- reform_constrained_pars(p=p, M=M_orig, d=d, params=params, model=model,
                                     constraints=gsmvar$model$constraints,
                                     same_means=gsmvar$model$same_means,
+                                    weight_constraints=gsmvar$model$weight_constraints,
                                     structural_pars=structural_pars)
   structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   if(gsmvar$model$parametrization == "mean") {
     params <- change_parametrization(p=p, M=M, d=d, params=params, constraints=NULL,
-                                     structural_pars=structural_pars, change_to="intercept")
+                                     weight_constraints=NULL, structural_pars=structural_pars,
+                                     change_to="intercept")
   }
 
   all_mu <- get_regime_means(gsmvar)
@@ -155,7 +157,7 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
   } else { # Reduced form model
     for(m in 1:M) { # t(chol(all_Omega[, , m]))
       eig <- eigen(all_Omega[, , m], symmetric=TRUE) # Orthogonal eigenvalue decomposition of the error term covariance matrix
-      all_Bm[, , m] <- eig$vectors%*%tcrossprod(diag(sqrt(eig$values)), eig$vectors) # Symmetric square root matrix of the error term covariance matrix
+      all_Bm[, , m] <- eig$vectors%*%tcrossprod(diag(sqrt(eig$values)), eig$vectors) # Symmetric sqr root matx of the error cov matrix
     }
   }
 
@@ -174,9 +176,13 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
     all_logC <- lgamma(0.5*(d*p + all_df)) - 0.5*d*p*log(base::pi) - 0.5*d*p*log(all_df - 2) - lgamma(0.5*all_df)
   }
 
-
+  # GIRF stuff, particularly for reduced form models, which assume Cholesky identification
   if(!is.null(girf_pars)) {
     R1 <- girf_pars$R1
+    reduced_form_girf <- is.null(gsmvar$model$structural_pars) # reduced form model GIRF -> Cholesky identification
+    all_Omegas_as_matrix <- t(matrix(all_Omega, nrow=d^2, ncol=M)) # Used for reduced form model GIRF
+  } else {
+    reduced_form_girf <- FALSE # No GIRF to be estimated
   }
 
   # Relative mixing probabilities of the initial regimes
@@ -219,7 +225,8 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
   }
 
   # Some functions to be used
-  get_matprods <- function(Y) vapply(1:M, function(m) crossprod(Y[i1,] - rep(all_mu[, m], p), inv_Sigmas[, , m])%*%(Y[i1,] - rep(all_mu[, m], p)), numeric(1))
+  get_matprods <- function(Y) vapply(1:M, function(m) crossprod(Y[i1,] - rep(all_mu[, m], p),
+                                                                inv_Sigmas[, , m])%*%(Y[i1,] - rep(all_mu[, m], p)), numeric(1))
   get_logmvdvalues <- function(matprods, arch_scalars) vapply(1:M, function(m) {
     if(m <= M1) { # GMVAR type regime
       return(-0.5*d*p*log(2*pi) - 0.5*log(det_Sigmas[m]) - 0.5*matprods[m]) # Log multivariate normal density
@@ -252,9 +259,11 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
       mu_mt <- all_phi0[, m] + A2%*%Y[i1,]
 
       # Draw the sample and store it
-      eps_t <- rnorm(d) # We use the same std normal shocks to create the Student't variables as well to control random variation across the sample paths
+      # We use the same std normal shocks to create the Student't variables as well to control random variation across the sample paths
+      eps_t <- rnorm(d)
       if(M1 < M) { # StMVAR and G-StMVAR models
-        # We generate a chi^2 variable with df nu + dp for all StMVAR type regimes and when computing GIRF use the same ones in both sample paths
+        # We generate a chi^2 variable with df nu + dp for all StMVAR type regimes and when computing GIRF use the same ones in
+        # both sample paths
         all_chisq_rv <- vapply(all_df + d*p, function(i1) rchisq(n=1, df=i1), numeric(1)) # [m - M1] indexed
       }
 
@@ -303,34 +312,52 @@ simulate.gsmvar <- function(object, nsim=1, seed=NULL, ..., init_values=NULL, in
           u_t <- all_Bm[, , m2]%*%eps_t
         } else {# StMVAR type regime
           df_to_use <- all_df[m2 - M1] + d*p
-          Z <- sqrt(arch_scalars[m2 - M1]*(df_to_use - 2)/df_to_use)*all_Bm[, , m2]%*%eps_t # Sample from N(0, arch_scalar*(v - 2)/v*Omega_m))
+          Z <- sqrt(arch_scalars2[m2 - M1]*(df_to_use - 2)/df_to_use)*all_Bm[, , m2]%*%eps_t # Sample from N(0, arch_scalar*(v - 2)/v*Omega_m))
           u_t <- Z*sqrt(df_to_use/all_chisq_rv[m2 - M1]) # Sample from t_d(0, arch_scalar*Omega_m, all_df[m - M1] + d*p)
         }
 
         if(i1 == 1) { # At impact, obtain reduced form shock from the specific structural shock
 
-          # Calculate the time-varying B-matrix
-          if(M == 1) {
-            B_t <- W
-          } else {
-            tmp <- array(dim=c(d, d, M))
-            if(model == "StMVAR") { # The first regime is StMVAR type
-              multiplier <- arch_scalars[1]*alpha_mt2[1]
+          # Calculate the time-varying B-matrix B_t
+          if(reduced_form_girf) {
+            # Reduced form model: identification by lower triangular Cholesky decomposition
+            if(M == 1) {
+              B_t <- t(chol(all_Omega[, , 1]))
             } else {
-              multiplier <-  alpha_mt2[1]
-            }
-            tmp[, , 1] <- multiplier*diag(d)
-
-            for(m in 2:M) {
-              if(m <= M1) { # GMVAR type regime
-                multiplier <- alpha_mt2[m]
-              } else { # StMVAR type regime
-                multiplier <- arch_scalars[m - M1]*alpha_mt2[m]
+              if(M1 < M) { # Contains t-regimes
+                tmp_ascalars <- c(rep(0, times=M1), arch_scalars2)
+                multipliers <- alpha_mt2*tmp_ascalars
+              } else { # Only Gaussian regimes
+                multipliers <- alpha_mt2
               }
-              tmp[, , m] <- multiplier*diag(lambdas[, m - 1])
+              # Lower triangular Cholesky decomposition of the reduced form error conditional cov mat
+              B_t <- t(chol(matrix(colSums(as.vector(multipliers)*all_Omegas_as_matrix), ncol=d, nrow=d)))
             }
-            B_t <- W%*%sqrt(apply(tmp, MARGIN=1:2, FUN=sum))
+          } else {
+            # Structural model: identification by heteroskedasticity
+            if(M == 1) {
+              B_t <- W
+            } else {
+              tmp <- array(dim=c(d, d, M))
+              if(model == "StMVAR") { # The first regime is StMVAR type
+                multiplier <- arch_scalars2[1]*alpha_mt2[1]
+              } else {
+                multiplier <-  alpha_mt2[1]
+              }
+              tmp[, , 1] <- multiplier*diag(d)
+              for(m in 2:M) {
+                if(m <= M1) { # GMVAR type regime
+                  multiplier <- alpha_mt2[m]
+                } else { # StMVAR type regime
+                  multiplier <- arch_scalars2[m - M1]*alpha_mt2[m]
+                }
+                tmp[, , m] <- multiplier*diag(lambdas[, m - 1])
+              }
+              B_t <- W%*%sqrt(apply(tmp, MARGIN=1:2, FUN=sum))
+            }
           }
+
+          # Calculate the structural shock e_t and impose the specific structural shock
           e_t <- solve(B_t, u_t) # Structural shock
           e_t[girf_pars$shock_numb] <- girf_pars$shock_size # Impose the size of a shock
           u_t <- B_t%*%e_t # The reduced form shock corresponding to the specific sized structural shock in the j:th element

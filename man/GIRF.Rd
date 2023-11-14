@@ -5,8 +5,8 @@
 \alias{GIRF}
 \alias{plot.girf}
 \alias{print.girf}
-\title{Estimate generalized impulse response function for a structural GMVAR,
-  StMVAR, or G-StMVAR model.}
+\title{Estimate generalized impulse response function for
+ structural (and reduced form) GMVAR, StMVAR, and G-StMVAR models.}
 \usage{
 GIRF(
   gsmvar,
@@ -144,12 +144,14 @@ Returns a class \code{'girf'} list with the GIRFs in the first
 }
 \description{
 \code{GIRF} estimates generalized impulse response function for
-  a structural GMVAR, StMVAR, or G-StMVAR model.
+ structural (and reduced form) GMVAR, StMVAR, and G-StMVAR models.
 }
 \details{
-The model needs to be structural in order for this function to be
-  applicable. A structural GMVAR, StMVAR, or G-StMVAR model can be estimated
-  by specifying the argument \code{structural_pars} in the function \code{fitGSMVAR}.
+The model DOES NOT need to be structural in order for this function to be
+  applicable. When an identified structural GMVAR, StMVAR, or G-StMVAR model is
+  provided in the argument \code{gsmvar}, the identification imposed by the model
+  is used. When a reduced form model is provided in the argument \code{gsmvar},
+  lower triangular Cholesky identification is used to identify the shocks.
 
   The confidence bounds reflect uncertainty about the initial state (but
   currently not about the parameter estimates) if initial values are not
@@ -172,7 +174,22 @@ The model needs to be structural in order for this function to be
  # These are long-running examples that use parallel computing.
  # It takes approximately 30 seconds to run all the below examples.
 
- # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+ ## StMVAR(1, 2), d=2 model identified recursively by lower-triangular
+ ## Cholesky decomposition (i.e., reduced form model is specified):
+ params12t <- c(0.55, 0.11, 0.34, 0.05, -0.01, 0.72, 0.58, 0.01, 0.06, 0.17,
+   0.25, 0.34, 0.05, -0.01, 0.72, 0.50, -0.01, 0.20, 0.60, 3.00, 12.00)
+ mod12t <- GSMVAR(gdpdef, p=1, M=2, params=params12t, model="StMVAR")
+
+ # Estimating the GIRFs of both structural shocks with initial values
+ # drawn from the stationary distribution of the process,
+ # 12 periods ahead, confidence levels 0.95 and 0.8:
+ girf0 <- GIRF(mod12t, N=12, R1=100, R2=100)
+ girf0
+ plot(girf0)
+ ## NOTE: Small R1 and R2 is used here to shorten the estimation time.
+ ## Larger R1 and R2 should be considered in empirical applications!
+
+ ## Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
  params22s <- c(0.36, 0.121, 0.484, 0.072, 0.223, 0.059, -0.151, 0.395,
   0.406, -0.005, 0.083, 0.299, 0.218, 0.02, -0.119, 0.722, 0.093, 0.032,
    0.044, 0.191, 0.057, 0.172, -0.46, 0.016, 3.518, 5.154, 0.58)
@@ -219,7 +236,7 @@ The model needs to be structural in order for this function to be
  @keywords internal
 }
 \seealso{
-\code{\link{GFEVD}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
+\code{\link{GFEVD}}, \code{\link{linear_IRF}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
   \code{\link{gsmvar_to_sgsmvar}}, \code{\link{reorder_W_columns}},
   \code{\link{swap_W_signs}}, \code{\link{simulate.gsmvar}},
   \code{\link{predict.gsmvar}}, \code{\link{profile_logliks}},

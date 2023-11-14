@@ -1,8 +1,8 @@
-#' @title Estimate generalized impulse response function for a structural GMVAR,
-#'   StMVAR, or G-StMVAR model.
+#' @title Estimate generalized impulse response function for
+#'  structural (and reduced form) GMVAR, StMVAR, and G-StMVAR models.
 #'
 #' @description \code{GIRF} estimates generalized impulse response function for
-#'   a structural GMVAR, StMVAR, or G-StMVAR model.
+#'  structural (and reduced form) GMVAR, StMVAR, and G-StMVAR models.
 #'
 #' @inheritParams quantile_residual_tests
 #' @inheritParams simulate.gsmvar
@@ -57,9 +57,11 @@
 #'   creating reproducible results.
 #' @param ... parameters passed to the plot method \code{plot.girf} that plots
 #'   the results.
-#' @details The model needs to be structural in order for this function to be
-#'   applicable. A structural GMVAR, StMVAR, or G-StMVAR model can be estimated
-#'   by specifying the argument \code{structural_pars} in the function \code{fitGSMVAR}.
+#' @details The model DOES NOT need to be structural in order for this function to be
+#'   applicable. When an identified structural GMVAR, StMVAR, or G-StMVAR model is
+#'   provided in the argument \code{gsmvar}, the identification imposed by the model
+#'   is used. When a reduced form model is provided in the argument \code{gsmvar},
+#'   lower triangular Cholesky identification is used to identify the shocks.
 #'
 #'   The confidence bounds reflect uncertainty about the initial state (but
 #'   currently not about the parameter estimates) if initial values are not
@@ -80,7 +82,7 @@
 #'   The element \code{$all_girfs} is a list containing results from all the individual GIRFs
 #'   obtained from the MC repetitions. Each element is for one shock and results are in
 #'   array of the form \code{[horizon, variables, MC-repetitions]}.
-#' @seealso \code{\link{GFEVD}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
+#' @seealso \code{\link{GFEVD}}, \code{\link{linear_IRF}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
 #'   \code{\link{gsmvar_to_sgsmvar}}, \code{\link{reorder_W_columns}},
 #'   \code{\link{swap_W_signs}}, \code{\link{simulate.gsmvar}},
 #'   \code{\link{predict.gsmvar}}, \code{\link{profile_logliks}},
@@ -92,7 +94,22 @@
 #'  # These are long-running examples that use parallel computing.
 #'  # It takes approximately 30 seconds to run all the below examples.
 #'
-#'  # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+#'  ## StMVAR(1, 2), d=2 model identified recursively by lower-triangular
+#'  ## Cholesky decomposition (i.e., reduced form model is specified):
+#'  params12t <- c(0.55, 0.11, 0.34, 0.05, -0.01, 0.72, 0.58, 0.01, 0.06, 0.17,
+#'    0.25, 0.34, 0.05, -0.01, 0.72, 0.50, -0.01, 0.20, 0.60, 3.00, 12.00)
+#'  mod12t <- GSMVAR(gdpdef, p=1, M=2, params=params12t, model="StMVAR")
+#'
+#'  # Estimating the GIRFs of both structural shocks with initial values
+#'  # drawn from the stationary distribution of the process,
+#'  # 12 periods ahead, confidence levels 0.95 and 0.8:
+#'  girf0 <- GIRF(mod12t, N=12, R1=100, R2=100)
+#'  girf0
+#'  plot(girf0)
+#'  ## NOTE: Small R1 and R2 is used here to shorten the estimation time.
+#'  ## Larger R1 and R2 should be considered in empirical applications!
+#'
+#'  ## Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
 #'  params22s <- c(0.36, 0.121, 0.484, 0.072, 0.223, 0.059, -0.151, 0.395,
 #'   0.406, -0.005, 0.083, 0.299, 0.218, 0.02, -0.119, 0.722, 0.093, 0.032,
 #'    0.044, 0.191, 0.057, 0.172, -0.46, 0.016, 3.518, 5.154, 0.58)
@@ -138,7 +155,13 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 
   stopifnot(N %% 1 == 0 && N > 0)
   stopifnot(scale_horizon %in% 0:N)
-  if(is.null(gsmvar$model$structural_pars)) stop("Only structural models are supported")
+  if(is.null(gsmvar$model$structural_pars)) { # Reduced form model
+    B_constrs <- matrix(NA, nrow=d, ncol=d)
+    B_constrs[upper.tri(B_constrs)] <- 0
+    diag(B_constrs) <- 1 # Lower triangular Cholesky constraints
+  } else {
+    B_constrs <- gsmvar$model$structural_pars$W
+  }
   if(M == 1) include_mixweights <- FALSE
   if(missing(which_shocks)) {
     which_shocks <- 1:d
@@ -164,8 +187,13 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 
     # For the considered shocks, check that there are not zero-constraints for the variable whose initial response is scaled.
     for(i1 in 1:ncol(scale)) {
-      if(!is.na(gsmvar$model$structural_pars$W[scale[2, i1], scale[1, i1]]) && gsmvar$model$structural_pars$W[scale[2, i1], scale[1, i1]] == 0) {
-        stop(paste("Instantaneous response of the variable that has a zero constraint for the considered shock cannot be scaled"))
+      if(!is.na(B_constrs[scale[2, i1], scale[1, i1]]) && B_constrs[scale[2, i1], scale[1, i1]] == 0) {
+        if(is.null(is.null(gsmvar$model$structural_pars))) {
+          stop(paste("Instantaneous response of the variable that has a zero constraint for the considered shock cannot be scaled"))
+        } else { # Reduced form
+          stop(paste("Instantaneous response of the variable that has a zero constraint for the considered shock cannot be scaled",
+                      "(lower triangular recursive identification is assumed for reduced form models)"))
+        }
       }
     }
   }
@@ -188,9 +216,11 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
     message("ncores was set to be larger than the number of cores detected")
   }
   if(is.null(init_values)) {
-    cat(paste("Using", ncores, "cores to estimate", R2,"GIRFs for", length(which_shocks), "structural shocks,", "each based on", R1, "Monte Carlo repetitions."), "\n")
+    cat(paste("Using", ncores, "cores to estimate", R2,"GIRFs for", length(which_shocks), "structural shocks,",
+              "each based on", R1, "Monte Carlo repetitions."), "\n")
   } else {
-    cat(paste("Using", ncores, "cores to estimate one GIRF for", length(which_shocks), "structural shocks, each based on", R1, "Monte Carlo repetitions."), "\n")
+    cat(paste("Using", ncores, "cores to estimate one GIRF for", length(which_shocks), "structural shocks, each based on",
+              R1, "Monte Carlo repetitions."), "\n")
   }
 
   ### Calculate the GIRFs ###
@@ -203,7 +233,8 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 
   for(i1 in 1:length(which_shocks)) {
     cat(paste0("Estimating GIRFs for structural shock ", which_shocks[i1], "..."), "\n")
-    GIRF_shocks[[i1]] <- pbapply::pblapply(1:R2, function(i2) get_one_girf(shock_numb=which_shocks[i1], shock_size=shock_size, seed=seeds[i2]), cl=cl)
+    GIRF_shocks[[i1]] <- pbapply::pblapply(1:R2, function(i2) get_one_girf(shock_numb=which_shocks[i1],
+                                                                           shock_size=shock_size, seed=seeds[i2]), cl=cl)
   }
 
   parallel::stopCluster(cl=cl)
@@ -214,7 +245,7 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
   names(GIRF_results) <- paste0("shock", which_shocks)
 
   for(i1 in 1:length(which_shocks)) { # Go through shocks
-    res_in_array <- array(unlist(GIRF_shocks[[i1]]), dim=c(N + 1, d + ifelse(include_mixweights, M, 0), R2)) # [horizon, variables, MC-repetitions]
+    res_in_array <- array(unlist(GIRF_shocks[[i1]]), dim=c(N + 1, d + ifelse(include_mixweights, M, 0), R2)) # [horz, vars, MCreps]
     if(length(which_cumulative) > 0) {
       for(i2 in which_cumulative) {
         res_in_array[, i2, ] <- apply(res_in_array[, i2, , drop=FALSE], MARGIN=3, FUN=cumsum) # Replace GIRF with cumulative GIRF
@@ -227,7 +258,8 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
       which_var <- scale[2, which_col] # According to initial/peak response of which variable the GIRFs should be scaled
       magnitude <- scale[3, which_col] # What should be the magnitude of the initial/peak response of this variable
 
-      my_comparison_fun <- function(vec1, scalar1) which(abs(vec1 - scalar1) < .Machine$double.eps)[1] # To avoid potential problems with using == to compare numerical values
+      # To avoid potential problems with using == to compare numerical values
+      my_comparison_fun <- function(vec1, scalar1) which(abs(vec1 - scalar1) < .Machine$double.eps)[1]
       for(i2 in 1:R2) { # Go through the MC repetitions
         # The scaling scalar is different for each MC repetition, because the instantaneous/peak movement is generally
         # different with different starting values.
@@ -237,7 +269,8 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
           inds <- 1:(scale_horizon + 1) # +1 for period 0
           one_scale <- magnitude/res_in_array[my_comparison_fun(vec1=abs(res_in_array[inds, which_var, i2]),
                                                                 scalar1=max(abs(res_in_array[inds, which_var, i2]))), which_var, i2]
-          #one_scale <- magnitude/res_in_array[which(abs(res_in_array[, which_var, i2]) == max(abs(res_in_array[, which_var, i2]))), which_var, i2]
+          #one_scale <- magnitude/res_in_array[which(abs(res_in_array[, which_var, i2]) ==
+          #             max(abs(res_in_array[, which_var, i2]))), which_var, i2]
         }
         res_in_array[, , i2] <- one_scale*res_in_array[, , i2]
       }
@@ -280,11 +313,11 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 
 
 
-#' @title Estimate generalized forecast error variance decomposition for a structural
-#'   GMVAR, StMVAR, or G-StMVAR model.
+#' @title Estimate generalized forecast error variance decomposition for structural
+#'  (and reduced form) GMVAR, StMVAR, and G-StMVAR models.
 #'
-#' @description \code{GFEVD} estimates generalized generalized forecast error variance decomposition for
-#'  a structural GMVAR, StMVAR, or G-StMVAR model.
+#' @description \code{GFEVD} estimates generalized forecast error variance decomposition for structural
+#'  (and reduced form) GMVAR, StMVAR, and G-StMVAR models.
 #'
 #' @inheritParams GIRF
 #' @param shock_size What shocks size should be used for all shocks? By the definition of the SGMVAR,
@@ -310,8 +343,11 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #'     \item ...\code{1} if \code{initval_type="fixed."}.
 #'   }
 #'   Set to \code{NULL} for not initializing the seed. Exists for creating reproducible results.
-#' @details The model needs to be structural in order for this function to be applicable. A structural
-#'   GMVAR, StMVAR, or G-StMVAR model can be estimated by specifying the argument \code{structural_pars} in the function \code{fitGSMVAR}.
+#' @details The model DOES NOT need to be structural in order for this function to be
+#'   applicable. When an identified structural GMVAR, StMVAR, or G-StMVAR model is
+#'   provided in the argument \code{gsmvar}, the identification imposed by the model
+#'   is used. When a reduced form model is provided in the argument \code{gsmvar},
+#'   lower triangular Cholesky identification is used to identify the shocks.
 #'
 #'   The GFEVD is a forecast error variance decomposition calculated with the generalized impulse response function (GIRF).
 #'   Lanne and Nyberg (2016) for details. Note, however, that the related GIRFs are calculated using the algorithm given in
@@ -319,8 +355,8 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #' @return Returns and object of class 'gfevd' containing the GFEVD for all the variables and if
 #'   \code{include_mixweights=TRUE} also to the mixing weights. Note that the decomposition does not
 #'   exist at horizon zero for mixing weights because the related GIRFs are always zero at impact.
-#' @seealso \code{\link{GIRF}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}}, \code{\link{gsmvar_to_sgsmvar}},
-#'  \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}, \code{\link{simulate.gsmvar}}
+#' @seealso \code{\link{GIRF}}, \code{\link{linear_IRF}}, \code{\link{fitGSMVAR}}, \code{\link{GSMVAR}},
+#'  \code{\link{gsmvar_to_sgsmvar}}, \code{\link{reorder_W_columns}}, \code{\link{swap_W_signs}}, \code{\link{simulate.gsmvar}}
 #' @references
 #'  \itemize{
 #'    \item Lanne M. and Nyberg H. 2016. Generalized Forecast Error Variance Decomposition for Linear
@@ -337,7 +373,21 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #'  # These are long-running examples that use parallel computing.
 #'  # It takes approximately 30 seconds to run all the below examples.
 #'
-#'  # Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
+#'  ## StMVAR(1, 2), d=2 model identified recursively by lower-triangular
+#'  ## Cholesky decomposition (i.e., reduced form model is specified):
+#'  params12t <- c(0.55, 0.11, 0.34, 0.05, -0.01, 0.72, 0.58, 0.01, 0.06, 0.17,
+#'    0.25, 0.34, 0.05, -0.01, 0.72, 0.50, -0.01, 0.20, 0.60, 3.00, 12.00)
+#'  mod12t <- GSMVAR(gdpdef, p=1, M=2, params=params12t, model="StMVAR")
+#'
+#'  # Estimating the GFEVD using all possible histories in the data as the
+#'  # initial values:
+#'  gfevd0 <- GFEVD(mod12t, N=24, R1=10, initval_type="data")
+#'  gfevd0
+#'  plot(gfevd0)
+#'  ## NOTE: Use larger R1 is empirical applications! Small R1 is used
+#'  ## here only to fasten the execution time of the examples.
+#'
+#'  ## Structural GMVAR(2, 2), d=2 model identified with sign-constraints:
 #'  params22s <- c(0.36, 0.121, 0.484, 0.072, 0.223, 0.059, -0.151, 0.395,
 #'   0.406, -0.005, 0.083, 0.299, 0.218, 0.02, -0.119, 0.722, 0.093, 0.032,
 #'   0.044, 0.191, 0.057, 0.172, -0.46, 0.016, 3.518, 5.154, 0.58)
@@ -350,18 +400,15 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #'  #                   ncalls=20, seeds=1:20)
 #'  # To obtain an estimated version of the same model.
 #'
-#'  ## NOTE: Use larger R1 is empirical applications! Small R1 is used
-#'  ## Below only to fasten the execution time of the examples.
-#'
 #'  # Estimating the GFEVD using all possible histories in the data as the
 #'  # initial values:
-#'  gfevd1 <- GFEVD(mod22s, N=24, R1=20, initval_type="data")
+#'  gfevd1 <- GFEVD(mod22s, N=24, R1=10, initval_type="data")
 #'  gfevd1
 #'  plot(gfevd1)
 #'
 #'  # Estimate GFEVD with the initial values generated from the stationary
 #'  # distribution of the process:
-#'  gfevd2 <- GFEVD(mod22s, N=24, R1=20, R2=100, initval_type="random")
+#'  gfevd2 <- GFEVD(mod22s, N=24, R1=10, R2=100, initval_type="random")
 #'  gfevd2
 #'  plot(gfevd2)
 #'
@@ -384,13 +431,12 @@ GFEVD <- function(gsmvar, shock_size=1, N=30, initval_type=c("data", "random", "
   p <- gsmvar$model$p
   M <- sum(gsmvar$model$M)
   d <- gsmvar$model$d
-  if(is.null(gsmvar$model$structural_pars)) stop("Only structural models are supported")
   if(M == 1) include_mixweights <- FALSE
   if(initval_type == "data") {
     if(is.null(gsmvar$data)) stop("The model does not contain data! Add data with the function 'add_data' or select another 'initval_type'.")
     stopifnot(nrow(gsmvar$data) >= p)
     R2 <- nrow(gsmvar$data) - p + 1 # The number of length p histories in the data
-    all_initvals <- array(vapply(1:R2, function(i1) gsmvar$data[i1:(i1 + p - 1),], numeric(p*d)), dim=c(p, d, R2)) # [, , i1] for i1:th initval
+    all_initvals <- array(vapply(1:R2, function(i1) gsmvar$data[i1:(i1 + p - 1),], numeric(p*d)), dim=c(p, d, R2)) # [, , i1] for i1 initval
   } else if(initval_type == "random") {
     if(is.null(init_regimes)) {
       message("Initial regimes were not specified, so the initial values are generated from the stationary distribution of the process.")
@@ -402,7 +448,8 @@ GFEVD <- function(gsmvar, shock_size=1, N=30, initval_type=c("data", "random", "
     all_initvals <- array(dim=c(1, 1, R2)) # This won't be used. NULL init_values will be used.
   } else if(initval_type == "fixed") {
     R2 <- 1
-    if(is.null(init_values)) stop("Initial values were not specified! Specify the initial values with the argument 'init_values' or choose another 'initval_type'.")
+    if(is.null(init_values)) stop(paste0("Initial values were not specified! Specify the initial values with the argument",
+                                         "'init_values' or choose another 'initval_type'."))
     if(!is.matrix(init_values)) stop("init_values must be a numeric matrix")
     if(anyNA(init_values)) stop("init_values contains NA values")
     if(ncol(init_values) != d | nrow(init_values) < p) stop("init_values must contain d columns and at least p rows")
@@ -430,9 +477,11 @@ GFEVD <- function(gsmvar, shock_size=1, N=30, initval_type=c("data", "random", "
     message("ncores was set to be larger than the number of cores detected")
   }
   if(initval_type != "fixed") {
-    cat(paste("Using", ncores, "cores to estimate", R2,"GIRFs for", d, "structural shocks,", "each based on", R1, "Monte Carlo repetitions."), "\n")
+    cat(paste("Using", ncores, "cores to estimate", R2,"GIRFs for", d, "structural shocks,", "each based on",
+              R1, "Monte Carlo repetitions."), "\n")
   } else {
-    cat(paste("Using", ncores, "cores to estimate one GIRF for", d, "structural shocks, each based on", R1, "Monte Carlo repetitions."), "\n")
+    cat(paste("Using", ncores, "cores to estimate one GIRF for", d, "structural shocks, each based on",
+              R1, "Monte Carlo repetitions."), "\n")
   }
 
   ### Calculate the GIRFs ###

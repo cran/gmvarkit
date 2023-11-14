@@ -29,8 +29,9 @@ a univariate time series. \code{NA} values are not supported.}
 
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
-   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+   in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
+   is \code{M=M1+M2}.}
 }}
 
 \item{conditional}{a logical argument specifying whether the conditional or exact log-likelihood function}
@@ -54,8 +55,9 @@ the same but the first regime has freely estimated (unconditional) mean. Ignore 
 should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
 that is, when \code{parametrization="mean"}.}}
 
-\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
-the following elements:
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. Reduced models can be used directly as recursively
+identified structural models. For a structural model identified by conditional heteroskedasticity, should be a list containing
+at least the first one of the following elements:
 \itemize{
   \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
     unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
@@ -65,6 +67,10 @@ the following elements:
     parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
     must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
     should not be constrained.
+  \item \code{fixed_lambdas} - a length \eqn{d(M-1)} numeric vector (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M})} with elements strictly larger than zero specifying the fixed parameter values for the
+    parameters \eqn{\lambda_{mi}} should be constrained to. This constraint is alternative \code{C_lambda}.
+    Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}} should not be constrained.
 }
 See Virolainen (2022) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
 a time-varying diagonal matrix with positive diagonal entries).}
@@ -150,6 +156,15 @@ If you wish to estimate a structural model without overidentifying constraints t
  of the parameter space, it might help to use smaller numerical tolerance for the stationarity and positive
  definiteness conditions. The numerical tolerance of an existing model can be changed with the function
  \code{update_numtols}.
+
+ \strong{Filtering inappropriate estimates:} If \code{filter_estimates == TRUE}, the function will automatically filter
+ out estimates that it deems "inappropriate". That is, estimates that are not likely solutions of interest.
+ Specifically, solutions that incorporate a near-singular error term covariance matrix (any eigenvalue less than \eqn{0.002}),
+ mixing weights such that they are close to zero for almost all \eqn{t} for at least one regime, or mixing weight parameter
+ estimate close to zero (or one). It also filters out estimates with any modulus "bold A" eigenvalues larger than 0.9985,
+as the solution is near the boundary of the stationarity region and likely not a local maximum. You can also set
+ \code{filter_estimates=FALSE} and find the solutions of interest yourself by using the
+ function \code{alt_gsmvar}.
 }
 \references{
 \itemize{

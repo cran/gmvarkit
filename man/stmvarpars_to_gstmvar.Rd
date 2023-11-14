@@ -13,6 +13,7 @@ stmvarpars_to_gstmvar(
   model = c("GMVAR", "StMVAR", "G-StMVAR"),
   constraints = NULL,
   same_means = NULL,
+  weight_constraints = NULL,
   structural_pars = NULL,
   maxdf = 100
 )
@@ -22,8 +23,9 @@ stmvarpars_to_gstmvar(
 
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
-   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+   in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
+   is \code{M=M1+M2}.}
 }}
 
 \item{params}{a real valued vector specifying the parameter values.
@@ -63,10 +65,14 @@ stmvarpars_to_gstmvar(
           (\strong{\eqn{\phi}}\eqn{_{1}}\eqn{,...,}\strong{\eqn{\phi}}\eqn{_{M})}.
       }
     }
+     \item{\strong{For models with weight_constraints:}}{Drop \eqn{\alpha_1,...,\alpha_{M-1}} from
+      the parameter vector.}
     \item{\strong{For structural models:}}{
-      Should have the form
+      Reduced form models can be directly used as recursively identified structural models. If the structural model is
+      identified by conditional heteroskedasticity, the parameter vector should have the form
       \strong{\eqn{\theta}}\eqn{ = (\phi_{1,0},...,\phi_{M,0},}\strong{\eqn{\phi}}\eqn{_{1},...,}\strong{\eqn{\phi}}\eqn{_{M},
-      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}\eqn{)}, where
+      vec(W),}\strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M},\alpha_{1},...,\alpha_{M-1},}\strong{\eqn{\nu}}\eqn{)},
+       where
       \itemize{
         \item\strong{\eqn{\lambda}}\eqn{_{m}=(\lambda_{m1},...,\lambda_{md})} contains the eigenvalues of the \eqn{m}th mixture component.
       }
@@ -78,10 +84,12 @@ stmvarpars_to_gstmvar(
           as above.}
         \item{\strong{If \eqn{W} is constrained:}}{Remove the zeros from \eqn{vec(W)} and make sure the other entries satisfy
          the sign constraints.}
-        \item{\strong{If \eqn{\lambda_{mi}} are constrained:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}\strong{\eqn{\lambda}}\eqn{_{M}}
-         with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
-        \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is a \eqn{(d(M-1) x r)}
-         constraint matrix.}
+        \item{\strong{If \eqn{\lambda_{mi}} are constrained via \code{C_lambda}:}}{Replace \strong{\eqn{\lambda}}\eqn{_{2},...,}
+        \strong{\eqn{\lambda}}\eqn{_{M}} with \strong{\eqn{\gamma}} \eqn{(rx1)} that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}
+        \eqn{,...,} \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \eqn{C_{\lambda}} is
+         a \eqn{(d(M-1) x r)} constraint matrix.}
+        \item{\strong{If \eqn{\lambda_{mi}} are constrained via \code{fixed_lambdas}:}}{Drop \strong{\eqn{\lambda}}\eqn{_{2},...,}
+        \strong{\eqn{\lambda}}\eqn{_{M}} from the parameter vector.}
       }
     }
   }
@@ -93,9 +101,10 @@ stmvarpars_to_gstmvar(
   \eqn{vec()} is vectorization operator that stacks columns of a given matrix into a vector. \eqn{vech()} stacks columns
   of a given matrix from the principal diagonal downwards (including elements on the diagonal) into a vector.
 
-  In the \strong{GMVAR model}, \eqn{M1=M} and \strong{\eqn{\nu}} is dropped from the parameter vector. In the \strong{StMVAR} model, \eqn{M1=0}.
-  In the \strong{G-StMVAR} model, the first \code{M1} regimes are \emph{GMVAR type} and the rest \code{M2} regimes are \emph{StMVAR type}.
-  In \strong{StMVAR} and \strong{G-StMVAR} models, the degrees of freedom parameters in \strong{\eqn{\nu}} should be strictly larger than two.
+  In the \strong{GMVAR model}, \eqn{M1=M} and \strong{\eqn{\nu}} is dropped from the parameter vector. In the \strong{StMVAR} model,
+  \eqn{M1=0}. In the \strong{G-StMVAR} model, the first \code{M1} regimes are \emph{GMVAR type} and the rest \code{M2} regimes are
+  \emph{StMVAR type}. In \strong{StMVAR} and \strong{G-StMVAR} models, the degrees of freedom parameters in \strong{\eqn{\nu}} should
+  be strictly larger than two.
 
   The notation is similar to the cited literature.}
 
@@ -118,8 +127,13 @@ the same but the first regime has freely estimated (unconditional) mean. Ignore 
 should not be restricted to be the same among any regimes. \strong{This constraint is available only for mean parametrized models;
 that is, when \code{parametrization="mean"}.}}
 
-\item{structural_pars}{If \code{NULL} a reduced form model is considered. For structural model, should be a list containing
-the following elements:
+\item{weight_constraints}{a numeric vector of length \eqn{M-1} specifying fixed parameter values for the mixing weight parameters
+\eqn{\alpha_m, \ m=1,...,M-1}. Each element should be strictly between zero and one, and the sum of all the elements should
+be strictly less than one.}
+
+\item{structural_pars}{If \code{NULL} a reduced form model is considered. Reduced models can be used directly as recursively
+identified structural models. For a structural model identified by conditional heteroskedasticity, should be a list containing
+at least the first one of the following elements:
 \itemize{
   \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
     unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
@@ -129,6 +143,10 @@ the following elements:
     parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
     must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
     should not be constrained.
+  \item \code{fixed_lambdas} - a length \eqn{d(M-1)} numeric vector (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M})} with elements strictly larger than zero specifying the fixed parameter values for the
+    parameters \eqn{\lambda_{mi}} should be constrained to. This constraint is alternative \code{C_lambda}.
+    Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}} should not be constrained.
 }
 See Virolainen (2022) for the conditions required to identify the shocks and for the B-matrix as well (it is \eqn{W} times
 a time-varying diagonal matrix with positive diagonal entries).}
@@ -137,16 +155,20 @@ a time-varying diagonal matrix with positive diagonal entries).}
 GMVAR type.}
 }
 \value{
-Returns a list with four elements: \code{$params} contains the corresponding G-StMVAR model
+Returns a list with six elements: \code{$params} contains the corresponding G-StMVAR model
  parameter vector, \code{$reg_order} contains the permutation that was applied to the regimes
  (GMVAR type regimes first, and decreasing ordering by mixing weight parameters),
  \code{$M} a vector of length two containing the number of GMVAR type regimes in the first element
- and the number of StMVAR type regimes in the second, \code{$same_means} constains the \code{same_mean}
- constraints of the new model.
+ and the number of StMVAR type regimes in the second, \code{$same_means} contains the \code{same_mean}
+ constraints of the new model. Finally \code{$weight_constraints} contains the \code{weight_constraints} and
+\code{$fixed_lambdas} the \code{structural_pars$fixed_lambdas}  of the new model
 }
 \description{
 \code{stmvarpars_to_gstmvar} transforms a StMVAR (or G-StMVAR) model parameter vector to the corresponding
   G-StMVAR model parameter vector with the large df parameters removed.
+}
+\details{
+If constraints are employed on the autoregressive parameters, the regimes cannot be sorted due to the
 }
 \section{Warning}{
 

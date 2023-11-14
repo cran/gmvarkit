@@ -15,8 +15,9 @@ smart_df(
 \arguments{
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1} in the
-   first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components is \code{M=M1+M2}.}
+  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+   in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
+   is \code{M=M1+M2}.}
 }}
 
 \item{df}{the old degrees of freedom parameters (of all regimes)}
@@ -31,9 +32,11 @@ close to the given degrees of freedom.}
 are GMVAR type and the rest \code{M2} components are StMVAR type.}
 }
 \value{
-\item{\strong{GMVAR models}}{a numeric vector of length zero.}
-  \item{\strong{StMVAR models}}{a numeric vector of length \code{M} with random entries strictly larger than two.}
-  \item{\strong{G-StMVAR models}}{a numeric vector of length \code{M2} with random entries strictly larger than two.}
+\describe{
+    \item{\strong{GMVAR models}:}{a numeric vector of length zero.}
+    \item{\strong{StMVAR models}:}{a numeric vector of length \code{M} with random entries strictly larger than two.}
+    \item{\strong{G-StMVAR models}:}{a numeric vector of length \code{M2} with random entries strictly larger than two.}
+  }
 }
 \description{
 \code{random_df} generates random \code{M2} degrees of freedom parameter values

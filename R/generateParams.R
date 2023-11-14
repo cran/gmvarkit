@@ -9,7 +9,8 @@
 #' @inherit in_paramspace references
 #' @keywords internal
 
-random_ind <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), constraints=NULL, same_means=NULL, structural_pars=NULL,
+random_ind <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), constraints=NULL, same_means=NULL,
+                       weight_constraints=NULL, structural_pars=NULL,
                        mu_scale, mu_scale2, omega_scale, W_scale, lambda_scale, ar_scale2=1) {
   model <- match.arg(model)
   M_orig <- M
@@ -18,6 +19,7 @@ random_ind <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), constrai
                               1 + log(2*mean(c((p - 0.2)^(1.25), d))),
                               1 + (sum(constraints)/(M*d^2))^0.85)
   g <- ifelse(is.null(same_means), M, length(same_means)) # Number of groups of regimes with the same mean parameters
+  # AR and covmat pars
   if(is.null(constraints)) {
     if(is.null(structural_pars)) {
       if(is.null(same_means)) { # No AR constraints, reduced form, no same_means
@@ -44,12 +46,12 @@ random_ind <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), constrai
       x <- c(all_phi0, psi, random_covmat(d=d, M=M, W_scale=W_scale, lambda_scale=lambda_scale, structural_pars=structural_pars))
     }
   }
-  if(M > 1) {
+  if(M > 1 && is.null(weight_constraints)) {
     alphas <- runif(n=M)
     alphas <- sort_and_standardize_alphas(alphas=alphas, constraints=constraints, same_means=same_means,
                                           structural_pars=structural_pars)
     ret <- c(x, alphas[-M])
-  } else {
+  } else { # No alpha params
     ret <- x
   }
   c(ret, random_df(M=M_orig, model=model))
@@ -74,15 +76,16 @@ random_ind <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), constrai
 #' @inherit random_ind return references
 #' @keywords internal
 
-smart_ind <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"), constraints=NULL, same_means=NULL, structural_pars=NULL,
-                      accuracy=1, which_random=numeric(0), mu_scale, mu_scale2, omega_scale, ar_scale=1, ar_scale2=1,
-                      W_scale, lambda_scale) {
+smart_ind <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"), constraints=NULL, same_means=NULL,
+                      weight_constraints=NULL, structural_pars=NULL, accuracy=1, which_random=numeric(0),
+                      mu_scale, mu_scale2, omega_scale, ar_scale=1, ar_scale2=1, W_scale, lambda_scale) {
   model <- match.arg(model)
   M_orig <- M
   M <- sum(M)
   scale_A <- ar_scale2*(1 + log(2*mean(c((p - 0.2)^(1.25), d))))
   params_std <- reform_constrained_pars(p=p, M=M_orig, d=d, params=params, model=model,
                                         constraints=constraints, same_means=same_means,
+                                        weight_constraints=weight_constraints,
                                         structural_pars=structural_pars)
   unc_structural_pars <- get_unconstrained_structural_pars(structural_pars=structural_pars)
   alphas <- pick_alphas(p=p, M=M_orig, d=d, params=params_std, model=model)
@@ -164,29 +167,30 @@ smart_ind <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"), c
         covmat_pars <- random_covmat(d=d, M=M, W_scale=W_scale, lambda_scale=lambda_scale, structural_pars=structural_pars)
       } else { # First regime is smart
         W_pars <- Wvec(pick_W(p=p, M=M, d=d, params=params_std, structural_pars=unc_structural_pars))
-        if(M > 1) {
+        if(M > 1 && is.null(structural_pars$fixed_lambdas)) {
           n_lambs <- ifelse(is.null(structural_pars$C_lambda), d*(M - 1), ncol(structural_pars$C_lambda))
           W_and_lambdas <- c(W_pars, params[(length(params) - (M - 1) - n_lambs + 1):(length(params) - (M - 1))])
         } else {
-          W_and_lambdas <- W_pars # No lambdas when M == 1
+          W_and_lambdas <- W_pars # No lambdas when M == 1 or fixed_lambdas are used
         }
         covmat_pars <- smart_covmat(d=d, M=M, W_and_lambdas=W_and_lambdas, accuracy=accuracy, structural_pars=structural_pars)
       }
-      if(is.null(structural_pars$C_lambda) && M > 1) {
+      if(is.null(structural_pars$C_lambda) && is.null(structural_pars$fixed_lambdas) && M > 1) {
         # If lambdas are not constrained, we can replace smart lambdas of some regimes with random lambdas
         for(m in 2:M) {
           if(any(which_random == m)) {
-            covmat_pars[(length(covmat_pars) - d*(M - 1) + d*(m - 2) + 1):(length(covmat_pars) - d*(M - 1) + d*(m - 2) + d)] <- abs(rnorm(n=d, mean=0, sd=lambda_scale[m - 1]))
+            covmat_pars[(length(covmat_pars) - d*(M - 1) + d*(m - 2) +
+                           1):(length(covmat_pars) - d*(M - 1) + d*(m - 2) + d)] <- abs(rnorm(n=d, mean=0, sd=lambda_scale[m - 1]))
           }
         }
       }
     }
     pars <- c(phi0_pars, AR_pars, covmat_pars)
   }
-  if(M > 1) {
+  if(M > 1 && is.null(weight_constraints)) {
     alphas <- abs(rnorm(M, mean=alphas, sd=0.1))
     ret <- c(pars, (alphas/sum(alphas))[-M])
-  } else {
+  } else { # No alpha params
     ret <- pars
   }
   c(ret, smart_df(M=M_orig, df=all_df, accuracy=accuracy, which_random=which_random, model=model))
@@ -225,7 +229,8 @@ smart_ind <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"), c
 #'  }
 #'  @keywords internal
 
-random_ind2 <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), same_means=NULL, structural_pars=NULL,
+random_ind2 <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), same_means=NULL,
+                        weight_constraints=NULL, structural_pars=NULL,
                         mu_scale, mu_scale2, omega_scale, ar_scale=1, W_scale, lambda_scale) {
   model <- match.arg(model)
   M_orig <- M
@@ -241,11 +246,13 @@ random_ind2 <- function(p, M, d, model=c("GMVAR", "StMVAR", "G-StMVAR"), same_me
    x <- c(rnorm(d*g, mean=mu_scale, sd=mu_scale2),
           replicate(n=M, random_coefmats2(p=p, d=d, ar_scale=ar_scale)),
           replicate(n=n_covmats,
-                    random_covmat(d=d, M=M, omega_scale=omega_scale, W_scale=W_scale, lambda_scale=lambda_scale, structural_pars=structural_pars)))
+                    random_covmat(d=d, M=M, omega_scale=omega_scale, W_scale=W_scale,
+                                  lambda_scale=lambda_scale, structural_pars=structural_pars)))
   }
-  if(M > 1) {
+  if(M > 1 && is.null(weight_constraints)) {
     alphas <- runif(n=M)
     alphas <- sort_and_standardize_alphas(alphas=alphas, constraints=NULL, same_means=same_means,
+                                          weight_constraints=weight_constraints,
                                           structural_pars=structural_pars)
     ret <- c(x, alphas[-M])
   } else {
@@ -364,8 +371,9 @@ random_coefmats2 <- function(p, d, ar_scale=1) {
 #'     \item{For \strong{structural models}:}{Returns a length \eqn{d^2 - n_zeros - d*(M - 1)} vector of the form
 #'       \eqn{(Wvec(W),\lambda_2,...,\lambda_M)} where \eqn{\lambda_m=(\lambda_{m1},...,\lambda_{md})}
 #'       contains the eigenvalue parameters of the \eqn{m}th regime \eqn{(m>1)} and \eqn{n_zeros} is the number of zero constraints
-#'       in \eqn{W}. If lambdas are constrained, replacce \eqn{d*(M - 1)} in the length with \eqn{r} and
-#'       \eqn{\lambda_2,...,\lambda_M)} with \strong{\eqn{\gamma}}. The operator \eqn{Wvec()} vectorizes a matrix and removes zeros.}
+#'       in \eqn{W}. If lambdas are \code{C_lambda} constrained, replace \eqn{d*(M - 1)} in the length with \eqn{r} and
+#'       \eqn{\lambda_2,...,\lambda_M)} with \strong{\eqn{\gamma}}. If \code{fixed_lambdas} are used, the \eqn{\lambda_{mi}} parameters
+#'        are not included. The operator \eqn{Wvec()} vectorizes a matrix and removes zeros.}
 #'   }
 #' @keywords internal
 
@@ -381,14 +389,14 @@ random_covmat <- function(d, M, omega_scale, W_scale, lambda_scale, structural_p
     new_W[W == 0 & !is.na(W)] <- 0
     new_W[W > 0 & !is.na(W)] <- abs(new_W[W > 0 & !is.na(W)])
     new_W[W < 0 & !is.na(W)] <- -abs(new_W[W < 0 & !is.na(W)])
-    if(M > 1) {
+    if(M > 1 && is.null(structural_pars$fixed_lambdas)) {
       if(is.null(structural_pars$C_lambda)) {
         lambdas <- as.vector(abs(vapply(1:(M - 1), function(i1) rnorm(n=d, mean=0, sd=lambda_scale[i1]), numeric(d))))
       } else {
         lambdas <- abs(rnorm(n=ncol(structural_pars$C_lambda), mean=0, sd=lambda_scale)) # gammas
       }
       return(c(Wvec(new_W), lambdas))
-    } else {
+    } else { # No lambda params
       return(Wvec(new_W))
     }
   }
@@ -442,10 +450,11 @@ smart_covmat <- function(d, M, Omega, W_and_lambdas, accuracy, structural_pars=N
   } else {
     M <- sum(M)
     pars <- rnorm(n=length(W_and_lambdas), mean=W_and_lambdas, sd=sqrt(abs(W_and_lambdas)/(d + accuracy)))
-    W_const <- structural_pars$W[structural_pars$W != 0] # Non-zero constraints/free values - first length(W_const) values in pars are W parameters
-    pars[1:length(W_const)][W_const > 0 & !is.na(W_const)] <- abs(pars[1:length(W_const)][W_const > 0 & !is.na(W_const)]) # We enforce W to satisfy the sign constraints
+    W_const <- structural_pars$W[structural_pars$W != 0] # Non-zero constrnts/free values, first length(W_const) values in pars are W params
+    # We enforce W to satisfy the sign constraints
+    pars[1:length(W_const)][W_const > 0 & !is.na(W_const)] <- abs(pars[1:length(W_const)][W_const > 0 & !is.na(W_const)])
     pars[1:length(W_const)][W_const < 0 & !is.na(W_const)] <- -abs(pars[1:length(W_const)][W_const < 0 & !is.na(W_const)])
-    if(M > 1) {
+    if(M > 1 && is.null(structural_pars$fixed_lambdas)) {
       n_lambdas <- ifelse(is.null(structural_pars$C_lambda), d*(M - 1), ncol(structural_pars$C_lambda))
       lambdas <- abs(pars[(length(pars) - n_lambdas + 1):length(pars)]) # Make lambdas positive
       pars[(length(pars) - n_lambdas + 1):length(pars)] <- lambdas
@@ -463,9 +472,11 @@ smart_covmat <- function(d, M, Omega, W_and_lambdas, accuracy, structural_pars=N
 #'
 #' @inheritParams loglikelihood_int
 #' @return
-#'   \item{\strong{GMVAR models}}{a numeric vector of length zero.}
-#'   \item{\strong{StMVAR models}}{a numeric vector of length \code{M} with random entries strictly larger than two.}
-#'   \item{\strong{G-StMVAR models}}{a numeric vector of length \code{M2} with random entries strictly larger than two.}
+#'   \describe{
+#'     \item{\strong{GMVAR models}:}{a numeric vector of length zero.}
+#'     \item{\strong{StMVAR models}:}{a numeric vector of length \code{M} with random entries strictly larger than two.}
+#'     \item{\strong{G-StMVAR models}:}{a numeric vector of length \code{M2} with random entries strictly larger than two.}
+#'   }
 #' @keywords internal
 
 random_df <- function(M, model=c("GMVAR", "StMVAR", "G-StMVAR")) {

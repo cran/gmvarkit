@@ -15,7 +15,8 @@ reform_data <- function(data, p) {
   d <- ncol(data)
   n_obs <- nrow(data)
   T_obs <- n_obs - p
-  matrix(vapply(1:p, function(i1) as.vector(data[(p - i1 + 1):(T_obs + p - i1 + 1),]), numeric((n_obs - p + 1)*d)), nrow=n_obs - p + 1, byrow=FALSE)
+  matrix(vapply(1:p, function(i1) as.vector(data[(p - i1 + 1):(T_obs + p - i1 + 1),]), numeric((n_obs - p + 1)*d)),
+         nrow=n_obs - p + 1, byrow=FALSE)
 }
 
 
@@ -34,17 +35,26 @@ reform_data <- function(data, p) {
 #' @keywords internal
 
 reform_constrained_pars <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"),
-                                    constraints=NULL, same_means=NULL, structural_pars=NULL,
-                                    change_na=FALSE) {
+                                    constraints=NULL, same_means=NULL, weight_constraints=NULL,
+                                    structural_pars=NULL, change_na=FALSE) {
   model <- match.arg(model)
-  if(is.null(constraints) && is.null(structural_pars) && is.null(same_means)) {
+  if(is.null(constraints) && is.null(structural_pars) && is.null(same_means) && is.null(weight_constraints)) {
     return(params)
-  } else if(is.null(constraints) && is.null(same_means) && !is.null(structural_pars) && !any(structural_pars$W == 0, na.rm=TRUE) && is.null(structural_pars$C_lambda)) {
+  } else if(is.null(constraints) && is.null(same_means) && !is.null(structural_pars) && is.null(weight_constraints) &&
+            !any(structural_pars$W == 0, na.rm=TRUE) && is.null(structural_pars$C_lambda) &&
+            is.null(structural_pars$fixed_lambdas)) {
     return(params)
   }
   all_df <- pick_df(M=M, params=params, model=model)
-  M2 <- length(all_df)
+  M2 <- length(all_df) # M[2]
   M <- sum(M)
+  if(is.null(constraints) && is.null(structural_pars) && is.null(same_means) && !is.null(weight_constraints)) {
+    # Not structural models, only weight constraints (different form of structural parameter vector,
+    # alphas are just dropped)
+    return(c(params[1:(length(params) - M2)], # all but alphas and df
+             weight_constraints, all_df))
+  }
+
 
   if(is.null(same_means)) {
     less_pars <- 0 # Number of parameters less compared to models without same mean constraints
@@ -54,7 +64,7 @@ reform_constrained_pars <- function(p, M, d, params, model=c("GMVAR", "StMVAR", 
   }
 
   # Obtain the AR coefficients from the constraints
-  if(is.null(constraints)) { # For structural model with constrained structural parameters but no AR constraints
+  if(is.null(constraints)) {
     q <- M*p*d^2
     psi_expanded <- params[(d*M + 1 - less_pars):(d*M + d^2*p*M - less_pars)] # AR coefficients (without constraints)
     psiNA <- FALSE
@@ -87,8 +97,9 @@ reform_constrained_pars <- function(p, M, d, params, model=c("GMVAR", "StMVAR", 
   }
 
   if(is.null(structural_pars)) { # Reduced form model
-    pars <- as.vector(vapply(1:M, function(m) c(all_phi0[,m], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
-                                                params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1 - less_pars):(M*d + q + m*d*(d + 1)/2 - less_pars)]),
+    pars <- as.vector(vapply(1:M,
+                             function(m) c(all_phi0[,m], psi_expanded[((m - 1)*p*d^2 + 1):(m*p*d^2)],
+                                           params[(M*d + q + (m - 1)*d*(d + 1)/2 + 1 - less_pars):(M*d + q + m*d*(d + 1)/2 - less_pars)]),
                              numeric(p*d^2 + d + d*(d + 1)/2)))
   } else { # Structural model
     W <- structural_pars$W # Obtain the indices with zero constraints (the zeros don't exist in params)
@@ -98,7 +109,9 @@ reform_constrained_pars <- function(p, M, d, params, model=c("GMVAR", "StMVAR", 
     new_W[W != 0 | is.na(W)] <- W_pars
 
     if(M > 1) {
-      if(!is.null(structural_pars$C_lambda)) {
+      if(!is.null(structural_pars$fixed_lambdas)) {
+        lambdas <- structural_pars$fixed_lambdas
+      } else if(!is.null(structural_pars$C_lambda)) {
         r <- ncol(structural_pars$C_lambda)
         gamma <- params[(d*M + q + d^2 - n_zeros + 1 - less_pars):(d*M + q + d^2 - n_zeros + r - less_pars)]
         if(change_na) {
@@ -118,10 +131,16 @@ reform_constrained_pars <- function(p, M, d, params, model=c("GMVAR", "StMVAR", 
       pars <- c(as.vector(all_phi0), psi_expanded, vec(new_W), lambdas)
     }
   }
+
   if(M == 1) {
     return(c(pars, all_df))
-  } else {
-    return(c(pars, params[(length(params) - M - M2 + 2):length(params)]))
+  } else { # M > 1 -> alpha params in the param vector
+    if(is.null(weight_constraints)) {
+      alphas <- params[(length(params) - M - M2 + 2):(length(params) - M2)]
+    } else {
+      alphas <- weight_constraints
+    }
+    return(c(pars, alphas, all_df))
   }
 }
 
@@ -211,7 +230,8 @@ form_boldA <- function(p, M, d, all_A) {
   M <- sum(M)
   I_all <- diag(nrow=d*(p - 1))
   ZER_all <- matrix(0, nrow=d*(p - 1), ncol=d)
-  array(vapply(1:M, function(m) rbind(matrix(all_A[, , 1:p, m], nrow=d, byrow=FALSE), cbind(I_all, ZER_all)), numeric((d*p)^2)), dim=c(d*p, d*p, M))
+  array(vapply(1:M, function(m) rbind(matrix(all_A[, , 1:p, m], nrow=d, byrow=FALSE),
+                                      cbind(I_all, ZER_all)), numeric((d*p)^2)), dim=c(d*p, d*p, M))
 }
 
 
@@ -274,7 +294,8 @@ sort_components <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVA
     old_W[W_const != 0] <- params[(d*M + d^2*p*M + 1):(d*M + d^2*p*M + d^2 - n_zeros)] # Zeros where there are zero constaints
     return(c(phi0[, ord], # sorted phi0/mu parameters
              A[, ord], # sorted AR parameters
-             Wvec(redecompose_Omegas(M=M, d=d, W=old_W, lambdas=lambdas, perm=ord)), # Sorted and possibly recomposed the covariance matrices
+             Wvec(redecompose_Omegas(M=M, d=d, W=old_W,
+                                     lambdas=lambdas, perm=ord)), # Sorted and possibly recomposed the covariance matrices
              alphas, all_df)) # sorted alphas, excluding the M:th one.
   }
 }
@@ -354,13 +375,13 @@ sort_W_and_lambdas <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-St
 #' @keywords internal
 
 change_parametrization <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"), constraints=NULL, same_means=NULL,
-                                   structural_pars=NULL, change_to=c("intercept", "mean")) {
+                                   weight_constraints=NULL, structural_pars=NULL, change_to=c("intercept", "mean")) {
   stopifnot(is.null(same_means))
   model <- match.arg(model)
   change_to <- match.arg(change_to)
   re_params <- params
   params <- reform_constrained_pars(p=p, M=M, d=d, params=params, model=model, constraints=constraints, same_means=same_means,
-                                    structural_pars=structural_pars) # Parameters in "regular" form
+                                    weight_constraints=weight_constraints, structural_pars=structural_pars) # Parameters in "regular" form
   Id <- diag(nrow=d)
   all_A <- pick_allA(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
   all_phi0_or_mu <- pick_phi0(p=p, M=M, d=d, params=params, structural_pars=structural_pars)
@@ -400,7 +421,7 @@ change_parametrization <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "
 #'     In the case of a GMVAR type regime, \eqn{\nu_m} is omitted.
 #'   }
 #' @return Returns parameter vector with \code{m}:th regime changed to \code{regime_pars}.
-#' @details Does not currently support models with AR, mean, or lambda parameter constraints.
+#' @details Does not currently support models with AR, mean, alpha, or lambda parameter constraints.
 #' @section Warning:
 #'  No argument checks!
 #' @inherit in_paramspace_int references
@@ -475,15 +496,17 @@ regime_distance <- function(regime_pars1, regime_pars2) {
 #'  not parametrized in the model). Don't need to be standardized to sum to one.
 #' @return Returns the given alphas in a (M x 1) vector sorted in decreasing order and their sum standardized to one.
 #'  If AR constraints, lambda constraints, or same means are employed, does not sort but standardizes the alphas
-#'  to sum to one.
+#'  to sum to one. If \code{weight_constraints} are used, gives an error.
 #' @section Warning:
 #'  No argument checks!
 #' @keywords internal
 
 sort_and_standardize_alphas <- function(alphas, M, model=c("GMVAR", "StMVAR", "G-StMVAR"),
-                                        constraints=NULL, same_means=NULL, structural_pars=NULL) {
+                                        constraints=NULL, same_means=NULL, weight_constraints=NULL,
+                                        structural_pars=NULL) {
+  if(!is.null(weight_constraints)) stop("weight_constraints are not supported in sort_and_standardize_alphas")
   model <- match.arg(model)
-  if(is.null(constraints) && is.null(structural_pars$C_lambda) && is.null(same_means)) {
+  if(is.null(constraints) && is.null(structural_pars$C_lambda) && is.null(structural_pars$fixed_lambdas) && is.null(same_means)) {
     if(model != "G-StMVAR") {
       alphas <- alphas[order(alphas, decreasing=TRUE, method="radix")]
     } else { # model == "G-StMVAR"
@@ -505,19 +528,23 @@ sort_and_standardize_alphas <- function(alphas, M, model=c("GMVAR", "StMVAR", "G
 #' @inheritParams loglikelihood_int
 #' @param maxdf regimes with degrees of freedom parameter value larger than this will be turned into
 #'  GMVAR type.
-#' @return Returns a list with four elements: \code{$params} contains the corresponding G-StMVAR model
+#' @details If constraints are employed on the autoregressive parameters, the regimes cannot be sorted due to the
+#   specific form of the constraints. In this case, all constraints are removed and we then do the switch
+#   with the unconstrained model.
+#' @return Returns a list with six elements: \code{$params} contains the corresponding G-StMVAR model
 #'  parameter vector, \code{$reg_order} contains the permutation that was applied to the regimes
 #'  (GMVAR type regimes first, and decreasing ordering by mixing weight parameters),
 #'  \code{$M} a vector of length two containing the number of GMVAR type regimes in the first element
-#'  and the number of StMVAR type regimes in the second, \code{$same_means} constains the \code{same_mean}
-#'  constraints of the new model.
+#'  and the number of StMVAR type regimes in the second, \code{$same_means} contains the \code{same_mean}
+#'  constraints of the new model. Finally \code{$weight_constraints} contains the \code{weight_constraints} and
+#' \code{$fixed_lambdas} the \code{structural_pars$fixed_lambdas}  of the new model
 #' @section Warning:
 #'  No argument checks!
 #' @keywords internal
 
 stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G-StMVAR"),
-                                  constraints=NULL, same_means=NULL, structural_pars=NULL,
-                                  maxdf=100) {
+                                  constraints=NULL, same_means=NULL, weight_constraints=NULL,
+                                  structural_pars=NULL, maxdf=100) {
   model <- match.arg(model)
   stopifnot(model %in% c("StMVAR", "G-StMVAR"))
   constraints_orig <- constraints
@@ -541,12 +568,15 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
     return(list(params=params,
                 reg_order=1:M,
                 M=ret_M,
-                same_means=same_means))
+                same_means=same_means,
+                weight_constraints=weight_constraints,
+                fixed_lambdas=structural_pars$fixed_lambdas))
   }
 
   # Which regimes will be GMVAR type in the new model
   regs_to_change <- which(all_df > maxdf) + M1 # Which regimes to change to GMVAR type
-  if(length(regs_to_change) == M2) message("All regimes are changed to GMVAR type. The result is therefore a GMVAR model and not a G-StMVAR model.")
+  if(length(regs_to_change) == M2) message(paste("All regimes are changed to GMVAR type.",
+                                                 "The result is therefore a GMVAR model and not a G-StMVAR model."))
   if(model == "StMVAR") {
     gmvar_regs <- regs_to_change
   } else { # model == "G-StMVAR"
@@ -558,8 +588,8 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
 
   # Obtain the new parameter vector, but excluding the mixing weight and degrees of freedom parameters
   params_std <- reform_constrained_pars(p=p, M=M_orig, d=d, params=params, model=model, constraints=constraints, same_means=same_means,
-                                        structural_pars=structural_pars)
-  alphas <- pick_alphas(p=p, M=M_orig, d=d, params=params_std, model=model)
+                                        weight_constraints=weight_constraints, structural_pars=structural_pars)
+  alphas <- pick_alphas(p=p, M=M_orig, d=d, params=params_std, model=model) # Includes alphas determined by weight_constraints
   if(M > 1) {
     reg_order <- c(gmvar_regs[order(alphas[gmvar_regs], decreasing=TRUE)], # GMVAR type regimes
                    (1:M)[-gmvar_regs][order(alphas[-gmvar_regs], decreasing=TRUE)]) # StMVAR type regimes
@@ -578,7 +608,13 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
   # Construct the new parameter vectors, exxluding mixing weights and degrees of feedom parameters
   if(all(reg_order == 1:M)) {
     # The regime order is the same in the new model, so only the degrees of freedom parameters change (some are removed)
-    new_params <- params[1:(length(params) - length(all_df) - (M - 1))] # Remove the mixing weights and degrees of freedom parameters
+    # Remove the mixing weights and degrees of freedom parameters (note: no mw params if weight_constraints are used)
+    new_params <- params[1:(length(params) - length(all_df) - ifelse(is.null(weight_constraints), M - 1, 0))]
+    if(is.null(structural_pars$fixed_lambdas)) {
+      fixed_lambdas <- NULL
+    } else {
+      fixed_lambdas <- structural_pars$fixed_lambdas
+    }
   } else {
     # Here the ordering of the regimes changes
 
@@ -594,7 +630,8 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
       if(is.null(structural_pars)) {
         message("All constraints were removed from the model when switching to the G-StMVAR model")
       } else {
-        message("All constraints were removed from the model, except the ones imposed on the W-matrix, when switching to the G-StMVAR model")
+        message(paste("All constraints were removed from the model, except the ones imposed on the W-matrix,",
+                      "when switching to the G-StMVAR model"))
       }
     } else if(!is.null(same_means)) {
       # If only mean parameters are constrained, the regimes can be sorted as long as the mean-parameter
@@ -603,9 +640,10 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
       for(i1 in 1:length(same_means)) { # Go though the same means groups
         new_same_means[[i1]] <- which(reg_order %in% same_means[[i1]]) # Create the new groups according to the new ordering
       }
-      cat("The 'same_means' constraints were reconstructed when reordering the regimes. The new same_means is:\n")
+      message(paste("The 'same_means' constraints were reconstructed when reordering the regimes. The new same_means is: ",
+                    paste0(same_means, collapse=", ")))
       same_means <- new_same_means
-      print(same_means)
+      #print(same_means)
     }
     if(!is.null(structural_pars$C_lambda) && is.null(constraints_orig)) {
       # In this case, removal of the (lambda) constraints has not yet been messaged
@@ -622,6 +660,7 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
 
     # Go through the special cases, case by case
     if(is.null(structural_pars)) { ## Reduced form model
+      fixed_lambdas <- NULL
       all_Omega <- pick_Omegas(p=p, M=M_orig, d=d, params=params_std, structural_pars=structural_pars) # [, , m]
       new_all_Omega <- vapply(1:M, function(m) vech(all_Omega[, , m]), numeric(d*(d + 1)/2))[, reg_order] # [, m] with the new order
       if(!is.null(constraints) || (is.null(constraints) && is.null(same_means))) {
@@ -643,21 +682,39 @@ stmvarpars_to_gstmvar <- function(p, M, d, params, model=c("GMVAR", "StMVAR", "G
       lambdas <- pick_lambdas(p=p, M=M_orig, d=d, params=params_std, structural_pars=structural_pars)
       new_W_and_lambdas <- redecompose_Omegas(M=M_orig, d=d, W=W_pars, lambdas=lambdas, perm=reg_order)
       new_W <- new_W_and_lambdas[1:(d^2)]
-      new_W <- new_W[!structural_pars$W == 0] # Remove zeros when the corresponding elements of W are constrained to zero and hence not parametrized (note: the new W has zeros in the same entries as the old W)
+      # Remove zeros when the corresponding elements of W are constrained to zero and hence not parametrized
+      # (note: the new W has zeros in the same entries as the old W)
+      new_W <- new_W[!structural_pars$W == 0]
       new_lambdas <- new_W_and_lambdas[(d^2 + 1):length(new_W_and_lambdas)]
       if(!is.null(same_means)) {
-        new_mean_params <- params[1:(d*length(same_means))] # The old mean params are also the new mean params (see the reduced form case)
+        # The old mean params are also the new mean params (see the reduced form case)
+        new_mean_params <- params[1:(d*length(same_means))]
       } else {
         new_mean_params <- new_all_phi0
       }
-      # In the structural models, constrained and unconstrainwd models have the same form for the parameter vector.
-      # Note that if AR or lambda constraints are employed, they are removed.
-      new_params <- c(new_mean_params, new_allA, new_W, new_lambdas)
+      # In the structural models, constrained and unconstrained models have the same form for the parameter vector.
+      # Note that if AR or lambda constraints are employed, they are removed, except that fixed_lambdas are altered.
+      if(is.null(structural_pars$fixed_lambdas)) {
+        new_params <- c(new_mean_params, new_allA, new_W, new_lambdas)
+        fixed_lambdas <- NULL
+      } else {
+        new_params <- c(new_mean_params, new_allA, new_W)
+        fixed_lambdas <- new_lambdas
+      }
     }
   }
+  # Add new mixing weight and degrees of freedom parameter vectors
+  if(is.null(weight_constraints)) {
+    new_params <- c(new_params, new_alphas, new_df)
+  } else {
+    new_params <- c(new_params, new_df)
+    weight_constraints <- new_alphas # New alpha constraints
+  }
 
-  list(params=c(new_params, new_alphas, new_df), # Add new mixing weight and degrees of freedom parameter vectors
+  list(params=new_params,
        reg_order=reg_order,
        M=ret_M,
-       same_means=same_means)
+       same_means=same_means,
+       weight_constraints=weight_constraints,
+       fixed_lambdas=fixed_lambdas)
 }

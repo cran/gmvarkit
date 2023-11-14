@@ -230,8 +230,10 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
   }
   constraints <- gsmvar$model$constraints
   same_means <- gsmvar$model$same_means
+  weight_constraints <- gsmvar$model$weight_constraints
   structural_pars <- gsmvar$model$structural_pars
   npars <- length(which_pars)
+  n_alphas <- ifelse(is.null(weight_constraints), M - 1, 0)
 
   if(missing(nrows)) nrows <- max(ceiling(log2(npars) - 1), 1)
   if(missing(ncols)) ncols <- ceiling(npars/nrows)
@@ -263,13 +265,15 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
   for(i1 in which_pars) { # Go though the parameters
     pars <- params
     range <- abs(scale*pars[i1])
-    vals <- seq(from=pars[i1] - range, to=pars[i1] + range, length.out=precision) # Loglik to be evaluated at these values of the parameter considered
+    # Loglik to be evaluated at these values of the parameter considered
+    vals <- seq(from=pars[i1] - range, to=pars[i1] + range, length.out=precision)
     logliks <- vapply(vals, function(val) {
       new_pars <- pars
       new_pars[i1] <- val # Change the single parameter value
       loglikelihood_int(data=gsmvar$data, p=p, M=M_orig, params=new_pars, model=model,
                         conditional=gsmvar$model$conditional, parametrization=parametrization,
                         constraints=constraints, same_means=same_means,
+                        weight_constraints=weight_constraints,
                         structural_pars=structural_pars,
                         check_params=TRUE, minval=NA,
                         stat_tol=stat_tol, posdef_tol=posdef_tol, df_tol=df_tol)
@@ -310,11 +314,11 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
         m <- i1 - max(cum_q)
         main <- substitute(alpha[foo], list(foo=m))
       } else { # degrees of freedom: i1 > length(params) - n_df (this is the case also if M == 1 && i1 > max(cum_q))
-        m <- i1 - max(cum_q) - (M - 1) + M1
+        m <- i1 - max(cum_q) - (n_alphas) + M1
         main <- substitute(nu[foo], list(foo=m))
       }
     } else { ## If AR parameters are constrained, mean parameters are constrained, or a structural model is considered
-      last_covmat_par_index <- length(params) - (M - 1) - n_df
+      last_covmat_par_index <- length(params) - (n_alphas) - n_df
       g <- ifelse(is.null(same_means), M, length(same_means)) # Number groups with the same mean parameters
       less_pars <- d*(M - g) # Number of parameters less compared to models without same mean constraints
 
@@ -341,7 +345,7 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
             row_ind <- rep(1:d, times=d)[pos2] # The row where we are in the current matrix
             main <- substitute(A[foo](foo2), list(foo=paste0(m, ",", which_mat), foo2=paste0(row_ind, ",", col_ind)))
           } else {
-            pos <- i1 - M*d
+            pos <- i1 - (M*d - less_pars)
             main <- substitute(psi(foo), list(foo=pos))
           }
         }
@@ -359,7 +363,8 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
         } else { # Structural models: W and lambdas
           if(i1 <= M*d - less_pars + q + d^2 - n_zeros) { # W parameters
             n_zeros_in_each_column <- vapply(1:d, function(i2) sum(W_const[,i2] == 0, na.rm=TRUE), numeric(1))
-            zero_positions <- lapply(1:d, function(i2) (1:d)[W_const[,i2] == 0 & !is.na(W_const[,i2])]) # Zero constraint positions in each column
+            # Zero constraint positions in each column:
+            zero_positions <- lapply(1:d, function(i2) (1:d)[W_const[,i2] == 0 & !is.na(W_const[,i2])])
             cum_wc <- c(0, cumsum(d - n_zeros_in_each_column)) # Index in W parameters after which a new column in W starts
             posw <- i1 - (M*d - less_pars + q) # Index in W parameters
             col_ind <- sum(posw > cum_wc)
@@ -373,12 +378,12 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
             main <- substitute(W(foo), list(foo=paste0(W_row_ind[col_ind], ", ", col_ind)))
             W_row_ind[col_ind] <- W_row_ind[col_ind] + 1
           } else { # lambda parameters
-            if(is.null(structural_pars$C_lambda)) { # Lambdas are not constraints
+            if(is.null(structural_pars$C_lambda) && is.null(structural_pars$fixed_lambdas)) { # Lambdas are not constraints
               cum_lamb <- M*d - less_pars + q + d^2 - n_zeros + c(0, cumsum(rep(d, times=M))) # Index after which the regime changes
               m <- sum(i1 > cum_lamb) + 1
               pos <- i1 - cum_lamb[m - 1] # which i=1,...,d in lambda_{mi}
               main <- substitute(lambda[foo](foo2), list(foo=m, foo2=pos))
-            } else { # Lambdas are constrained
+            } else if(!is.null(structural_pars$C_lambda)) { # Lambdas are C_lambda constrained
               pos <- i1 - (M*d - less_pars + q + d^2 - n_zeros)
               main <- substitute(gamma(foo), list(foo=pos))
             }
@@ -388,7 +393,7 @@ profile_logliks <- function(gsmvar, which_pars, scale=0.02, nrows, ncols, precis
         m <- i1 - last_covmat_par_index
         main <- substitute(alpha[foo], list(foo=m))
       } else { # degrees of freedom: i1 > length(params) - n_df (this is the case if also M == 1 && i1 > last_covmat_par_index)
-        m <- i1 - last_covmat_par_index - (M - 1) + M1
+        m <- i1 - last_covmat_par_index - (n_alphas) + M1
         main <- substitute(nu[foo], list(foo=m))
       }
     }
