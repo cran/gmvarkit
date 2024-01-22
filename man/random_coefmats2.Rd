@@ -11,7 +11,8 @@ random_coefmats2(p, d, ar_scale = 1)
 
 \item{d}{the number of time series in the system.}
 
-\item{ar_scale}{a positive real number. Larger values will typically result larger AR coefficients.}
+\item{ar_scale}{a positive real number between zero and one. Larger values will typically result
+larger AR coefficients.}
 }
 \value{
 Returns \eqn{((pd^2)x1)} vector containing stationary vectorized coefficient
@@ -25,6 +26,11 @@ The coefficient matrices are generated using the algorithm proposed by Ansley
   and Kohn (1986) which forces stationarity. It's not clear in detail how \code{ar_scale}
   affects the coefficient matrices. Read the cited article by Ansley and Kohn (1986) and
   the source code for more information.
+
+  Note that when using large \code{ar_scale} with large \code{p} or \code{d}, numerical
+  inaccuracies caused by the imprecision of the float-point presentation may result in errors
+  or nonstationary AR-matrices. Using smaller \code{ar_scale} facilitates the usage of larger
+  \code{p} or \code{d}.
 }
 \references{
 \itemize{

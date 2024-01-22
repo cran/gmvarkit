@@ -134,12 +134,15 @@
 #'   As with omega_scale and W_scale, this argument should be adjusted carefully if specified by hand. \strong{NOTE}
 #'   that if lambdas are constrained in some other way than restricting some of them to be identical, this parameter
 #'   should be adjusted accordingly in order to the estimation succeed!
-#' @param ar_scale a positive real number adjusting how large AR parameter values are typically proposed in construction
-#'   of the initial population: larger value implies larger coefficients (in absolute value). After construction of the
-#'   initial population, a new scale is drawn from \code{(0, 0.)} uniform distribution in each iteration.
+#' @param ar_scale a positive real number between zero and one, adjusting how large AR parameter values are typically
+#'    proposed in construction of the initial population: larger value implies larger coefficients (in absolute value).
+#'    After construction of the initial population, a new scale is drawn from \code{(0, upper_ar_scale)} uniform
+#'    distribution in each iteration. With large \code{p} or \code{d}, \code{ar_scale} is restricted from above,
+#'    see the details section.
 #' @param upper_ar_scale the upper bound for \code{ar_scale} parameter (see above) in the random mutations. Setting
-#'  this too high might lead to failure in proposing new parameters that are well enough inside the parameter space,
-#'  and especially with large \code{p} one might want to try smaller upper bound (e.g., 0.5).
+#'   this too high might lead to failure in proposing new parameters that are well enough inside the parameter space,
+#'   and especially with large \code{p} one might want to try smaller upper bound (e.g., 0.5). With large \code{p} or
+#'   \code{d}, \code{upper_ar_scale} is restricted from above, see the details section.
 #' @param ar_scale2 a positive real number adjusting how large AR parameter values are typically proposed in some
 #'   random mutations (if AR constraints are employed, in all random mutations): larger value implies \strong{smaller} coefficients
 #'   (in absolute value). \strong{Values larger than 1 can be used if the AR coefficients are expected to be very small.
@@ -176,6 +179,12 @@
 #'  By "redundant" or "wasted" regimes we mean regimes that have the time varying mixing weights practically at
 #'  zero for almost all t. A model including redundant regimes would have about the same log-likelihood value without
 #'  the redundant regimes and there is no purpose to have redundant regimes in a model.
+#'
+#'  Some of the AR coefficients are drawn with the algorithm by Ansley and Kohn (1986). However,
+#'  when using large \code{ar_scale} with large \code{p} or \code{d}, numerical inaccuracies caused
+#'  by the imprecision of the float-point presentation may result in errors or nonstationary AR-matrices.
+#'  Using smaller \code{ar_scale} facilitates the usage of larger \code{p} or \code{d}. Therefore, we bound
+#'  \code{upper_ar_scale} from above by \eqn{1-pd/150} when \code{p*d>40} and by \eqn{1} otherwise.
 #' @return Returns the estimated parameter vector which has the form described in \code{initpop}.
 #' @references
 #'  \itemize{
@@ -293,8 +302,15 @@ GAfit <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), conditiona
   } else if(!(length(lambda_scale) == n_lambs & all(lambda_scale > 0.1))) {
     stop("lambda_scale must be numeric vector with length M-1 (r if lambdas are constrained) and elements larger than 0.1")
   }
-  if(length(ar_scale) != 1 | ar_scale <= 0) {
-    stop("ar_scale must be positive and have length one")
+  if(length(ar_scale) != 1 | ar_scale <= 0 | ar_scale > 1) {
+    stop("ar_scale must be strictly positive, at most one, and have length one")
+  }
+  if(upper_ar_scale > 1) {
+    stop("upper_ar_scale should be at most one")
+  } else if(p*d > 40) {
+    if(upper_ar_scale > 1 - p*d/150) {
+      upper_ar_scale <- max(1 - p*d/150, 0.05)
+    }
   }
   if(length(ar_scale2) != 1 | ar_scale2 <= 0) {
     stop("ar_scale2 must be positive and have length one")

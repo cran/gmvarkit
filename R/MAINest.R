@@ -607,16 +607,16 @@ estimate_sgsmvar <- function(gsmvar, new_W, ncalls=16, ncores=2, maxit=1000, see
       if(is.na(sn) && so != 0) { # No new constraint, old constraint is not zero
         newWpars[i1, i2] <- oldWpars_inW[i1, i2] # Insert old param
       } else if(is.na(sn) && so == 0) { # No new constraints, old constraint is zero
-        newWpars[i1, i2] <- 1e+6  # Insert close to zero value: not exactly zero to avoid the parameter disappearing in Wvec
+        newWpars[i1, i2] <- 1e-6  # Insert close to zero value: not exactly zero to avoid the parameter disappearing in Wvec
       } else if(so == sn) { # Same constraint in new and old W
         newWpars[i1, i2] <- oldWpars_inW[i1, i2] # Insert old param
       } else if(sn == 0) { # Zero constraint in new W
         newWpars[i1, i2] <- 0 # Insert zero (which will be removed as it is not parametrized)
       } else if(so > sn) { # sn must be negative, so could be zero or positive
-        newWpars[i1, i2] <- -0.01 # Insert small negative number
+        newWpars[i1, i2] <- -0.05 # Insert small negative number
         n_sign_changes <- n_sign_changes + 1
       } else { # It must be that so < sn, which implies sn > 0, while so could be zero or negative
-        newWpars[i1, i2] <- 0.01 # Insert s mall positive number
+        newWpars[i1, i2] <- 0.05 # Insert s mall positive number
         n_sign_changes <- n_sign_changes + 1
       }
     }
