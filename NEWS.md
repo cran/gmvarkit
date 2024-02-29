@@ -230,3 +230,10 @@
 * Slightly adjusted the setting of estimate_sgmvar.
 * Added a strict upper bound of one for ar_scale to avoid problems caused by numerical inaccuracies caused by imprecise machine accuracy.
 * Added note to the GAfit's documentation for using ar_scale with large p or d. Also bounded upper_ar_scale by 1-p*d/150 when p*d>40 to avoid numerical issues (but it does not go below 0.05). 
+
+# gmvarkit 2.1.2
+
+* fitGSMVAR now automatically filters out inappropriate estimates by default. 
+* Updated the reference structural models identified by heterokedasticity.
+* Fixed a lot of typos etc in the vignette. 
+* Updates to readme. 

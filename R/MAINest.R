@@ -104,8 +104,8 @@
 #'          \emph{Transactions on Systems, Man and Cybernetics} \strong{24}, 656-667.
 #'    \item Smith R.E., Dike B.A., Stegmann S.A. 1995. Fitness inheritance in genetic algorithms.
 #'          \emph{Proceedings of the 1995 ACM Symposium on Applied Computing}, 345-350.
-#'    \item Virolainen S. 2022. Structural Gaussian mixture vector autoregressive model with application to the asymmetric
-#'      effects of monetary policy shocks. Unpublished working paper, available as arXiv:2007.04713.
+#'    \item Virolainen S. (forthcoming). A statistically identified structural vector autoregression with endogenously
+#'           switching volatility regime. \emph{Journal of Business & Economic Statistics}.
 #'    \item Virolainen S. 2022. Gaussian and Student's t mixture vector autoregressive model with application to the
 #'      asymmetric effects of monetary policy shocks in the Euro area. Unpublished working
 #'      paper, available as arXiv:2109.13648.
@@ -123,9 +123,6 @@
 #' summary(fit12)
 #' print_std_errors(fit12)
 #' profile_logliks(fit12)
-#'
-#' fit42t <- fitGSMVAR(gdpdef, p=4, M=2, ncalls=5, model="StMVAR", seeds=1:5, use_parallel=FALSE,
-#'  filter_estimates=TRUE, print_res=FALSE)
 #'
 #' # The rest of the examples only use a single estimation round with a given
 #' # seed that produces the MLE to reduce running time of the examples. When
@@ -177,7 +174,7 @@
 fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), conditional=TRUE, parametrization=c("intercept", "mean"),
                       constraints=NULL, same_means=NULL, weight_constraints=NULL, structural_pars=NULL,
                       ncalls=(M + 1)^5, ncores=2, maxit=1000, seeds=NULL, print_res=TRUE, use_parallel=TRUE,
-                      filter_estimates=FALSE, calc_std_errors=TRUE, ...) {
+                      filter_estimates=TRUE, calc_std_errors=TRUE, ...) {
 
   model <- match.arg(model)
   parametrization <- match.arg(parametrization)
@@ -343,7 +340,7 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
       alphas_ok <- !any(alphas < 0.01)
 
       # Check mixing weights
-      mixing_weights_ok <- tryCatch(!any(vapply(1:M,
+      mixing_weights_ok <- tryCatch(!any(vapply(1:sum(M),
                                           function(m) sum(mod$mixing_weights[,m] > red_criteria[1]) < red_criteria[2]*n_obs,
                                           logical(1))),
                               error=function(e) FALSE)
@@ -355,7 +352,7 @@ fitGSMVAR <- function(data, p, M, model=c("GMVAR", "StMVAR", "G-StMVAR"), condit
         message("No 'appropriate' estimates were found!
                  Check that all the variables are scaled to vary in similar magninutes, also not very small or large magnitudes.
                  Consider running more estimation rounds or study the obtained estimates one-by-one with the function alt_gsmvar.")
-        if(M > 2) {
+        if(sum(M) > 2) {
           message("Consider also using smaller M. Too large M leads to identification problems.")
         }
         which_best_fit <- which(loks == max(loks))[1]
