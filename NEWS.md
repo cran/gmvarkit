@@ -237,3 +237,8 @@
 * Updated the reference structural models identified by heterokedasticity.
 * Fixed a lot of typos etc in the vignette. 
 * Updates to readme. 
+
+# gmvarkit 2.1.3
+
+* Added table of contents to the vignette.
+* Fixed typos etc in the vignette.

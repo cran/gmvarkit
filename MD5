@@ -1,6 +1,6 @@
-50474ebcf449e0b9ceee08d6a21ea880 *DESCRIPTION
+a237d479f2322df17089aef5734226f0 *DESCRIPTION
 343082adc7cae394b564b41b480339bf *NAMESPACE
-a16b8e3b6b3fb11b0267144e54121cb0 *NEWS.md
+1e78a57075c57763aa030de20d34ec3c *NEWS.md
 82eb8b2068bde61fcfa16318904df6fa *R/GIRFandGFEVD.R
 3ff9311b68ecfa1d7356e06bf07e37c4 *R/GSMVARconstruction.R
 90dbbcc3390ce2d11ca20e6781239d21 *R/MAINest.R
@@ -9,7 +9,7 @@ a16b8e3b6b3fb11b0267144e54121cb0 *NEWS.md
 e91c5df7bf4ed54dcbad0571e23c6da3 *R/backwardCompatibility.R
 c8a3e7c92dbdb9c35dafcbd1f9ddca9f *R/data.R
 6d62cbabfa4efb81a88b1bddf39aba9d *R/diagnosticPlot.R
-65d080c553bc798a9353954b177fb396 *R/generateParams.R
+25c4d6a47adc8704663d71c00bd83542 *R/generateParams.R
 233e79872a75b30994334bfb25e83916 *R/geneticAlgorithm.R
 87095787173a0eacbb7cd08b56449c07 *R/gmvarkit.R
 8169d8b6478dbd78db7b7a3eabd21f2b *R/linearIRF.R
@@ -18,7 +18,7 @@ c8a3e7c92dbdb9c35dafcbd1f9ddca9f *R/data.R
 9bfb3931014b4c5450dcf97d279939aa *R/miscS3methods.R
 1f23e1c163979a7b1ed5ac53cf33402a *R/morePlots.R
 0d4af2806bd025e423631c5a62525495 *R/numericalDifferentiation.R
-39c294adc8511cc7472a29c7b5a6b5bc *R/parameterReforms.R
+55189e51030b4320b3285b328524a7b0 *R/parameterReforms.R
 87c3eef1b41cc34cdd9da65d1ad87c89 *R/pickParams.R
 a486a0cf1311dfc1272c280a7aabc459 *R/plotMethods.R
 74b9ca4ccc4b3c866d891a89f56748f4 *R/predictMethod.R
@@ -29,14 +29,14 @@ b0bc2fcd70a287ca97a57997aef7482c *R/quantileResidualTests.R
 9ca925c41ae674a82605bcd7d1d74908 *R/standardErrors.R
 3ed33bcb86620f159a570ac842559cca *R/uncondMoments.R
 7d03b06864daa28cf5ceb50a3672d9bf *README.md
-707a90cbe295ca9c8d02f39b1e37cbf2 *build/vignette.rds
+b59c89239ca1f6f68a5c15c0945247d4 *build/vignette.rds
 7e1b61dc0231308d0d44dd9d0db9cf9d *data/euromone.rda
 01070dd73721f54addde06eb0947fc1f *data/gdpdef.rda
 b417b0a30c7f17d4fd00d0f6c33c2054 *data/usamon.rda
 d759040baef0654e9a8f8dddf6beb247 *data/usamone.rda
 c5929bc97cf0d126800f9d30a0ee6830 *inst/doc/gmvarkit-vignette.R
-01ef85054b041514be7242ec2733aa57 *inst/doc/gmvarkit-vignette.Rnw
-9e7bda421954de8a7a19908490dc2527 *inst/doc/gmvarkit-vignette.pdf
+4b5b34ea716b4163833ce637554fdea2 *inst/doc/gmvarkit-vignette.Rnw
+bdce9c9cb3e4999b149cfdaa91beb86f *inst/doc/gmvarkit-vignette.pdf
 855de1113cad3852bfa8abcce1435292 *man/GAfit.Rd
 747269508781d0eccbad88e32d8433a0 *man/GFEVD.Rd
 168151b435e9a0bf62301ce461439885 *man/GIRF.Rd
@@ -92,7 +92,7 @@ b74ebbf37f6abf8b2c10f0b515c22f72 *man/get_symmetric_sqrt.Rd
 85b2a0850b23ed9dc35833d59377c6f1 *man/get_varying_h.Rd
 338e47cc11192e80951ca39e3da6068b *man/gmvar_to_gsmvar.Rd
 4a87724c00e463d82c8200b1dd9f8fd3 *man/gmvar_to_sgmvar.Rd
-caecd7e7bfddd2c2448b010cd09a17fe *man/gmvarkit-package.Rd
+4469877f07ba031b0d8350d95be1b6d5 *man/gmvarkit-package.Rd
 a7d82b2caab74b070bb97833a9332fa7 *man/gsmvar_to_sgsmvar.Rd
 234e4b33a96284a5fcb7c1bddbbbdfba *man/in_paramspace.Rd
 8eb8c059eecd082cc89f52ab713a58eb *man/in_paramspace_int.Rd
@@ -172,11 +172,11 @@ c881ac5ed4427ce06a0f060204072ce6 *tests/testthat/test_S3methods.R
 ef2239f8ecfcb5f06f4795ebe7249714 *tests/testthat/test_argumentChecks.R
 5b8416ee70a88027a31000afedcb62c4 *tests/testthat/test_generateParams.R
 1f3fc5222ab188e57daa7dc979cdffd3 *tests/testthat/test_gsmvarConstruction.R
-7957f6dc32abe1fb615674c3e0b9a9b3 *tests/testthat/test_linearIRF.R
+147d8c29191a09e7eb3fba1f9bf1d649 *tests/testthat/test_linearIRF.R
 405b7e8bbd490838e1761fdc6a551353 *tests/testthat/test_loglikelihood.R
 5bc18874271ed7094f226c65f38e23a8 *tests/testthat/test_matcal.R
 9e60016f77c9ce5e0fcb3f52b047808a *tests/testthat/test_numericalDifferentiation.R
-b72ce37764122c25f5fb4821564ce3b5 *tests/testthat/test_parameterReforms.R
+361615d2aa0f95b77686e3333d7c9d85 *tests/testthat/test_parameterReforms.R
 e4ee07b068df1f0ab49524a0b2c9a30c *tests/testthat/test_pickParams.R
 bb9e362231ea9d28c3187bc2ccd822fa *tests/testthat/test_quantileResidualTests.R
 0109d00e4476f807b6fd7f794798550f *tests/testthat/test_quantileResiduals.R
@@ -188,5 +188,5 @@ be8235acce7f2669356eba1aafda9e18 *vignettes/figures/densityplot.png
 40060cf3d22435f5921d95572b013124 *vignettes/figures/predplot.png
 8ffd46a00aea5f01db4742ac64fa0f91 *vignettes/figures/proflogliks.png
 e430c736432762aff86d40adb191e40c *vignettes/figures/seriesplot.png
-01ef85054b041514be7242ec2733aa57 *vignettes/gmvarkit-vignette.Rnw
-2fb263a9de2ae263a94716961bd80627 *vignettes/refs.bib
+4b5b34ea716b4163833ce637554fdea2 *vignettes/gmvarkit-vignette.Rnw
+d4885692f5bbde7953be93c0954910a4 *vignettes/refs.bib
