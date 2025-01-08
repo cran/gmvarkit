@@ -149,10 +149,6 @@ The model DOES NOT need to be structural in order for this function to be
  mod22s <- GSMVAR(gdpdef, p=2, M=2, params=params22s,
   structural_pars=list(W=W_22))
  mod22s
- # Alternatively, use:
- #fit22s <- fitGSMVAR(gdpdef, p=2, M=2, structural_pars=list(W=W_22),
- #                   ncalls=20, seeds=1:20)
- # To obtain an estimated version of the same model.
 
  # Estimating the GFEVD using all possible histories in the data as the
  # initial values:
@@ -182,10 +178,10 @@ The model DOES NOT need to be structural in order for this function to be
      and Nonlineae Multivariate Models. \emph{Oxford Bulletin of Economics and Statistics}, \strong{78}, 4, 595-603.
    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
          \emph{Journal of Econometrics}, \strong{192}, 485-498.
-   \item Virolainen S. (forthcoming). A statistically identified structural vector autoregression with endogenously
-          switching volatility regime. \emph{Journal of Business & Economic Statistics}.
    \item Virolainen S. 2022. Gaussian and Student's t mixture vector autoregressive model with application to the
      asymmetric effects of monetary policy shocks in the Euro area. Unpublished working paper, available as arXiv:2109.13648.
+   \item Virolainen S. 2025. A statistically identified structural vector autoregression with endogenously
+          switching volatility regime. \emph{Journal of Business & Economic Statistics}, \strong{43}, 1, 44-54.
  }
 }
 \seealso{

@@ -363,10 +363,10 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #'      and Nonlineae Multivariate Models. \emph{Oxford Bulletin of Economics and Statistics}, \strong{78}, 4, 595-603.
 #'    \item Kalliovirta L., Meitz M. and Saikkonen P. 2016. Gaussian mixture vector autoregression.
 #'          \emph{Journal of Econometrics}, \strong{192}, 485-498.
-#'    \item Virolainen S. (forthcoming). A statistically identified structural vector autoregression with endogenously
-#'           switching volatility regime. \emph{Journal of Business & Economic Statistics}.
 #'    \item Virolainen S. 2022. Gaussian and Student's t mixture vector autoregressive model with application to the
 #'      asymmetric effects of monetary policy shocks in the Euro area. Unpublished working paper, available as arXiv:2109.13648.
+#'    \item Virolainen S. 2025. A statistically identified structural vector autoregression with endogenously
+#'           switching volatility regime. \emph{Journal of Business & Economic Statistics}, \strong{43}, 1, 44-54.
 #'  }
 #' @examples
 #'  \donttest{
@@ -395,10 +395,6 @@ GIRF <- function(gsmvar, which_shocks, shock_size=1, N=30, R1=250, R2=250, init_
 #'  mod22s <- GSMVAR(gdpdef, p=2, M=2, params=params22s,
 #'   structural_pars=list(W=W_22))
 #'  mod22s
-#'  # Alternatively, use:
-#'  #fit22s <- fitGSMVAR(gdpdef, p=2, M=2, structural_pars=list(W=W_22),
-#'  #                   ncalls=20, seeds=1:20)
-#'  # To obtain an estimated version of the same model.
 #'
 #'  # Estimating the GFEVD using all possible histories in the data as the
 #'  # initial values:
@@ -510,26 +506,54 @@ GFEVD <- function(gsmvar, shock_size=1, N=30, initval_type=c("data", "random", "
   }
   shocknames <- paste0("Shock", 1:d)
 
-  GIRF_square_cumsum <- array(dim=c(N + 1, length(varnames), d),
-                              dimnames=list(0:N, varnames, shocknames)) # [horizon, variable, shock]
-  for(i1 in 1:d) { # Go through the shocks
-    res_in_array <- array(unlist(GIRF_shocks[[i1]]), dim=c(N + 1, length(varnames), R2))
-    if(length(which_cumulative) > 0) {
-      for(i2 in which_cumulative) {
-        res_in_array[, i2, ] <- apply(res_in_array[, i2, , drop=FALSE], MARGIN=3, FUN=cumsum) # Replace GIRF with cumulative GIRF
+  # GIRF_square_cumsum <- array(dim=c(N + 1, length(varnames), d),
+  #                             dimnames=list(0:N, varnames, shocknames)) # [horizon, variable, shock]
+  # for(i1 in 1:d) { # Go through the shocks
+  #   res_in_array <- array(unlist(GIRF_shocks[[i1]]), dim=c(N + 1, length(varnames), R2))
+  #   if(length(which_cumulative) > 0) {
+  #     for(i2 in which_cumulative) {
+  #       res_in_array[, i2, ] <- apply(res_in_array[, i2, , drop=FALSE], MARGIN=3, FUN=cumsum) # Replace GIRF with cumulative GIRF
+  #     }
+  #   }
+  #   GIRF_square_cumsum[, , i1] <-  apply(apply(X=res_in_array, MARGIN=1:2, FUN=mean)^2, MARGIN=2, FUN=cumsum)
+  # }
+  #
+  # GFEVD_results <- array(dim=c(N + 1, d, length(varnames)),
+  #                        dimnames=list(0:N, shocknames, varnames)) # [horizon, shock, variable]
+  # for(i1 in 1:ncol(GIRF_square_cumsum)) { # Go through the variables and possibly mixing weights
+  #   denominator <- rowSums(GIRF_square_cumsum[, i1, ]) # The denominators for h=0,1,...,N
+  #   for(i2 in 1:d) { # Go through the shocks
+  #     GFEVD_results[ , i2, i1] <- GIRF_square_cumsum[, i1, i2]/denominator
+  #   }
+  # }
+
+  # Calculate the GFEVD also separately for each length p history a GIRF was estimated to
+  ind_GFEVD_results <- array(dim=c(N + 1, length(varnames), d, R2),
+                             dimnames=list(0:N, varnames, shocknames, 1:R2)) # [horizon, variable, shock, time])
+  for(i1 in 1:R2) { # Go through the length p histories
+    GIRF_square_cumsum_i1 <- array(NA, dim=c(N+1, length(varnames), d)) # [horizon, variable, shock] for time period i1
+    for(i2 in 1:d) { # Go through the shocks
+      res_in_matrix <- GIRF_shocks[[i2]][[i1]] # [horizon, variable] GIRF of shock i2 at the time i1
+      if(length(which_cumulative > 0)) { # Any GIRFs that should be accumulated?
+        for(i3 in which_cumulative) {
+          res_in_matrix[, i3] <- cumsum(res_in_matrix[, i3]) # Replace GIRF with cumulative GIRF
+        }
+      }
+      # Cumulative squared GIRF of shock i2 at the time i1
+      GIRF_square_cumsum_i1[, , i2] <- apply(res_in_matrix^2, MARGIN=2, FUN=cumsum) # [horizon, variable]
+    }
+    # Calculate the denominators
+    for(i2 in 1:length(varnames)) { # Go through the variables
+      denominator <- rowSums(GIRF_square_cumsum_i1[, i2, ]) # The denominators for h=0,1,...,N (sums over socks)
+      for(i3 in 1:d) { # Go through the shocks
+        ind_GFEVD_results[ , i2, i3, i1] <- GIRF_square_cumsum_i1[, i2, i3]/denominator
       }
     }
-    GIRF_square_cumsum[, , i1] <-  apply(apply(X=res_in_array, MARGIN=1:2, FUN=mean)^2, MARGIN=2, FUN=cumsum)
   }
 
-  GFEVD_results <- array(dim=c(N + 1, d, length(varnames)),
-                         dimnames=list(0:N, shocknames, varnames)) # [horizon, shock, variable]
-  for(i1 in 1:ncol(GIRF_square_cumsum)) { # Go through the variables and possibly mixing weights
-    denominator <- rowSums(GIRF_square_cumsum[, i1, ]) # The denominators for h=0,1,...,N
-    for(i2 in 1:d) { # Go through the shocks
-      GFEVD_results[ , i2, i1] <- GIRF_square_cumsum[, i1, i2]/denominator
-    }
-  }
+  # Calculate the GFEVD by calculating the mean over GFEVDs calculated for each length p history
+  GFEVD_results <- apply(ind_GFEVD_results, MARGIN=1:3, FUN=mean) # [horizon, variable, shock]
+  GFEVD_results <- aperm(GFEVD_results, perm=c(1, 3, 2)) # [horizon, shock, variable]
 
   cat("Finished!\n")
   ret <- structure(list(gfevd_res=GFEVD_results,
