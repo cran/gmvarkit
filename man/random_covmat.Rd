@@ -11,7 +11,7 @@ random_covmat(d, M, omega_scale, W_scale, lambda_scale, structural_pars = NULL)
 
 \item{M}{\describe{
   \item{For \strong{GMVAR} and \strong{StMVAR} models:}{a positive integer specifying the number of mixture components.}
-  \item{For \strong{G-StMVAR} models:}{a size (2x1) integer vector specifying the number of \emph{GMVAR type} components \code{M1}
+  \item{For \strong{G-StMVAR} models:}{a size \eqn{(2\times 1)} integer vector specifying the number of \emph{GMVAR type} components \code{M1}
    in the first element and \emph{StMVAR type} components \code{M2} in the second element. The total number of mixture components
    is \code{M=M1+M2}.}
 }}
@@ -64,8 +64,8 @@ at least the first one of the following elements:
   \item \code{W} - a \eqn{(dxd)} matrix with its entries imposing constraints on \eqn{W}: \code{NA} indicating that the element is
     unconstrained, a positive value indicating strict positive sign constraint, a negative value indicating strict
     negative sign constraint, and zero indicating that the element is constrained to zero.
-  \item \code{C_lambda} - a \eqn{(d(M-1) x r)} constraint matrix that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
-    \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \strong{\eqn{\gamma}} is the new \eqn{(r x 1)}
+  \item \code{C_lambda} - a \eqn{(d(M-1) \times  r)} constraint matrix that satisfies (\strong{\eqn{\lambda}}\eqn{_{2}}\eqn{,...,}
+    \strong{\eqn{\lambda}}\eqn{_{M}) =} \strong{\eqn{C_{\lambda} \gamma}} where \strong{\eqn{\gamma}} is the new \eqn{(r \times 1)}
     parameter subject to which the model is estimated (similarly to AR parameter constraints). The entries of \code{C_lambda}
     must be either \strong{positive} or \strong{zero}. Ignore (or set to \code{NULL}) if the eigenvalues \eqn{\lambda_{mi}}
     should not be constrained.
@@ -79,7 +79,7 @@ a time-varying diagonal matrix with positive diagonal entries).}
 }
 \value{
 \describe{
-    \item{For \strong{reduced form models}:}{Returns a \eqn{(d(d+1)/2x1)} vector containing vech-vectorized covariance matrix
+    \item{For \strong{reduced form models}:}{Returns a \eqn{(d(d+1)/2\times 1)} vector containing vech-vectorized covariance matrix
       \eqn{\Omega}.}
     \item{For \strong{structural models}:}{Returns a length \eqn{d^2 - n_zeros - d*(M - 1)} vector of the form
       \eqn{(Wvec(W),\lambda_2,...,\lambda_M)} where \eqn{\lambda_m=(\lambda_{m1},...,\lambda_{md})}
@@ -90,7 +90,7 @@ a time-varying diagonal matrix with positive diagonal entries).}
   }
 }
 \description{
-\code{random_covmat} generates random VAR model \eqn{(dxd)} error term covariance matrix \eqn{\Omega}
+\code{random_covmat} generates random VAR model \eqn{(d\times d)} error term covariance matrix \eqn{\Omega}
   from (scaled) Wishart distribution for reduced form models and the parameters \eqn{W},\eqn{\lambda_1,...,\lambda_M}
   for structural models (from normal distributions).
 }

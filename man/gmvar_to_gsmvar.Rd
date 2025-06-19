@@ -2,7 +2,7 @@
 % Please edit documentation in R/backwardCompatibility.R
 \name{gmvar_to_gsmvar}
 \alias{gmvar_to_gsmvar}
-\title{Makes class 'gmvar' objects compatible with the functions using class 'gsmvar' objects}
+\title{Makes the old class 'gmvar' objects compatible with the functions using class 'gsmvar' objects}
 \usage{
 gmvar_to_gsmvar(gsmvar)
 }
@@ -17,8 +17,8 @@ If the provided object has the class 'gsmvar', the provided object
   it is returned.
 }
 \description{
-\code{gmvar_to_gsmvar} class 'gmvar' objects compatible with the functions using
-s class 'gsmvar' objects
+\code{gmvar_to_gsmvar} makes class 'gmvar' objects compatible with the functions using
+class 'gsmvar' objects
 }
 \details{
 This exists so that models estimated with earlier versions
