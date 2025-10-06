@@ -1,7 +1,7 @@
 Package: gmvarkit
 Title: Estimate Gaussian and Student's t Mixture Vector Autoregressive
         Models
-Version: 2.2.0
+Version: 2.2.1
 Authors@R: person("Savi", "Virolainen",
                   email = "savi.virolainen@helsinki.fi",
                   role = c("aut", "cre"),
@@ -16,7 +16,7 @@ Description: Unconstrained and constrained maximum likelihood estimation of stru
     forecast error variance decomposition.
     Leena Kalliovirta, Mika Meitz, Pentti Saikkonen (2016) <doi:10.1016/j.jeconom.2016.02.012>,
     Savi Virolainen (2025) <doi:10.1080/07350015.2024.2322090>,
-    Savi Virolainen (2022) <doi:10.48550/arXiv.2109.13648>.
+    Savi Virolainen (in press) <doi:10.1016/j.ecosta.2025.09.003>.
 Depends: R (>= 3.6.0)
 BugReports: https://github.com/saviviro/gmvarkit/issues
 License: GPL-3
@@ -30,6 +30,6 @@ Imports: Brobdingnag (>= 1.2-4), mvnfast (>= 0.2.5), parallel (>=
 Suggests: testthat, knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2025-06-19 15:08:38 UTC; savi
+Packaged: 2025-10-06 14:37:38 UTC; savi
 Repository: CRAN
-Date/Publication: 2025-06-19 15:50:02 UTC
+Date/Publication: 2025-10-06 15:40:02 UTC
